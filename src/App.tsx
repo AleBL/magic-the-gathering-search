@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 
 import { useTranslation } from 'react-i18next';
+import SwitchDarkMode from './SwitchDarkMode';
 import SelectLanguage from './SelectLanguage';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
     <div className="flex flex-col">
       <div className="flex-auto">
         <div className="ml-4 mr-4 mt-4 mb-4 flex items-center justify-between">
+          <SwitchDarkMode />
           <SelectLanguage />
         </div>
         <div className=" flex flex-col justify-center items-center h-full space-y-4">
