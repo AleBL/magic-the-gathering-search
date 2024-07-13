@@ -127,7 +127,7 @@ function useLoading() {
     removeLoading() {
       safeDOM.remove(document.head, oStyle);
       safeDOM.remove(document.body, oDiv);
-    },
+    }
   };
 }
 
@@ -137,11 +137,6 @@ const { appendLoading, removeLoading } = useLoading();
 domReady().then(appendLoading);
 
 window.onmessage = (ev) => {
+  // eslint-disable-next-line no-unused-expressions
   ev.data.payload === 'removeLoading' && removeLoading();
 };
-
-postMessage({ payload: 'removeLoading' }, '*');
-
-console.log("cda");
-
-// setTimeout(removeLoading, 4999);

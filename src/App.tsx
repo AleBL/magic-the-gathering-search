@@ -1,14 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 import SwitchDarkMode from './SwitchDarkMode';
 import SelectLanguage from './SelectLanguage';
 
 function App() {
-  useEffect(() => {
-    postMessage({ payload: 'removeLoading' }, '*');
-  });
-
   const { t } = useTranslation();
 
   return (

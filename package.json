@@ -29,8 +29,7 @@
     "pack": "npm run build && electron-builder --dir",
     "clean": "rimraf dist dist-electron dist-vite",
     "type-check": "tsc",
-    "lint": "eslint . --ext js,jsx,ts,tsx",
-    "lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
+    "lint": "eslint . --ext js,jsx,ts,tsx --ignore-path .gitignore  --fix",
     "deps:update": "taze major -I"
   },
   "dependencies": {
