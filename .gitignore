@@ -4,8 +4,9 @@ dist
 dist-ssr
 *.local
 
+*.Identifier
+
 # production
-/main
 /dist
 /dist-vite
 /dist-electron
