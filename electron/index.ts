@@ -2,53 +2,37 @@
 import { join } from 'path';
 
 // Packages
-import { BrowserWindow, app, ipcMain, IpcMainEvent } from 'electron';
-import isDev from 'electron-is-dev';
-
-const height = 600;
-const width = 800;
+import { BrowserWindow, app, ipcMain, IpcMainEvent, nativeTheme } from 'electron';
 
 function createWindow() {
   // Create the browser window.
   const window = new BrowserWindow({
-    width,
-    height,
-    //  change to false to use AppBar
-    frame: false,
+    width: 1600,
+    height: 900,
+    minWidth: 765,
+    minHeight: 720,
     show: true,
     resizable: true,
     fullscreenable: true,
     webPreferences: {
-      preload: join(__dirname, 'preload.js')
+      preload: join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: false
     }
   });
 
-  const port = process.env.PORT || 3000;
-  const url = isDev ? `http://localhost:${port}` : join(__dirname, '../src/out/index.html');
+  const url = process.env.VITE_DEV_SERVER_URL;
+  const indexHtml = join(__dirname, '../dist-vite/index.html');
 
   // and load the index.html of the app.
-  if (isDev) {
+  if (url) {
     window?.loadURL(url);
+    window.webContents.openDevTools();
   } else {
-    window?.loadFile(url);
+    window?.loadFile(indexHtml);
   }
-  // Open the DevTools.
-  // window.webContents.openDevTools();
 
-  // For AppBar
-  ipcMain.on('minimize', () => {
-    // eslint-disable-next-line no-unused-expressions
-    window.isMinimized() ? window.restore() : window.minimize();
-    // or alternatively: win.isVisible() ? win.hide() : win.show()
-  });
-  ipcMain.on('maximize', () => {
-    // eslint-disable-next-line no-unused-expressions
-    window.isMaximized() ? window.restore() : window.maximize();
-  });
-
-  ipcMain.on('close', () => {
-    window.close();
-  });
+  nativeTheme.themeSource = 'dark';
 }
 
 // This method will be called when Electron has finished
@@ -75,7 +59,6 @@ app.on('window-all-closed', () => {
 // code. You can also put them in separate files and require them here.
 
 // listen the channel `message` and resend the received message to the renderer process
-ipcMain.on('message', (event: IpcMainEvent, message: any) => {
-  console.log(message);
+ipcMain.on('message', (event: IpcMainEvent) => {
   setTimeout(() => event.sender.send('message', 'hi from electron'), 500);
 });

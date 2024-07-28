@@ -1,14 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+@import 'bootstrap/dist/css/bootstrap.min.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* For AppBar */
-.draggable {
-    -webkit-user-select: none;
-    -webkit-app-region: drag;
+@layer base {
+  code {
+    @apply mx-2 rounded bg-gray-200 px-1 py-0.5 dark:bg-gray-700;
   }
 
-.undraggable {
-    -webkit-app-region: no-drag;
+  .root {
+    @apply min-h-screen dark:bg-slate-900 dark:text-gray-200;
   }
+}
