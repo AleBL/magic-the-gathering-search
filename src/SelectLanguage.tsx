@@ -38,7 +38,7 @@ function SelectLanguage() {
     <div className="div-select-language">
       <Select label="Select Language" variant="standard" value={language} onChange={languageHandler} color="blue">
         {languages.map(({ value, key, iconPath }) => (
-          <Option value={key} className="language">
+          <Option value={key} className="language" key={key.toString()}>
             <img src={iconPath} alt={value} className="language-icon" />
             {value}
           </Option>
