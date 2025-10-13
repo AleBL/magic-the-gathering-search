@@ -1,0 +1,18 @@
+{
+  "id": "1728819876543",
+  "name": "Deck de Dragões",
+  "cards": [
+    {
+      "id": "example-card-1",
+      "name": "Shivan Dragon",
+      "type_line": "Creature — Dragon",
+      "mana_cost": "{4}{R}{R}",
+      "oracle_text": "Flying\n{R}: Shivan Dragon gets +1/+0 until end of turn.",
+      "power": "5",
+      "toughness": "5",
+      "rarity": "rare",
+      "set_name": "Magic 2014"
+    }
+  ],
+  "createdAt": "2024-10-13T11:17:56.543Z"
+}
