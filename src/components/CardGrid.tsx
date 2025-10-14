@@ -4,21 +4,23 @@ import { Card } from '../types/Card';
 
 interface CardGridProps {
   cards: Card[];
-  cardSize: 'small' | 'medium' | 'large';
+  size: 'small' | 'medium' | 'large' | 'xlarge';
   onAddToDeck: (card: Card) => void;
   onRemoveFromDeck?: (card: Card) => void;
   showRemoveButton?: boolean;
 }
 
-function CardGrid({ cards, cardSize, onAddToDeck, onRemoveFromDeck, showRemoveButton = false }: CardGridProps) {
+function CardGrid({ cards, size, onAddToDeck, onRemoveFromDeck, showRemoveButton = false }: CardGridProps) {
   const getGridClass = () => {
-    switch (cardSize) {
+    switch (size) {
       case 'small':
         return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2';
       case 'medium':
         return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
       case 'large':
         return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6';
+      case 'xlarge':
+        return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8';
       default:
         return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
     }
@@ -30,7 +32,7 @@ function CardGrid({ cards, cardSize, onAddToDeck, onRemoveFromDeck, showRemoveBu
         <CardItem
           key={card.id}
           card={card}
-          cardSize={cardSize}
+          size={size}
           onAddToDeck={onAddToDeck}
           onRemoveFromDeck={onRemoveFromDeck}
           showRemoveButton={showRemoveButton}

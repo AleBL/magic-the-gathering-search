@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import SwitchDarkMode from './SwitchDarkMode';
 import SelectLanguage from './SelectLanguage';
@@ -10,6 +10,20 @@ function App() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'search' | 'deck'>('search');
   const [currentDeck, setCurrentDeck] = useState<Card[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedDarkMode = localStorage.getItem('darkMode');
+    return savedDarkMode !== null ? savedDarkMode === 'true' : true;
+  });
+
+  // Aplicar dark mode ao documento
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', isDarkMode.toString());
+  }, [isDarkMode]);
 
   const handleAddToDeck = (card: Card) => {
     setCurrentDeck((prev) => [...prev, card]);
@@ -28,37 +42,39 @@ function App() {
   };
 
   const handleClearDeck = () => {
-    if (confirm('Tem certeza que deseja limpar o deck atual?')) {
+    if (confirm(t('confirmClear'))) {
       setCurrentDeck([]);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900">
-      <div className="bg-gray-800 border-b border-gray-700">
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+      <div className="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 transition-colors duration-300">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
-            <h1 className="text-white text-xl font-bold">Magic: The Gathering Search</h1>
+            <h1 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300">
+              {t('appTitle')}
+            </h1>
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('search')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                   activeTab === 'search'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                Buscar Cartas
+                {t('searchTab')}
               </button>
               <button
                 onClick={() => setActiveTab('deck')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 relative ${
                   activeTab === 'deck'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                Meus Decks
+                {t('decksTab')}
                 {currentDeck.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {currentDeck.length}
@@ -68,7 +84,7 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <SwitchDarkMode />
+            <SwitchDarkMode isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
             <SelectLanguage />
           </div>
         </div>

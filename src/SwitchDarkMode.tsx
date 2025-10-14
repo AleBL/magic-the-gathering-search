@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './style/switch_dark_mode.css';
 
 const svgMoon = new URL(`./assets/moon.svg`, import.meta.url).href;
 const svgSun = new URL(`./assets/sun.svg`, import.meta.url).href;
 
-function SwitchDarkMode() {
-  const [isDark, setDark] = useState(true);
+interface SwitchDarkModeProps {
+  isDarkMode: boolean;
+  setIsDarkMode: (value: boolean) => void;
+}
 
+function SwitchDarkMode({ isDarkMode, setIsDarkMode }: SwitchDarkModeProps) {
   const darkModeHandler = () => {
-    setDark(!isDark);
-    document.body.classList.toggle('dark');
+    setIsDarkMode(!isDarkMode);
   };
 
   return (
@@ -21,10 +23,17 @@ function SwitchDarkMode() {
       <span className="sun">
         <img src={svgSun} alt="sun" />
       </span>
-      <input id="checkbox" type="checkbox" className="input" checked={isDark} onChange={darkModeHandler} />
+      <input 
+        id="checkbox" 
+        type="checkbox" 
+        className="input" 
+        checked={isDarkMode} 
+        onChange={darkModeHandler} 
+      />
       <span className="slider" />
     </label>
   );
 }
 
 export default SwitchDarkMode;
+

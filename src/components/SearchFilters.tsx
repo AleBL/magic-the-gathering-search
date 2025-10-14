@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Filters {
   colors: string[];
@@ -13,32 +14,33 @@ interface SearchFiltersProps {
 }
 
 function SearchFilters({ filters, setFilters }: SearchFiltersProps) {
+  const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(false);
 
   const colors = [
-    { code: 'W', name: 'Branco', color: 'bg-yellow-100' },
-    { code: 'U', name: 'Azul', color: 'bg-blue-500' },
-    { code: 'B', name: 'Preto', color: 'bg-gray-900' },
-    { code: 'R', name: 'Vermelho', color: 'bg-red-600' },
-    { code: 'G', name: 'Verde', color: 'bg-green-600' },
+    { code: 'W', name: t('white'), color: 'bg-yellow-100' },
+    { code: 'U', name: t('blue'), color: 'bg-blue-500' },
+    { code: 'B', name: t('black'), color: 'bg-gray-900' },
+    { code: 'R', name: t('red'), color: 'bg-red-600' },
+    { code: 'G', name: t('green'), color: 'bg-green-600' },
   ];
 
   const types = [
-    'Creature',
-    'Instant',
-    'Sorcery',
-    'Enchantment',
-    'Artifact',
-    'Planeswalker',
-    'Land',
+    { code: 'Creature', name: t('creature') },
+    { code: 'Instant', name: t('instant') },
+    { code: 'Sorcery', name: t('sorcery') },
+    { code: 'Enchantment', name: t('enchantment') },
+    { code: 'Artifact', name: t('artifact') },
+    { code: 'Planeswalker', name: t('planeswalker') },
+    { code: 'Land', name: t('land') },
   ];
 
   const rarities = [
-    { value: '', label: 'Todas' },
-    { value: 'common', label: 'Comum' },
-    { value: 'uncommon', label: 'Incomum' },
-    { value: 'rare', label: 'Rara' },
-    { value: 'mythic', label: 'Mítica' },
+    { value: '', label: t('all') },
+    { value: 'common', label: t('common') },
+    { value: 'uncommon', label: t('uncommon') },
+    { value: 'rare', label: t('rare') },
+    { value: 'mythic', label: t('mythic') },
   ];
 
   const toggleColor = (colorCode: string) => {
@@ -69,29 +71,31 @@ function SearchFilters({ filters, setFilters }: SearchFiltersProps) {
   };
 
   return (
-    <div className="bg-gray-700 rounded-lg">
+    <div className="bg-gray-200 dark:bg-gray-700 rounded-lg transition-colors duration-300">
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="w-full px-4 py-2 text-white text-left flex items-center justify-between hover:bg-gray-600 rounded-lg transition-colors"
+        className="w-full px-4 py-2 text-gray-900 dark:text-white text-left flex items-center justify-between hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-all duration-300"
       >
-        <span className="font-semibold">Filtros Avançados</span>
+        <span className="font-semibold">{t('advancedFilters')}</span>
         <span className="text-xl">{showFilters ? '−' : '+'}</span>
       </button>
 
       {showFilters && (
-        <div className="p-4 space-y-4 border-t border-gray-600">
-          {/* Filtro de Cores */}
+        <div className="p-4 space-y-4 border-t border-gray-300 dark:border-gray-600 transition-colors duration-300">
+          {/* Cores */}
           <div>
-            <label className="block text-white text-sm font-semibold mb-2">Cores:</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-gray-900 dark:text-white text-sm font-semibold mb-2 transition-colors duration-300">
+              {t('colors')}
+            </label>
+            <div className="flex gap-2 flex-wrap">
               {colors.map((color) => (
                 <button
                   key={color.code}
                   onClick={() => toggleColor(color.code)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-3 py-1 rounded transition-all duration-300 ${
                     filters.colors.includes(color.code)
-                      ? `${color.color} text-white ring-2 ring-white`
-                      : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      ? `${color.color} text-white shadow-md ring-2 ring-blue-500`
+                      : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500'
                   }`}
                 >
                   {color.name}
@@ -100,33 +104,37 @@ function SearchFilters({ filters, setFilters }: SearchFiltersProps) {
             </div>
           </div>
 
-          {/* Filtro de Tipos */}
+          {/* Tipos */}
           <div>
-            <label className="block text-white text-sm font-semibold mb-2">Tipos:</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-gray-900 dark:text-white text-sm font-semibold mb-2 transition-colors duration-300">
+              {t('types')}
+            </label>
+            <div className="flex gap-2 flex-wrap">
               {types.map((type) => (
                 <button
-                  key={type}
-                  onClick={() => toggleType(type)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    filters.types.includes(type)
-                      ? 'bg-blue-600 text-white ring-2 ring-blue-400'
-                      : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                  key={type.code}
+                  onClick={() => toggleType(type.code)}
+                  className={`px-3 py-1 rounded transition-all duration-300 ${
+                    filters.types.includes(type.code)
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500'
                   }`}
                 >
-                  {type}
+                  {type.name}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Filtro de Raridade */}
+          {/* Raridade */}
           <div>
-            <label className="block text-white text-sm font-semibold mb-2">Raridade:</label>
+            <label className="block text-gray-900 dark:text-white text-sm font-semibold mb-2 transition-colors duration-300">
+              {t('rarity')}
+            </label>
             <select
               value={filters.rarity}
               onChange={(e) => setFilters((prev) => ({ ...prev, rarity: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
             >
               {rarities.map((rarity) => (
                 <option key={rarity.value} value={rarity.value}>
@@ -136,27 +144,26 @@ function SearchFilters({ filters, setFilters }: SearchFiltersProps) {
             </select>
           </div>
 
-          {/* Filtro de CMC (Custo de Mana Convertido) */}
+          {/* CMC */}
           <div>
-            <label className="block text-white text-sm font-semibold mb-2">
-              Custo de Mana Convertido (CMC):
+            <label className="block text-gray-900 dark:text-white text-sm font-semibold mb-2 transition-colors duration-300">
+              {t('cmc')}
             </label>
             <input
               type="number"
               value={filters.cmc}
               onChange={(e) => setFilters((prev) => ({ ...prev, cmc: e.target.value }))}
-              placeholder="Ex: 3"
-              min="0"
-              className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={t('cmcPlaceholder')}
+              className="w-full px-3 py-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
             />
           </div>
 
-          {/* Botão Limpar Filtros */}
+          {/* Limpar Filtros */}
           <button
             onClick={clearFilters}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-300 shadow-md hover:shadow-lg"
           >
-            Limpar Filtros
+            {t('clearFilters')}
           </button>
         </div>
       )}
