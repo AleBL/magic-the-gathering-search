@@ -7,7 +7,6 @@ import { CardSize } from '../../types';
 import { ShowToastFn } from '../../types/Toast';
 import { CARD_SIZES } from '../../constants';
 import SavedDecksPanel from './SavedDecksPanel';
-import DeckCompareModal from './DeckCompareModal';
 import DeckVersionHistoryModal from './DeckVersionHistoryModal';
 import DeckSuggestionsModal from './DeckSuggestionsModal';
 import DeckPreview from './DeckPreview';
@@ -42,7 +41,6 @@ function DeckManager({ showToast }: DeckManagerProps) {
   // Below lg the saved-decks list is collapsed by default so the main deck
   // area gets the whole viewport; the toggle (or the navbar page menu) opens it.
   const [isMobileDeckListOpen, setIsMobileDeckListOpen] = useState(false);
-  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
@@ -568,7 +566,6 @@ function DeckManager({ showToast }: DeckManagerProps) {
               editingDeckId={editingDeckId}
               isMobileOpen={isMobileDeckListOpen}
               onToggleMobileOpen={() => setIsMobileDeckListOpen((open) => !open)}
-              onCompare={() => setIsCompareOpen(true)}
               onSelectDeck={setSelectedDeck}
               onEditDeck={handleEditDeck}
               onExportDeck={(deck) => setDeckToExport(deck)}
@@ -629,8 +626,6 @@ function DeckManager({ showToast }: DeckManagerProps) {
           variant={dialogState.variant}
         />
       ) : null}
-
-      {isCompareOpen ? <DeckCompareModal decks={savedDecks} onClose={() => setIsCompareOpen(false)} /> : null}
 
       {isHistoryOpen && selectedDeck ? (
         <DeckVersionHistoryModal

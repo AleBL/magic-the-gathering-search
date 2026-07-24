@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { FaLayerGroup, FaChevronDown, FaBalanceScale } from 'react-icons/fa';
+import { FaLayerGroup, FaChevronDown } from 'react-icons/fa';
 import DeckList, { DeckListProps } from './DeckList';
 
 interface SavedDecksPanelProps extends DeckListProps {
@@ -8,17 +8,9 @@ interface SavedDecksPanelProps extends DeckListProps {
   savedDeckCount: number;
   isMobileOpen: boolean;
   onToggleMobileOpen: () => void;
-  // Opens the deck-compare modal. Shown only when there are at least two decks.
-  onCompare?: () => void;
 }
 
-function SavedDecksPanel({
-  savedDeckCount,
-  isMobileOpen,
-  onToggleMobileOpen,
-  onCompare,
-  ...deckListProps
-}: SavedDecksPanelProps) {
+function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...deckListProps }: SavedDecksPanelProps) {
   const { t } = useTranslation();
 
   return (
@@ -42,16 +34,6 @@ function SavedDecksPanel({
         />
       </button>
       <div id="saved-decks-panel" className={`${isMobileOpen ? 'block' : 'hidden'} lg:block`}>
-        {onCompare && savedDeckCount >= 2 && (
-          <button
-            type="button"
-            onClick={onCompare}
-            className="w-full min-h-11 flex items-center justify-center gap-2 px-4 py-2 mb-2 rounded-xl bg-white dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 active:scale-[0.99] transition-all duration-200 cursor-pointer"
-          >
-            <FaBalanceScale className="text-primary shrink-0" />
-            {t('deck.compareDecks')}
-          </button>
-        )}
         <DeckList {...deckListProps} />
       </div>
     </div>
