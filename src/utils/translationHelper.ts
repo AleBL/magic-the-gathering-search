@@ -9,6 +9,10 @@ import { dispatchToast } from './toastHelper';
  * Keeps cards in their original order, falling back to the original card object
  * if the translation query fails or if a translation is not available for a specific card.
  */
+/** True when a printing carries at least one usable price value. */
+const hasPriceData = (prices?: Card['prices']): boolean =>
+  !!prices && [prices.usd, prices.usd_foil, prices.eur, prices.eur_foil].some((v) => v != null && v !== '');
+
 export async function translateCards(cards: Card[], targetLang: string): Promise<Card[]> {
   if (cards.length === 0) return [];
 
@@ -76,28 +80,36 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
 
   // Map the original cards to their translated counterpart or fallback to the original
   return cards.map((card) => {
-    if (card.oracle_id && translatedMap.has(card.oracle_id)) {
-      const translated = translatedMap.get(card.oracle_id)!;
-      const hasImage = translated.image_uris?.normal || translated.card_faces?.[0]?.image_uris?.normal;
-      const originalHasImage = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+    if (!card.oracle_id || !translatedMap.has(card.oracle_id)) return card;
 
-      if (!hasImage && originalHasImage) {
-        const gatherer = translated.image_uris?.gatherer;
-        return {
-          ...translated,
-          image_uris: card.image_uris
-            ? {
-                ...card.image_uris,
-                gatherer: gatherer || card.image_uris.gatherer
-              }
-            : gatherer
-              ? { small: '', normal: '', large: '', png: '', gatherer }
-              : undefined,
-          card_faces: card.card_faces
-        };
-      }
-      return translated;
+    const translated = translatedMap.get(card.oracle_id)!;
+    const hasImage = translated.image_uris?.normal || translated.card_faces?.[0]?.image_uris?.normal;
+    const originalHasImage = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+
+    let result: Card = translated;
+
+    if (!hasImage && originalHasImage) {
+      const gatherer = translated.image_uris?.gatherer;
+      result = {
+        ...translated,
+        image_uris: card.image_uris
+          ? {
+              ...card.image_uris,
+              gatherer: gatherer || card.image_uris.gatherer
+            }
+          : gatherer
+            ? { small: '', normal: '', large: '', png: '', gatherer }
+            : undefined,
+        card_faces: card.card_faces
+      };
     }
-    return card;
+
+    // Localized printings very often ship without price data. Keep the original
+    // (English) printing's prices so imported decks still show USD/EUR values.
+    if (!hasPriceData(result.prices) && hasPriceData(card.prices)) {
+      result = { ...result, prices: card.prices };
+    }
+
+    return result;
   });
 }
