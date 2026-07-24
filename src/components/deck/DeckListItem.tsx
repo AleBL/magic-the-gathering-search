@@ -1,10 +1,11 @@
 import { memo, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaEdit, FaDownload, FaTrash, FaEllipsisV, FaClone, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaDownload, FaTrash, FaEllipsisV, FaClone, FaPlus, FaLayerGroup } from 'react-icons/fa';
 import { Deck, DeckFormat } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
 import { validateDeck } from '../../utils/deckValidator';
 import { formatLabelKey } from '../../utils/formatLabel';
+import { resolveDeckCoverArt } from '../../utils/deckCover';
 import DeckValidationBadge from './DeckValidationBadge';
 
 interface DeckListItemProps {
@@ -54,6 +55,7 @@ export const DeckListItem = memo(function DeckListItem({
   }, [showExportMenu]);
 
   const validation = validateDeck(deck.cards, deck.format || DeckFormatType.FREEFORM);
+  const coverArt = resolveDeckCoverArt(deck);
 
   return (
     <div
@@ -66,38 +68,41 @@ export const DeckListItem = memo(function DeckListItem({
           onSelect(deck);
         }
       }}
-      className={`deck-list-item cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isSelected ? 'deck-list-item-active' : 'deck-list-item-inactive'} ${showExportMenu ? 'z-50' : 'z-0'}`}
+      className={`deck-box cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isSelected ? 'deck-box-active' : 'deck-box-inactive'} ${showExportMenu ? 'z-50' : 'z-0'}`}
     >
-      {/* Subtle visual glow under selection */}
-      {isSelected && <div className="deck-list-item-glow pointer-events-none" />}
+      {/* Hero art banner — the "deck box" identity (commander / chosen cover). */}
+      <div className="deck-box-art">
+        {coverArt ? (
+          <img src={coverArt} alt="" loading="lazy" className="deck-box-art-image" />
+        ) : (
+          <div className="deck-box-art-placeholder">
+            <FaLayerGroup />
+          </div>
+        )}
+        <div className="deck-box-art-scrim" />
+        <div className="deck-box-title-row">
+          <p className="deck-box-title">{deck.name}</p>
+          {isEditing && <span className="deck-list-item-editing-badge" title={t('deck.editingDeck')} />}
+        </div>
+      </div>
 
-      <div className="deck-list-item-content">
-        <div className="w-full text-left pointer-events-none">
-          <div className="flex items-center gap-2">
-            <p
-              className={`deck-list-item-title ${isSelected ? 'deck-list-item-title-selected' : 'deck-list-item-title-default'}`}
-            >
-              {deck.name}
-            </p>
-            {isEditing && <span className="deck-list-item-editing-badge" title={t('deck.editingDeck')} />}
-          </div>
-          <div className="deck-list-item-meta">
-            <span
-              className={`text-xs ${isSelected ? 'text-blue-700 dark:text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}
-            >
-              {deck.cards.length} {t('common.cards')}
-            </span>
-            <span
-              className={`format-badge deck-list-item-format-badge ${isSelected ? 'deck-list-item-format-badge-selected' : 'deck-list-item-format-badge-default'}`}
-            >
-              {t(formatLabelKey(deck.format))}
-            </span>
-            <DeckValidationBadge
-              validation={validation}
-              formatKey={deck.format || DeckFormatType.FREEFORM}
-              variant="compact"
-            />
-          </div>
+      <div className="deck-box-footer">
+        <div className="deck-list-item-meta pointer-events-none">
+          <span
+            className={`text-xs ${isSelected ? 'text-blue-700 dark:text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}
+          >
+            {deck.cards.length} {t('common.cards')}
+          </span>
+          <span
+            className={`format-badge deck-list-item-format-badge ${isSelected ? 'deck-list-item-format-badge-selected' : 'deck-list-item-format-badge-default'}`}
+          >
+            {t(formatLabelKey(deck.format))}
+          </span>
+          <DeckValidationBadge
+            validation={validation}
+            formatKey={deck.format || DeckFormatType.FREEFORM}
+            variant="compact"
+          />
         </div>
 
         <div className="deck-list-item-actions pointer-events-auto">

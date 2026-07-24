@@ -244,6 +244,52 @@ html.dark .import-export-dropdown {
   @apply flex-1 sm:flex-none flex justify-center gap-1 items-center py-1.5 px-2.5 font-bold text-xs transition-all rounded-r-lg;
 }
 
+/* ─── Deck Box (Arena-style deck card) ─────────────────────────── */
+
+.deck-box {
+  @apply relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300;
+}
+
+.deck-box-inactive {
+  @apply bg-white/80 dark:bg-slate-800/80 border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:-translate-y-0.5;
+}
+
+.deck-box-active {
+  @apply bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border-blue-400 dark:border-blue-500/50 ring-2 ring-blue-500 shadow-md;
+}
+
+.deck-box-art {
+  @apply relative h-24 w-full overflow-hidden bg-slate-200 dark:bg-slate-900;
+}
+
+.deck-box-art-image {
+  @apply absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500;
+}
+
+.deck-box:hover .deck-box-art-image {
+  @apply scale-105;
+}
+
+.deck-box-art-placeholder {
+  @apply flex h-full w-full items-center justify-center text-3xl text-slate-400 dark:text-slate-600;
+}
+
+.deck-box-art-scrim {
+  @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent;
+}
+
+.deck-box-title-row {
+  @apply absolute inset-x-0 bottom-0 flex items-center gap-2 px-3 pb-2;
+}
+
+.deck-box-title {
+  @apply truncate text-sm font-bold text-white drop-shadow;
+}
+
+.deck-box-footer {
+  @apply flex flex-col gap-2 px-3 pb-3 pt-2;
+}
+
 /* ─── Empty Deck List State ─────────────────────────────────────── */
 
 .empty-deck-list-state {
