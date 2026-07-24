@@ -18,9 +18,11 @@ interface CardSearchProps {
   onAddToDeck?: (card: Card) => void;
   onAddTokenToDeck?: (token: Card) => void;
   activeFormat?: DeckFormat;
+  /** Makes results draggable into the deck editor's drop zone (two-pane mode). */
+  enableAddDrag?: boolean;
 }
 
-function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchProps) {
+function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat, enableAddDrag = false }: CardSearchProps) {
   const { i18n, t } = useTranslation();
   const [cardSize, setCardSize] = useState<CardSize>('medium');
 
@@ -206,6 +208,7 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
                 onAddTokenToDeck={onAddTokenToDeck}
                 activeFormat={activeFormat}
                 showCollectionControls
+                isAddDraggable={enableAddDrag}
               />
             </div>
           )}

@@ -319,7 +319,12 @@ html.dark .import-export-dropdown {
 
 /* Holds the deck preview/editor; scrolls independently of the search results. */
 .deck-edit-pane-deck {
-  @apply min-h-0 min-w-0 overflow-auto;
+  @apply min-h-0 min-w-0 overflow-auto rounded-xl transition-all duration-200;
+}
+
+/* Highlight while a searched card is being dragged over the deck side. */
+.deck-edit-pane-deck-drop {
+  @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent;
 }
 
 /* ─── Empty Deck List State ─────────────────────────────────────── */

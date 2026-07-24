@@ -67,7 +67,14 @@ interface CardItemProps {
   isEditMode?: boolean;
   /** Shows the own/wishlist overlay controls (search results & collection view). */
   showCollectionControls?: boolean;
+  /** Lets a (non-deck) search result be dragged into the deck editor. Emits the
+   *  full card as JSON under a custom MIME so it never collides with the
+   *  zone-move drag (which carries only the deck card id via `text/plain`). */
+  isAddDraggable?: boolean;
 }
+
+/** Custom drag MIME for adding a searched card to the deck by drag-and-drop. */
+export const ADD_CARD_DRAG_TYPE = 'application/x-mtg-add-card';
 
 function getCardImageUrl(card: Card, size: CardSize): string {
   if (card.selectedPrintImageUri) return card.selectedPrintImageUri;
@@ -108,7 +115,8 @@ function CardItem({
   isToken = false,
   isEditMode = false,
   onUpdateCardZone,
-  showCollectionControls = false
+  showCollectionControls = false,
+  isAddDraggable = false
 }: CardItemProps) {
   const { t } = useTranslation();
   const { motionEnabled } = useVisualEffects();
@@ -153,6 +161,9 @@ function CardItem({
   }, [card, activeFormat]);
 
   const isDraggable = isDeckCard && isEditMode && !isToken;
+  // A search result can be dragged to add it, but only when it isn't already a
+  // draggable deck card (whose drag means "move between zones").
+  const canAddDrag = isAddDraggable && !isDraggable;
 
   const imageClassName = `card-image-content transition-all duration-300 ${
     isToken && card.isActive === false
@@ -173,8 +184,8 @@ function CardItem({
 
   return (
     <div
-      className={`card-item-wrapper group relative ${isBanned ? 'border-red-500/50' : ''} ${isToken && card.isActive === false ? 'opacity-75' : ''} ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
-      draggable={isDraggable}
+      className={`card-item-wrapper group relative ${isBanned ? 'border-red-500/50' : ''} ${isToken && card.isActive === false ? 'opacity-75' : ''} ${isDraggable || canAddDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      draggable={isDraggable || canAddDrag}
       onDragStart={
         isDraggable
           ? (e) => {
@@ -182,10 +193,16 @@ function CardItem({
               e.dataTransfer.effectAllowed = 'move';
               (e.currentTarget as HTMLElement).style.opacity = '0.5';
             }
-          : undefined
+          : canAddDrag
+            ? (e) => {
+                e.dataTransfer.setData(ADD_CARD_DRAG_TYPE, JSON.stringify(card));
+                e.dataTransfer.effectAllowed = 'copy';
+                (e.currentTarget as HTMLElement).style.opacity = '0.5';
+              }
+            : undefined
       }
       onDragEnd={
-        isDraggable
+        isDraggable || canAddDrag
           ? (e) => {
               (e.currentTarget as HTMLElement).style.opacity = '1';
             }

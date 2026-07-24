@@ -586,11 +586,13 @@ function DeckManager({ showToast }: DeckManagerProps) {
         {editingDeckId ? (
           // Arena-style editor: card search on the left, the deck on the right.
           <DeckEditWorkspace
+            onDropCard={handleAddToDeck}
             search={
               <CardSearch
                 onAddToDeck={handleAddToDeck}
                 onAddTokenToDeck={handleAddTokenToDeck}
                 activeFormat={activeFormat}
+                enableAddDrag
               />
             }
             deck={deckPreviewElement}
