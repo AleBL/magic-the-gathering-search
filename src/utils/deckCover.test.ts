@@ -8,7 +8,11 @@ const withArt = (id: string, art: string, extra: Partial<Card> = {}): Card =>
 
 describe('cardArtCrop', () => {
   it('reads the front face art when the card itself has none', () => {
-    const card = c('x', { card_faces: [{ name: 'f', type_line: '', image_uris: { small: '', normal: '', large: '', png: '', art_crop: 'face' } }] });
+    const card = c('x', {
+      card_faces: [
+        { name: 'f', type_line: '', image_uris: { small: '', normal: '', large: '', png: '', art_crop: 'face' } }
+      ]
+    });
     expect(cardArtCrop(card)).toBe('face');
   });
 
@@ -20,7 +24,10 @@ describe('cardArtCrop', () => {
 describe('resolveDeckCoverCard', () => {
   it('honours a valid user-chosen cover', () => {
     const chosen = withArt('chosen', 'a');
-    const card = resolveDeckCoverCard({ cards: [withArt('hero', 'b', { isCommander: true }), chosen], coverCardId: 'chosen' });
+    const card = resolveDeckCoverCard({
+      cards: [withArt('hero', 'b', { isCommander: true }), chosen],
+      coverCardId: 'chosen'
+    });
     expect(card).toBe(chosen);
   });
 
