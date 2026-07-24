@@ -10,6 +10,8 @@ import SavedDecksPanel from './SavedDecksPanel';
 import DeckVersionHistoryModal from './DeckVersionHistoryModal';
 import DeckSuggestionsModal from './DeckSuggestionsModal';
 import DeckPreview from './DeckPreview';
+import DeckEditWorkspace from './DeckEditWorkspace';
+import CardSearch from '../card/CardSearch';
 import DeckSaveDialog from './DeckSaveDialog';
 import CustomDialog from '../ui/CustomDialog';
 import { useDeckStore } from '../../store/useDeckStore';
@@ -61,7 +63,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
   const onClearDeck = useDeckStore((state) => state.clearDeck);
   const onUpdateTokens = useDeckStore((state) => state.setCurrentDeckRelatedTokens);
 
-  const { handleAddToDeck, handleRemoveFromDeckWithToast } = useDeckActions(showToast);
+  const { handleAddToDeck, handleAddTokenToDeck, handleRemoveFromDeckWithToast } = useDeckActions(showToast);
 
   const [isTextImportOpen, setIsTextImportOpen] = useState(false);
 
@@ -508,6 +510,32 @@ function DeckManager({ showToast }: DeckManagerProps) {
     [onToggleCommander]
   );
 
+  // Shared between the standalone preview column and the two-pane editor's right side.
+  const deckPreviewElement = (
+    <DeckPreview
+      selectedDeck={selectedDeck}
+      currentDeck={currentDeck}
+      cardSize={cardSize}
+      editingDeckId={editingDeckId}
+      editingDeckNotes={editingDeckNotes}
+      onUpdateNotes={onUpdateNotes}
+      onUpdateCardZone={onUpdateCardZone}
+      onLoadDeckToEdit={handleLoadDeckToEdit}
+      onDeselectDeck={handleDeselectDeck}
+      onAddToDeck={handleAddToDeck}
+      onRemoveFromDeck={handleRemoveFromDeckWithToast}
+      onToggleCommander={handleToggleCommander}
+      activeFormat={activeFormat}
+      showToast={showToast}
+      onCardSizeChange={setCardSize}
+      onSaveNotesDirectly={handleSaveDeckNotesDirectly}
+      onApplySuggestedLands={handleApplySuggestedLands}
+      onUpdateCard={onUpdateCard}
+      onSaveTokens={handleSaveTokens}
+      deckRelatedTokens={selectedDeck ? selectedDeck.relatedTokens : deckRelatedTokens}
+    />
+  );
+
   return (
     <div className="workspace-container">
       <DeckManagerToolbar
@@ -555,50 +583,41 @@ function DeckManager({ showToast }: DeckManagerProps) {
       />
 
       <div className="workspace-body">
-        <div
-          className={`grid grid-cols-1 ${showDeckList ? 'lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]' : 'lg:grid-cols-1'} gap-4 p-4`}
-        >
-          {showDeckList ? (
-            <SavedDecksPanel
-              decks={displayDecks}
-              savedDeckCount={savedDecks.length}
-              selectedDeckId={selectedDeck?.id ?? null}
-              editingDeckId={editingDeckId}
-              isMobileOpen={isMobileDeckListOpen}
-              onToggleMobileOpen={() => setIsMobileDeckListOpen((open) => !open)}
-              onSelectDeck={setSelectedDeck}
-              onEditDeck={handleEditDeck}
-              onExportDeck={(deck) => setDeckToExport(deck)}
-              onDuplicateDeck={handleDuplicateDeck}
-              onNewFromDeck={handleNewDeckFromThis}
-              onDeleteDeck={confirmDeleteDeck}
-            />
-          ) : null}
-          <div className="col-span-1 min-w-0">
-            <DeckPreview
-              selectedDeck={selectedDeck}
-              currentDeck={currentDeck}
-              cardSize={cardSize}
-              editingDeckId={editingDeckId}
-              editingDeckNotes={editingDeckNotes}
-              onUpdateNotes={onUpdateNotes}
-              onUpdateCardZone={onUpdateCardZone}
-              onLoadDeckToEdit={handleLoadDeckToEdit}
-              onDeselectDeck={handleDeselectDeck}
-              onAddToDeck={handleAddToDeck}
-              onRemoveFromDeck={handleRemoveFromDeckWithToast}
-              onToggleCommander={handleToggleCommander}
-              activeFormat={activeFormat}
-              showToast={showToast}
-              onCardSizeChange={setCardSize}
-              onSaveNotesDirectly={handleSaveDeckNotesDirectly}
-              onApplySuggestedLands={handleApplySuggestedLands}
-              onUpdateCard={onUpdateCard}
-              onSaveTokens={handleSaveTokens}
-              deckRelatedTokens={selectedDeck ? selectedDeck.relatedTokens : deckRelatedTokens}
-            />
+        {editingDeckId ? (
+          // Arena-style editor: card search on the left, the deck on the right.
+          <DeckEditWorkspace
+            search={
+              <CardSearch
+                onAddToDeck={handleAddToDeck}
+                onAddTokenToDeck={handleAddTokenToDeck}
+                activeFormat={activeFormat}
+              />
+            }
+            deck={deckPreviewElement}
+          />
+        ) : (
+          <div
+            className={`grid grid-cols-1 ${showDeckList ? 'lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]' : 'lg:grid-cols-1'} gap-4 p-4`}
+          >
+            {showDeckList ? (
+              <SavedDecksPanel
+                decks={displayDecks}
+                savedDeckCount={savedDecks.length}
+                selectedDeckId={selectedDeck?.id ?? null}
+                editingDeckId={editingDeckId}
+                isMobileOpen={isMobileDeckListOpen}
+                onToggleMobileOpen={() => setIsMobileDeckListOpen((open) => !open)}
+                onSelectDeck={setSelectedDeck}
+                onEditDeck={handleEditDeck}
+                onExportDeck={(deck) => setDeckToExport(deck)}
+                onDuplicateDeck={handleDuplicateDeck}
+                onNewFromDeck={handleNewDeckFromThis}
+                onDeleteDeck={confirmDeleteDeck}
+              />
+            ) : null}
+            <div className="col-span-1 min-w-0">{deckPreviewElement}</div>
           </div>
-        </div>
+        )}
       </div>
 
       {showSaveDialog ? (

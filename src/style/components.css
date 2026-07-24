@@ -290,6 +290,38 @@ html.dark .import-export-dropdown {
   @apply flex flex-col gap-2 px-3 pb-3 pt-2;
 }
 
+/* ─── Deck Edit Workspace (Arena two-pane editor) ──────────────── */
+
+.deck-edit-workspace {
+  @apply flex h-full min-h-0 flex-col gap-3 p-4;
+}
+
+.deck-edit-mobile-tabs {
+  @apply grid grid-cols-2 gap-2;
+}
+
+.deck-edit-mobile-tab {
+  @apply flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-600 transition-all dark:border-slate-700 dark:bg-slate-800/80 dark:text-gray-300;
+}
+
+.deck-edit-mobile-tab-active {
+  @apply border-blue-400 bg-primary text-white shadow-sm dark:border-blue-500/50;
+}
+
+.deck-edit-panes {
+  @apply grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,440px)];
+}
+
+/* Holds the (h-full) card search: clip its sticky header to the rounded pane. */
+.deck-edit-pane-search {
+  @apply min-h-0 min-w-0 overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-slate-700;
+}
+
+/* Holds the deck preview/editor; scrolls independently of the search results. */
+.deck-edit-pane-deck {
+  @apply min-h-0 min-w-0 overflow-auto;
+}
+
 /* ─── Empty Deck List State ─────────────────────────────────────── */
 
 .empty-deck-list-state {
