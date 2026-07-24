@@ -460,11 +460,15 @@ html.dark .deck-preview-section {
 }
 
 .app-brand-logo-image {
-  @apply relative w-7 h-7 object-contain drop-shadow-[0_0_6px_#3b82f699];
+  @apply relative w-8 h-8 object-contain transition-transform duration-300 ease-out hover:scale-110;
+  filter: drop-shadow(0 0 10px rgb(59 130 246 / 0.7)) drop-shadow(0 0 3px rgb(99 102 241 / 0.55));
 }
 
+/* Brighter, higher-contrast gradient plus a soft glow — the previous ramp sat
+   too close to the header background and read as washed out. */
 .app-brand-title {
-  @apply text-xl font-serif font-extrabold tracking-[0.18em] leading-none transition-colors duration-300 hidden md:block select-none bg-gradient-to-r from-primary via-indigo-500 to-indigo-600 dark:from-blue-400 dark:via-indigo-300 dark:to-blue-500 bg-clip-text text-transparent uppercase;
+  @apply text-xl font-serif font-extrabold tracking-[0.18em] leading-none transition-all duration-300 hidden md:block select-none uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-blue-500 to-violet-600 dark:from-blue-300 dark:via-sky-200 dark:to-indigo-300;
+  filter: drop-shadow(0 1px 6px rgb(59 130 246 / 0.4));
 }
 
 .tab-button-icon {
