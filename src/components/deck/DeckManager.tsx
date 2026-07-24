@@ -9,6 +9,7 @@ import { CARD_SIZES } from '../../constants';
 import SavedDecksPanel from './SavedDecksPanel';
 import DeckCompareModal from './DeckCompareModal';
 import DeckVersionHistoryModal from './DeckVersionHistoryModal';
+import DeckSuggestionsModal from './DeckSuggestionsModal';
 import DeckPreview from './DeckPreview';
 import DeckSaveDialog from './DeckSaveDialog';
 import CustomDialog from '../ui/CustomDialog';
@@ -43,6 +44,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
   const [isMobileDeckListOpen, setIsMobileDeckListOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
 
   const currentDeck = useDeckStore((state) => state.currentDeck);
@@ -539,6 +541,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
         onImportFile={handleImportDeck}
         onExportAll={exportAllDecks}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenSuggestions={currentDeck.length > 0 ? () => setIsSuggestionsOpen(true) : undefined}
       />
 
       {/* Hidden, always-mounted twin of the toolbar's file input: the mobile
@@ -644,6 +647,15 @@ function DeckManager({ showToast }: DeckManagerProps) {
             setIsHistoryOpen(false);
           }}
           onClose={() => setIsHistoryOpen(false)}
+        />
+      ) : null}
+
+      {isSuggestionsOpen ? (
+        <DeckSuggestionsModal
+          cards={currentDeck}
+          format={activeFormat}
+          onAddToDeck={handleAddToDeck}
+          onClose={() => setIsSuggestionsOpen(false)}
         />
       ) : null}
 

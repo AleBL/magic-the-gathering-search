@@ -9,7 +9,8 @@ import {
   FaLightbulb,
   FaBook,
   FaColumns,
-  FaHistory
+  FaHistory,
+  FaMagic
 } from 'react-icons/fa';
 import { Deck } from '../../types/Deck';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -35,6 +36,8 @@ interface DeckManagerToolbarProps {
   onImportFile: (event: ChangeEvent<HTMLInputElement>) => void;
   onExportAll: () => void;
   onOpenHistory: () => void;
+  // Opens the Scryfall suggestions modal. Absent when the working deck is empty.
+  onOpenSuggestions?: () => void;
 }
 
 /** Header for the deck manager: title, info tooltip, and the save/clear/import-export toolbar. */
@@ -56,7 +59,8 @@ export function DeckManagerToolbar({
   onOpenTextImport,
   onImportFile,
   onExportAll,
-  onOpenHistory
+  onOpenHistory,
+  onOpenSuggestions
 }: DeckManagerToolbarProps) {
   const { t } = useTranslation();
   useEscapeKey(() => setShowImportExportDropdown(false), showImportExportDropdown);
@@ -83,6 +87,18 @@ export function DeckManagerToolbar({
               <p className="font-medium leading-relaxed">{t('validation.savedLocationNote')}</p>
             </div>
           </div>
+
+          {onOpenSuggestions ? (
+            <button
+              type="button"
+              onClick={onOpenSuggestions}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+              title={t('deck.suggestionsTitle')}
+            >
+              <FaMagic className="text-xs shrink-0" />
+              <span className="hidden sm:inline">{t('common.suggestions')}</span>
+            </button>
+          ) : null}
 
           {selectedDeck ? (
             <div className="ml-auto flex items-center gap-2">
