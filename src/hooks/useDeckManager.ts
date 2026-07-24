@@ -10,6 +10,7 @@ import { db } from '../db/database';
 import { useTranslation } from 'react-i18next';
 import { dispatchToast } from '../utils/toastHelper';
 import { parseDeckText, fetchCardsFromParsedList, ImportProgressData } from '../services/deckImportService';
+import { saveDeckSnapshotIfChanged } from '../services/deckVersionService';
 import { DecodedShareDeck, decodeShareString, parseDeckFileContent } from '../services/deckShare';
 
 export default function useDeckManager(
@@ -45,6 +46,15 @@ export default function useDeckManager(
     setDeckValidation(validateDeck(currentDeck, activeFormat));
   }, [currentDeck, deckFormat, editingDeckFormat, editingDeckId]);
 
+  /** Snapshots a deck after a successful save; never fails the save itself. */
+  const snapshotQuietly = async (deck: Deck): Promise<void> => {
+    try {
+      await saveDeckSnapshotIfChanged(deck);
+    } catch (error) {
+      logger.error('Failed to snapshot deck version:', error);
+    }
+  };
+
   const saveDeck = async (
     name: string,
     format: DeckFormat,
@@ -76,6 +86,7 @@ export default function useDeckManager(
       logger.error('Failed to save deck:', error);
       return { success: false, errorKey: 'deck.saveError' };
     }
+    await snapshotQuietly(newDeck);
     setDeckName('');
     setShowSaveDialog(false);
     return { success: true, createdDeck: newDeck };
@@ -92,14 +103,16 @@ export default function useDeckManager(
     try {
       const existing = await db.decks.get(id);
       if (existing) {
-        await db.decks.put({
+        const updated: Deck = {
           ...existing,
           name: name.trim(),
           format,
           cards,
           notes,
           relatedTokens: relatedTokens || existing.relatedTokens
-        });
+        };
+        await db.decks.put(updated);
+        await snapshotQuietly(updated);
       }
       return { success: true };
     } catch (error) {

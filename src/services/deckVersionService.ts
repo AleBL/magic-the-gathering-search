@@ -1,6 +1,7 @@
 import { db } from '../db/database';
 import { Deck, DeckVersion } from '../types/Deck';
 import { pruneVersions } from '../utils/deckVersions';
+import { diffDeckVersions } from '../utils/deckVersionDiff';
 
 /** How many snapshots to retain per deck before the oldest are dropped. */
 const MAX_VERSIONS_PER_DECK = 20;
@@ -33,4 +34,14 @@ export async function listDeckVersions(deckId: string): Promise<DeckVersion[]> {
 
 export async function deleteDeckVersion(id: string): Promise<void> {
   await db.deckVersions.delete(id);
+}
+
+/**
+ * Snapshots the deck only when it actually differs from the most recent
+ * snapshot, so repeated saves don't pile up identical versions.
+ */
+export async function saveDeckSnapshotIfChanged(deck: Deck): Promise<DeckVersion | null> {
+  const [latest] = await listDeckVersions(deck.id);
+  if (latest && diffDeckVersions(latest, deck).length === 0) return null;
+  return saveDeckSnapshot(deck);
 }
