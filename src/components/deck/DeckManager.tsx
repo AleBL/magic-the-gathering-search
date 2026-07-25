@@ -11,6 +11,7 @@ import DeckVersionHistoryModal from './DeckVersionHistoryModal';
 import DeckSuggestionsModal from './DeckSuggestionsModal';
 import DeckPreview from './DeckPreview';
 import DeckEditWorkspace from './DeckEditWorkspace';
+import DeckCoverModal from './DeckCoverModal';
 import CardSearch from '../card/CardSearch';
 import DeckSaveDialog from './DeckSaveDialog';
 import CustomDialog from '../ui/CustomDialog';
@@ -92,6 +93,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
     importSharedDeckString,
     duplicateDeck,
     saveTokensToDeck,
+    setDeckCover,
     restoreDeck,
     fileMissingCards,
     fileImportError,
@@ -107,6 +109,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
   const setSavedDeckCount = useDeckStore((state) => state.setSavedDeckCount);
 
   const [deckToExport, setDeckToExport] = useState<Deck | null>(null);
+  const [deckForCover, setDeckForCover] = useState<Deck | null>(null);
 
   // Always-mounted file input for the mobile page menu's "import deck" item:
   // the toolbar's own input lives inside a dropdown that is hidden below `sm`.
@@ -615,6 +618,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
                 onDuplicateDeck={handleDuplicateDeck}
                 onNewFromDeck={handleNewDeckFromThis}
                 onDeleteDeck={confirmDeleteDeck}
+                onChangeCover={setDeckForCover}
               />
             ) : null}
             <div className="col-span-1 min-w-0">{deckPreviewElement}</div>
@@ -672,6 +676,18 @@ function DeckManager({ showToast }: DeckManagerProps) {
           format={activeFormat}
           onAddToDeck={handleAddToDeck}
           onClose={() => setIsSuggestionsOpen(false)}
+        />
+      ) : null}
+
+      {deckForCover ? (
+        <DeckCoverModal
+          deck={deckForCover}
+          onSelect={async (cardId) => {
+            await setDeckCover(deckForCover.id, cardId);
+            setDeckForCover(null);
+            showToast(t('deck.coverUpdated'));
+          }}
+          onClose={() => setDeckForCover(null)}
         />
       ) : null}
 

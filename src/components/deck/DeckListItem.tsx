@@ -1,6 +1,6 @@
 import { memo, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaEdit, FaDownload, FaTrash, FaEllipsisV, FaClone, FaPlus, FaLayerGroup } from 'react-icons/fa';
+import { FaEdit, FaDownload, FaTrash, FaEllipsisV, FaClone, FaPlus, FaLayerGroup, FaImage } from 'react-icons/fa';
 import { Deck, DeckFormat } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
 import { validateDeck } from '../../utils/deckValidator';
@@ -25,6 +25,7 @@ interface DeckListItemProps {
   onDuplicate: (deck: Deck) => void;
   onNewFrom: (deck: Deck) => void;
   onDelete: (deck: Deck) => void;
+  onChangeCover: (deck: Deck) => void;
 }
 
 export const DeckListItem = memo(function DeckListItem({
@@ -36,7 +37,8 @@ export const DeckListItem = memo(function DeckListItem({
   onExport,
   onDuplicate,
   onNewFrom,
-  onDelete
+  onDelete,
+  onChangeCover
 }: DeckListItemProps) {
   const { t } = useTranslation();
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -182,6 +184,19 @@ export const DeckListItem = memo(function DeckListItem({
                 >
                   <FaPlus className="text-xs shrink-0" />
                   {t('deck.newDeckFromThis')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowExportMenu(false);
+                    onChangeCover(deck);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                >
+                  <FaImage className="text-xs shrink-0" />
+                  {t('deck.setCover')}
                 </button>
               </div>
             ) : null}

@@ -247,7 +247,9 @@ html.dark .import-export-dropdown {
 /* ─── Deck Box (Arena-style deck card) ─────────────────────────── */
 
 .deck-box {
-  @apply relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300;
+  /* No `overflow-hidden` here: it would clip the more-actions dropdown. The art
+     child clips its own image and rounds the top corners instead. */
+  @apply relative flex flex-col rounded-xl border transition-all duration-300;
 }
 
 .deck-box-inactive {
@@ -259,7 +261,7 @@ html.dark .import-export-dropdown {
 }
 
 .deck-box-art {
-  @apply relative h-24 w-full overflow-hidden bg-slate-200 dark:bg-slate-900;
+  @apply relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
 }
 
 .deck-box-art-image {

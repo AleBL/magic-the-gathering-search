@@ -160,6 +160,8 @@ const es = {
       deckDuplicated: '¡Mazo duplicado!',
       duplicateDeck: 'Duplicar mazo',
       newDeckFromThis: 'Nuevo mazo a partir de este',
+      setCover: 'Establecer portada',
+      coverUpdated: 'Portada del mazo actualizada',
       newDeckFromCopy: 'Editando una nueva copia del mazo',
       invalidShareLink: 'Este enlace de mazo es inválido o está dañado.',
       deckManager: 'Gestor de Mazos',

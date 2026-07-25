@@ -159,6 +159,8 @@ const en = {
       deckDuplicated: 'Deck duplicated!',
       duplicateDeck: 'Duplicate deck',
       newDeckFromThis: 'New deck from this',
+      setCover: 'Set cover',
+      coverUpdated: 'Deck cover updated',
       newDeckFromCopy: 'Editing a new copy of the deck',
       invalidShareLink: 'This deck link is invalid or corrupted.',
       deckManager: 'Deck Manager',

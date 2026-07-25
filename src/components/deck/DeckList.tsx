@@ -20,6 +20,7 @@ export interface DeckListProps {
   onDuplicateDeck: (deck: Deck) => void;
   onNewFromDeck: (deck: Deck) => void;
   onDeleteDeck: (deck: Deck) => void;
+  onChangeCover: (deck: Deck) => void;
 }
 
 function DeckList({
@@ -31,7 +32,8 @@ function DeckList({
   onExportDeck,
   onDuplicateDeck,
   onNewFromDeck,
-  onDeleteDeck
+  onDeleteDeck,
+  onChangeCover
 }: DeckListProps) {
   const { t } = useTranslation();
 
@@ -63,6 +65,7 @@ function DeckList({
               onDuplicate={onDuplicateDeck}
               onNewFrom={onNewFromDeck}
               onDelete={onDeleteDeck}
+              onChangeCover={onChangeCover}
             />
           ))
         )}

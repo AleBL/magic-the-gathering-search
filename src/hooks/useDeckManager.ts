@@ -208,6 +208,17 @@ export default function useDeckManager(
     }
   };
 
+  // Sets which card's art represents the deck on its deck box. The live query
+  // over db.decks re-renders the list automatically after the update.
+  const setDeckCover = async (deckId: string, coverCardId: string) => {
+    try {
+      await db.decks.update(deckId, { coverCardId });
+    } catch (error) {
+      logger.error('Failed to set deck cover:', error);
+      dispatchToast(t('deck.saveError'), 'danger');
+    }
+  };
+
   // Resolves a decoded share payload (from a link or a .deck file) into real
   // cards via Scryfall and saves it, reusing the file-import progress modal.
   const resolveShareDeck = async (decoded: DecodedShareDeck): Promise<void> => {
@@ -421,6 +432,7 @@ export default function useDeckManager(
     importSharedDeckString,
     duplicateDeck,
     saveTokensToDeck,
+    setDeckCover,
     restoreDeck,
     fileMissingCards,
     fileImportError,

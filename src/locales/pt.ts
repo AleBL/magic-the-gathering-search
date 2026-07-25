@@ -159,6 +159,8 @@ const pt = {
       deckDuplicated: 'Deck duplicado!',
       duplicateDeck: 'Duplicar deck',
       newDeckFromThis: 'Novo deck a partir deste',
+      setCover: 'Definir capa',
+      coverUpdated: 'Capa do deck atualizada',
       newDeckFromCopy: 'Editando uma nova cópia do deck',
       invalidShareLink: 'Este link de deck é inválido ou está corrompido.',
       deckManager: 'Gerenciador de Decks',
