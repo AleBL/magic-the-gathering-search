@@ -1,7 +1,7 @@
 import { ReactNode, useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { FaTimes, FaSync } from 'react-icons/fa';
+import { FaTimes, FaSync, FaRedo } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { useCardPrints } from '../../hooks/useCardPrints';
 import { useCardRelatedTokensForCard } from '../../hooks/useCardRelatedTokens';
@@ -66,6 +66,7 @@ function CardDetailModal({
   const { motionEnabled } = useVisualEffects();
   const [card, setCard] = useState<Card>(initialCard);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
+  const [isRotated, setIsRotated] = useState(false);
   const { prints, isLoading: isPrintsLoading } = useCardPrints(card, undefined, isToken);
   const [hoveredImageUrl, setHoveredImageUrl] = useState<string | null>(null);
   const [showPrintsSidebar, setShowPrintsSidebar] = useState(
@@ -76,6 +77,7 @@ function CardDetailModal({
   useEffect(() => {
     setCard(initialCard);
     setCurrentImageUrl(imageUrl);
+    setIsRotated(false);
   }, [initialCard.id, imageUrl]);
 
   const copiesCount = useMemo(() => {
@@ -98,6 +100,10 @@ function CardDetailModal({
   const hasMultipleFaces = !!card.card_faces && card.card_faces.length > 1;
   const faceImages = useMemo(() => getCardFaceImages(card), [card]);
   const [showBackFace, setShowBackFace] = useState(false);
+  // Split / aftermath / flip cards have several faces but a single physical
+  // image — they must not flip, and their text lives only in the faces.
+  const isSameSideMultiFace = hasMultipleFaces && !faceImages;
+  const canRotate = isSameSideMultiFace && (card.layout === 'split' || card.layout === 'aftermath');
 
   // Holographic foil sheen that tracks the cursor on rare & mythic cards.
   // CSS custom props are written straight to the DOM node so the pointer move
@@ -119,7 +125,8 @@ function CardDetailModal({
     foilRef.current?.style.setProperty('--holo-opacity', '0');
   };
 
-  const currentFace = hasMultipleFaces ? card.card_faces?.[showBackFace ? 1 : 0] : null;
+  // Only genuine double-faced cards adopt a single face; split cards show all.
+  const currentFace = faceImages && hasMultipleFaces ? card.card_faces?.[showBackFace ? 1 : 0] : null;
 
   const recursiveCard = useMemo(() => {
     if (!selectedToken) return null;
@@ -290,18 +297,19 @@ function CardDetailModal({
                     <img
                       src={visibleImageUrl}
                       alt={currentFace ? currentFace.name : card.name}
-                      className={`card-detail-image transition-all duration-200 ${
+                      style={isRotated ? { transform: 'rotate(90deg)' } : undefined}
+                      className={`card-detail-image transition-all duration-300 ${
                         isPreloading ? 'opacity-70 scale-[0.98] brightness-90' : 'opacity-100 scale-100'
                       }`}
                     />
                   )}
                   {foilEnabled && <div className="holo-foil" aria-hidden="true" />}
                 </div>
-                {hasMultipleFaces && (
+                {faceImages && hasMultipleFaces && (
                   <button
                     type="button"
                     onClick={() => setShowBackFace((prev) => !prev)}
-                    className="absolute top-4 left-4 z-20 p-3 rounded-full 
+                    className="absolute top-4 left-4 z-20 p-3 rounded-full
                       bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
                       text-white shadow-xl
                       transition-all duration-300 transform hover:scale-110 active:scale-95
@@ -311,6 +319,21 @@ function CardDetailModal({
                     <FaSync
                       className={`text-xl transition-transform duration-500 ${showBackFace ? '-rotate-180' : 'rotate-0'}`}
                     />
+                  </button>
+                )}
+                {canRotate && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRotated((prev) => !prev)}
+                    className="absolute top-4 left-4 z-20 p-3 rounded-full
+                      bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
+                      text-white shadow-xl
+                      transition-all duration-300 transform hover:scale-110 active:scale-95
+                      flex items-center justify-center opacity-80 hover:opacity-100"
+                    title={t('cardDetails.rotateAction')}
+                    aria-pressed={isRotated}
+                  >
+                    <FaRedo className="text-xl" />
                   </button>
                 )}
               </div>
@@ -323,6 +346,7 @@ function CardDetailModal({
                 currentFace={currentFace}
                 hidePriceAndLegality={hidePriceAndLegality}
                 isToken={isToken}
+                allFaces={isSameSideMultiFace ? card.card_faces : null}
               />
 
               {/* Related tokens section */}

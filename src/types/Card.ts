@@ -79,6 +79,10 @@ export interface Card {
     pioneer: string;
   };
   card_faces?: CardFace[];
+  /** Scryfall frame layout: 'normal', 'split', 'aftermath', 'flip', 'transform',
+   *  'modal_dfc', 'adventure', 'meld', etc. Distinguishes same-side multi-face
+   *  cards (split/aftermath — read sideways) from genuine double-faced cards. */
+  layout?: string;
   colors?: string[];
   color_identity?: string[];
   isCommander?: boolean;

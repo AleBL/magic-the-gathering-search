@@ -340,6 +340,7 @@ const en = {
       changeArt: 'Change Art',
       deleteCard: 'Remove all copies',
       flipAction: 'Flip Card',
+      rotateAction: 'Rotate Card',
       inDeck: 'In Deck',
       legal: 'Legal',
       legality: 'Legality',

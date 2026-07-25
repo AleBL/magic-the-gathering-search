@@ -10,10 +10,55 @@ interface CardDetailDataProps {
   readonly currentFace: CardFace | null | undefined;
   readonly hidePriceAndLegality: boolean;
   readonly isToken: boolean;
+  /** Renders every face stacked (split/aftermath cards, whose text lives only in
+   *  the faces and must all be shown at once — there is no side to flip to). */
+  readonly allFaces?: CardFace[] | null;
 }
 
-export function CardDetailData({ card, currentFace, hidePriceAndLegality, isToken }: CardDetailDataProps) {
+/** Name / type / mana / text / P–T block for one face or the whole card.
+ *  Both `Card` and `CardFace` are assignable to this shape. */
+interface FaceLike {
+  name: string;
+  printed_name?: string;
+  type_line: string;
+  printed_type_line?: string;
+  mana_cost?: string;
+  oracle_text?: string;
+  printed_text?: string;
+  power?: string;
+  toughness?: string;
+}
+
+export function CardDetailData({ card, currentFace, hidePriceAndLegality, isToken, allFaces }: CardDetailDataProps) {
   const { t } = useTranslation();
+
+  const renderFaceBlock = (source: FaceLike, key?: string | number) => (
+    <div key={key} className="space-y-1">
+      <p className="text-gray-700 dark:text-gray-300 transition-colors duration-300 font-semibold">
+        {source.printed_name || source.name}
+      </p>
+      <p className="text-gray-700 dark:text-gray-300 transition-colors duration-300">
+        {source.printed_type_line || source.type_line}
+      </p>
+      {source.mana_cost && (
+        <p className="text-yellow-600 dark:text-yellow-400 transition-colors duration-300 flex items-center flex-wrap gap-1">
+          {t('cardDetails.manaCostLabel')}: {parseTextWithSymbols(source.mana_cost, true)}
+        </p>
+      )}
+      {(source.printed_text || source.oracle_text) && (
+        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line transition-colors duration-300 leading-relaxed">
+          {parseTextWithSymbols(source.printed_text || source.oracle_text)}
+        </p>
+      )}
+      {source.power && source.toughness && (
+        <p className="text-success dark:text-green-400 transition-colors duration-300">
+          {t('cardDetails.powerToughnessLabel')}: {source.power}/{source.toughness}
+        </p>
+      )}
+    </div>
+  );
+
+  const showAllFaces = !!allFaces && allFaces.length > 1;
 
   return (
     <>
@@ -28,34 +73,45 @@ export function CardDetailData({ card, currentFace, hidePriceAndLegality, isToke
           </span>
         )}
       </div>
-      <p className="text-gray-700 dark:text-gray-300 transition-colors duration-300">
-        {currentFace
-          ? currentFace.printed_type_line || currentFace.type_line
-          : card.printed_type_line || card.type_line}
-      </p>
-      {((currentFace && currentFace.mana_cost) || card.mana_cost) && (
-        <p className="text-yellow-600 dark:text-yellow-400 transition-colors duration-300 flex items-center flex-wrap gap-1">
-          {t('cardDetails.manaCostLabel')}:{' '}
-          {parseTextWithSymbols(currentFace ? currentFace.mana_cost : card.mana_cost, true)}
-        </p>
-      )}
-      {((currentFace && (currentFace.printed_text || currentFace.oracle_text)) ||
-        card.printed_text ||
-        card.oracle_text) && (
-        <div>
-          <h3 className="font-semibold mb-1">{t('cardDetails.textLabel')}:</h3>
-          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line transition-colors duration-300 leading-relaxed">
-            {parseTextWithSymbols(
-              currentFace ? currentFace.printed_text || currentFace.oracle_text : card.printed_text || card.oracle_text
-            )}
-          </p>
+
+      {showAllFaces ? (
+        <div className="flex flex-col gap-3 divide-y divide-gray-200 dark:divide-gray-700 [&>*+*]:pt-3">
+          {allFaces!.map((face, index) => renderFaceBlock(face, index))}
         </div>
-      )}
-      {((currentFace && currentFace.power && currentFace.toughness) || (card.power && card.toughness)) && (
-        <p className="text-success dark:text-green-400 transition-colors duration-300">
-          {t('cardDetails.powerToughnessLabel')}: {currentFace ? currentFace.power : card.power}/
-          {currentFace ? currentFace.toughness : card.toughness}
-        </p>
+      ) : (
+        <>
+          <p className="text-gray-700 dark:text-gray-300 transition-colors duration-300">
+            {currentFace
+              ? currentFace.printed_type_line || currentFace.type_line
+              : card.printed_type_line || card.type_line}
+          </p>
+          {((currentFace && currentFace.mana_cost) || card.mana_cost) && (
+            <p className="text-yellow-600 dark:text-yellow-400 transition-colors duration-300 flex items-center flex-wrap gap-1">
+              {t('cardDetails.manaCostLabel')}:{' '}
+              {parseTextWithSymbols(currentFace ? currentFace.mana_cost : card.mana_cost, true)}
+            </p>
+          )}
+          {((currentFace && (currentFace.printed_text || currentFace.oracle_text)) ||
+            card.printed_text ||
+            card.oracle_text) && (
+            <div>
+              <h3 className="font-semibold mb-1">{t('cardDetails.textLabel')}:</h3>
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line transition-colors duration-300 leading-relaxed">
+                {parseTextWithSymbols(
+                  currentFace
+                    ? currentFace.printed_text || currentFace.oracle_text
+                    : card.printed_text || card.oracle_text
+                )}
+              </p>
+            </div>
+          )}
+          {((currentFace && currentFace.power && currentFace.toughness) || (card.power && card.toughness)) && (
+            <p className="text-success dark:text-green-400 transition-colors duration-300">
+              {t('cardDetails.powerToughnessLabel')}: {currentFace ? currentFace.power : card.power}/
+              {currentFace ? currentFace.toughness : card.toughness}
+            </p>
+          )}
+        </>
       )}
       <p className="text-gray-600 dark:text-gray-400 transition-colors duration-300">
         {t('cardDetails.rarityLabel')}: {t(`search.${card.rarity.toLowerCase()}`, { defaultValue: card.rarity })}

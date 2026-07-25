@@ -341,6 +341,7 @@ const pt = {
       changeArt: 'Trocar Arte',
       deleteCard: 'Remover todas as cópias',
       flipAction: 'Virar Carta',
+      rotateAction: 'Girar Carta',
       inDeck: 'No Deck',
       legal: 'Legal',
       legality: 'Legalidade',

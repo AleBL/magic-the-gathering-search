@@ -345,6 +345,7 @@ const es = {
       changeArt: 'Cambiar Arte',
       deleteCard: 'Eliminar todas las copias',
       flipAction: 'Voltear Carta',
+      rotateAction: 'Girar Carta',
       inDeck: 'En el mazo',
       legal: 'Legal',
       legality: 'Legalidad',
