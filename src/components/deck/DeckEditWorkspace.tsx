@@ -45,7 +45,7 @@ export default function DeckEditWorkspace({ search, deck, onDropCard }: DeckEdit
 
   return (
     <div className="deck-edit-workspace">
-      <div className="deck-edit-mobile-tabs lg:hidden">
+      <div className="deck-edit-mobile-tabs md:hidden">
         <button
           type="button"
           onClick={() => setMobileView('search')}
@@ -65,9 +65,9 @@ export default function DeckEditWorkspace({ search, deck, onDropCard }: DeckEdit
       </div>
 
       <div className="deck-edit-panes">
-        <div className={`deck-edit-pane-search ${mobileView === 'search' ? '' : 'hidden lg:block'}`}>{search}</div>
+        <div className={`deck-edit-pane-search ${mobileView === 'search' ? '' : 'hidden md:block'}`}>{search}</div>
         <div
-          className={`deck-edit-pane-deck ${isDropTarget ? 'deck-edit-pane-deck-drop' : ''} ${mobileView === 'deck' ? '' : 'hidden lg:block'}`}
+          className={`deck-edit-pane-deck ${isDropTarget ? 'deck-edit-pane-deck-drop' : ''} ${mobileView === 'deck' ? '' : 'hidden md:block'}`}
           onDragOver={handleDragOver}
           onDragLeave={() => setIsDropTarget(false)}
           onDrop={handleDrop}
