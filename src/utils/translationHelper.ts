@@ -40,7 +40,10 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
     // so without them `lang:` would only constrain the LAST oracle_id term and
     // every other card would come back in its default (English) printing.
     const oracleQuery = batch.map((id) => `oracle_id:${id}`).join(' OR ');
-    const query = `(${oracleQuery}) lang:${lang}`;
+    // `include:extras` is required so tokens/emblems (Scryfall "extras", hidden
+    // from default search) resolve to their localized printing — otherwise a
+    // Food/Comida token always falls back to its English name.
+    const query = `(${oracleQuery}) lang:${lang} include:extras`;
     const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`;
 
     try {
