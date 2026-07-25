@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFileAlt, FaLayerGroup, FaPencilAlt, FaBolt, FaExclamationTriangle, FaChartBar } from 'react-icons/fa';
 import { Card } from '../../types/Card';
@@ -24,7 +24,8 @@ import { DeckStatsFilteredCards } from '../deck/DeckStatsFilteredCards';
 import { DeckCollectionSummary } from '../deck/DeckCollectionSummary';
 import CardDetailModal from '../card/CardDetailModal';
 import DeckPreviewOverlays from './DeckPreviewOverlays';
-import DeckStatsModal from './DeckStatsModal';
+
+const DeckStats = lazy(() => import('../stats/DeckStats'));
 
 interface DeckPreviewProps {
   selectedDeck: Deck | null;
@@ -79,7 +80,6 @@ function DeckPreview({
   deckRelatedTokens
 }: DeckPreviewProps) {
   const { t } = useTranslation();
-  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   const {
     viewMode,
@@ -175,23 +175,19 @@ function DeckPreview({
       </button>
       <button
         type="button"
+        onClick={() => setActiveNoteTab('stats')}
+        className={`deck-content-tab ${activeNoteTab === 'stats' ? 'deck-content-tab-active' : ''}`}
+      >
+        <FaChartBar className="text-[11px]" /> {t('stats.deckStats')}
+      </button>
+      <button
+        type="button"
         onClick={() => setActiveNoteTab('notes')}
         className={`deck-content-tab ${activeNoteTab === 'notes' ? 'deck-content-tab-active' : ''}`}
       >
         <FaPencilAlt className="text-[11px]" /> {t('strategy.strategyGuide')}
       </button>
     </div>
-  );
-
-  const statsButton = (
-    <button
-      type="button"
-      onClick={() => setIsStatsOpen(true)}
-      className="button-small flex items-center gap-1.5 bg-slate-600 hover:bg-slate-700 text-white"
-      title={t('stats.deckStats')}
-    >
-      <FaChartBar className="text-xs" /> <span className="hidden sm:inline">{t('stats.deckStats')}</span>
-    </button>
   );
 
   const renderCards = (isRemovable: boolean) => (
@@ -294,7 +290,6 @@ function DeckPreview({
               isOpen={isDisplaySettingsOpen}
               setIsOpen={setIsDisplaySettingsOpen}
             />
-            {statsButton}
             <DeckActionBar
               cards={activeCards}
               selectedDeck={selectedDeck}
@@ -320,37 +315,40 @@ function DeckPreview({
             isEditable={true}
             onSave={(notes) => onSaveNotesDirectly?.(selectedDeck.id, notes)}
           />
+        ) : activeNoteTab === 'stats' ? (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>
+            }
+          >
+            <DeckStats
+              currentDeck={activeCards}
+              renderFilteredCards={(filteredCards) => (
+                <DeckStatsFilteredCards
+                  filteredCards={filteredCards}
+                  selectedDeck={selectedDeck}
+                  activeFormat={activeFormat}
+                  viewMode={viewMode}
+                  groupBy={groupBy}
+                  sortBy={sortBy}
+                  cardSize={cardSize}
+                  commanders={commanders}
+                  onHoverEnter={handleHoverEnter}
+                  onHoverMove={handleHoverMove}
+                  onHoverLeave={handleHoverLeave}
+                  onRemoveFromDeck={onRemoveFromDeck}
+                  onAddToDeck={onAddToDeck}
+                  onAddTokenToDeck={handleAddTokenCardCopy}
+                  onToggleCommander={onToggleCommander}
+                  onUpdateCard={onUpdateCard}
+                  onUpdateCardZone={onUpdateCardZone}
+                />
+              )}
+            />
+          </Suspense>
         ) : (
           renderCards(false)
         )}
-
-        {isStatsOpen ? (
-          <DeckStatsModal
-            cards={activeCards}
-            onClose={() => setIsStatsOpen(false)}
-            renderFilteredCards={(filteredCards) => (
-              <DeckStatsFilteredCards
-                filteredCards={filteredCards}
-                selectedDeck={selectedDeck}
-                activeFormat={activeFormat}
-                viewMode={viewMode}
-                groupBy={groupBy}
-                sortBy={sortBy}
-                cardSize={cardSize}
-                commanders={commanders}
-                onHoverEnter={handleHoverEnter}
-                onHoverMove={handleHoverMove}
-                onHoverLeave={handleHoverLeave}
-                onRemoveFromDeck={onRemoveFromDeck}
-                onAddToDeck={onAddToDeck}
-                onAddTokenToDeck={handleAddTokenCardCopy}
-                onToggleCommander={onToggleCommander}
-                onUpdateCard={onUpdateCard}
-                onUpdateCardZone={onUpdateCardZone}
-              />
-            )}
-          />
-        ) : null}
 
         {viewMode === 'list' && activeNoteTab === 'cards' && hoveredCard ? (
           <DeckFloatingPreview card={hoveredCard} mousePos={mousePos} />
@@ -431,7 +429,6 @@ function DeckPreview({
               isOpen={isDisplaySettingsOpen}
               setIsOpen={setIsDisplaySettingsOpen}
             />
-            {statsButton}
             <DeckActionBar
               cards={activeCards}
               showToast={showToast}
@@ -454,37 +451,38 @@ function DeckPreview({
 
       {noteTabHeader}
 
-      {isStatsOpen ? (
-        <DeckStatsModal
-          cards={activeCards}
-          onApplySuggestedLands={onApplySuggestedLands}
-          onClose={() => setIsStatsOpen(false)}
-          renderFilteredCards={(filteredCards) => (
-            <DeckStatsFilteredCards
-              filteredCards={filteredCards}
-              selectedDeck={selectedDeck}
-              activeFormat={activeFormat}
-              viewMode={viewMode}
-              groupBy={groupBy}
-              sortBy={sortBy}
-              cardSize={cardSize}
-              commanders={commanders}
-              onHoverEnter={handleHoverEnter}
-              onHoverMove={handleHoverMove}
-              onHoverLeave={handleHoverLeave}
-              onRemoveFromDeck={onRemoveFromDeck}
-              onAddToDeck={onAddToDeck}
-              onAddTokenToDeck={handleAddTokenCardCopy}
-              onToggleCommander={onToggleCommander}
-              onUpdateCard={onUpdateCard}
-              onUpdateCardZone={onUpdateCardZone}
-            />
-          )}
-        />
-      ) : null}
-
       {activeNoteTab === 'notes' ? (
         <DeckNotesEditor initialNotes={editingDeckNotes} isEditable={true} onSave={onUpdateNotes} />
+      ) : activeNoteTab === 'stats' ? (
+        <Suspense
+          fallback={<div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>}
+        >
+          <DeckStats
+            currentDeck={activeCards}
+            onApplySuggestedLands={onApplySuggestedLands}
+            renderFilteredCards={(filteredCards) => (
+              <DeckStatsFilteredCards
+                filteredCards={filteredCards}
+                selectedDeck={selectedDeck}
+                activeFormat={activeFormat}
+                viewMode={viewMode}
+                groupBy={groupBy}
+                sortBy={sortBy}
+                cardSize={cardSize}
+                commanders={commanders}
+                onHoverEnter={handleHoverEnter}
+                onHoverMove={handleHoverMove}
+                onHoverLeave={handleHoverLeave}
+                onRemoveFromDeck={onRemoveFromDeck}
+                onAddToDeck={onAddToDeck}
+                onAddTokenToDeck={handleAddTokenCardCopy}
+                onToggleCommander={onToggleCommander}
+                onUpdateCard={onUpdateCard}
+                onUpdateCardZone={onUpdateCardZone}
+              />
+            )}
+          />
+        </Suspense>
       ) : (
         <>
           {currentDeck.length === 0 ? (

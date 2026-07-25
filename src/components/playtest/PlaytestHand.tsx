@@ -114,7 +114,7 @@ const PlaytestHandCard = memo(
                 event.stopPropagation();
                 onContextMenu(event, playtestId);
               }}
-              title={t('playtest.moreActions')}
+              title={t('common.moreActions')}
               className="touch-hitarea absolute -top-3 -right-2.5 sm:-top-2.5 sm:-right-2 w-7 h-7 sm:w-5.5 sm:h-5.5 rounded-full flex items-center justify-center bg-slate-900 border border-slate-800 shadow-lg text-slate-400 hover:text-slate-200 hover:border-slate-600 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20 text-[9px] sm:text-[8px] cursor-pointer"
             >
               <FaEllipsisH />

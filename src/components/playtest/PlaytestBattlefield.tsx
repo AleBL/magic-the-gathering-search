@@ -154,7 +154,7 @@ const PlaytestBattlefieldCard = memo(
               event.stopPropagation();
               onContextMenu(event, playtestId);
             }}
-            title={t('playtest.moreActions')}
+            title={t('common.moreActions')}
             className="relative touch-hitarea w-8 h-8 sm:w-6 sm:h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-600 hover:text-white transition-all text-[10px] sm:text-[9px] cursor-pointer"
           >
             <FaEllipsisH />
