@@ -195,73 +195,76 @@ export function DeckManagerToolbar({
                 <span className={labelClasses}>{clearLabel}</span>
               </button>
 
-              <div className="relative inline-block text-left">
-                <button
-                  type="button"
-                  onClick={() => setShowImportExportDropdown(!showImportExportDropdown)}
-                  className="primary-button text-xs py-1.5 px-3 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FaFileImport className="text-xs shrink-0" />
-                  <span className={labelClasses}>{t('deck.importExport')}</span>
-                  <span className="text-[10px] opacity-75">▼</span>
-                </button>
-                {showImportExportDropdown ? (
-                  <>
-                    {/* Backdrop click is a mouse-only convenience; Escape provides the keyboard-equivalent action. */}
-                    <div
-                      className="fixed inset-0 z-[var(--z-backdrop)]"
-                      onClick={() => setShowImportExportDropdown(false)}
-                      aria-hidden="true"
-                    />
-                    <div className="import-export-dropdown">
-                      <span className="import-export-dropdown-section">── {t('common.import')} ──</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowImportExportDropdown(false);
-                          onOpenTextImport();
-                        }}
-                        className="import-export-dropdown-item"
-                      >
-                        <FaFileImport className="text-gray-400 shrink-0" />
-                        {t('deck.importTextList')}
-                      </button>
-                      <label className="import-export-dropdown-item">
-                        <FaFileImport className="text-gray-400 shrink-0" />
-                        {t('deck.importDeck')}{' '}
-                        <span className="text-[10px] text-gray-400 font-mono ml-auto">.json / .dec</span>
-                        <input
-                          id="deck-import-file-input"
-                          type="file"
-                          accept=".json,.dec,.txt,.deck"
-                          onChange={(e) => {
+              {/* Import/Export is for assembling decks, not mid-edit — hide it while editing. */}
+              {!editingDeckId ? (
+                <div className="relative inline-block text-left">
+                  <button
+                    type="button"
+                    onClick={() => setShowImportExportDropdown(!showImportExportDropdown)}
+                    className="primary-button text-xs py-1.5 px-3 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FaFileImport className="text-xs shrink-0" />
+                    <span className={labelClasses}>{t('deck.importExport')}</span>
+                    <span className="text-[10px] opacity-75">▼</span>
+                  </button>
+                  {showImportExportDropdown ? (
+                    <>
+                      {/* Backdrop click is a mouse-only convenience; Escape provides the keyboard-equivalent action. */}
+                      <div
+                        className="fixed inset-0 z-[var(--z-backdrop)]"
+                        onClick={() => setShowImportExportDropdown(false)}
+                        aria-hidden="true"
+                      />
+                      <div className="import-export-dropdown">
+                        <span className="import-export-dropdown-section">── {t('common.import')} ──</span>
+                        <button
+                          type="button"
+                          onClick={() => {
                             setShowImportExportDropdown(false);
-                            onImportFile(e);
+                            onOpenTextImport();
                           }}
-                          className="hidden"
-                        />
-                      </label>
-                      {hasSavedDecks ? (
-                        <>
-                          <div className="import-export-dropdown-divider" />
-                          <span className="import-export-dropdown-section">── {t('deck.export')} ──</span>
-                          <button
-                            type="button"
-                            onClick={() => {
+                          className="import-export-dropdown-item"
+                        >
+                          <FaFileImport className="text-gray-400 shrink-0" />
+                          {t('deck.importTextList')}
+                        </button>
+                        <label className="import-export-dropdown-item">
+                          <FaFileImport className="text-gray-400 shrink-0" />
+                          {t('deck.importDeck')}{' '}
+                          <span className="text-[10px] text-gray-400 font-mono ml-auto">.json / .dec</span>
+                          <input
+                            id="deck-import-file-input"
+                            type="file"
+                            accept=".json,.dec,.txt,.deck"
+                            onChange={(e) => {
                               setShowImportExportDropdown(false);
-                              onExportAll();
+                              onImportFile(e);
                             }}
-                            className="import-export-dropdown-item"
-                          >
-                            {t('deck.exportAllDecks')}{' '}
-                            <span className="text-[10px] text-gray-400 font-mono ml-auto">.json</span>
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </>
-                ) : null}
-              </div>
+                            className="hidden"
+                          />
+                        </label>
+                        {hasSavedDecks ? (
+                          <>
+                            <div className="import-export-dropdown-divider" />
+                            <span className="import-export-dropdown-section">── {t('deck.export')} ──</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowImportExportDropdown(false);
+                                onExportAll();
+                              }}
+                              className="import-export-dropdown-item"
+                            >
+                              {t('deck.exportAllDecks')}{' '}
+                              <span className="text-[10px] text-gray-400 font-mono ml-auto">.json</span>
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
