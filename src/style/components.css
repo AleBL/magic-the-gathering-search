@@ -323,7 +323,9 @@ html.dark .import-export-dropdown {
 }
 
 .deck-edit-panes {
-  @apply grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(340px,460px)];
+  /* Right (deck) column grows on larger screens so the current deck is easier
+     to read, while search keeps the flexible remainder. */
+  @apply grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] lg:grid-cols-[minmax(0,1fr)_minmax(400px,520px)] xl:grid-cols-[minmax(0,1fr)_minmax(440px,600px)];
 }
 
 /* Holds the (h-full) card search: clip its sticky header to the rounded pane. */
