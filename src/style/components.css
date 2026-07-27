@@ -299,7 +299,9 @@ html.dark .import-export-dropdown {
 }
 
 .deck-edit-mobile-tabs {
-  @apply grid grid-cols-2 gap-2;
+  /* md:hidden lives inside the rule (not just on the JSX) so its media block
+     wins over this class's own `display:grid` at >=md regardless of CSS order. */
+  @apply grid grid-cols-2 gap-2 md:hidden;
 }
 
 .deck-edit-mobile-tab {

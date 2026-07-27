@@ -45,7 +45,7 @@ export default function DeckEditWorkspace({ search, deck, onDropCard }: DeckEdit
 
   return (
     <div className="deck-edit-workspace">
-      <div className="deck-edit-mobile-tabs md:hidden">
+      <div className="deck-edit-mobile-tabs">
         <button
           type="button"
           onClick={() => setMobileView('search')}
