@@ -10,6 +10,8 @@ interface DeckSaveDialogProps {
   onDeckFormatChange: (format: DeckFormat) => void;
   onSave: () => void;
   onCancel: () => void;
+  /** Heading override — defaults to "Save Deck"; reused for editing deck info. */
+  title?: string;
 }
 
 const DECK_FORMATS: { value: DeckFormat; labelKey: string }[] = [
@@ -27,7 +29,8 @@ function DeckSaveDialog({
   onDeckNameChange,
   onDeckFormatChange,
   onSave,
-  onCancel
+  onCancel,
+  title
 }: DeckSaveDialogProps) {
   const { t } = useTranslation();
 
@@ -35,7 +38,7 @@ function DeckSaveDialog({
     <div className="modal-overlay" style={{ zIndex: 1000 }}>
       <div className="modal-container modal-container-medium w-full flex flex-col !p-0 overflow-hidden animate-fadeIn mx-auto">
         <div className="p-6 md:p-8 flex-1 overflow-y-auto flex flex-col">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('deck.saveDeck')}</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{title ?? t('deck.saveDeck')}</h3>
 
           <div className="space-y-4 mb-6">
             <div>

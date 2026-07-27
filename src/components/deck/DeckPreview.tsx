@@ -56,6 +56,7 @@ interface DeckPreviewProps {
   onUpdateCard?: (updatedCard: Card) => void;
   onSaveTokens?: (deckId: string, tokens: DeckRelatedToken[]) => void;
   deckRelatedTokens?: DeckRelatedToken[];
+  onEditInfo?: (deck: Deck) => void;
 }
 
 function DeckPreview({
@@ -78,7 +79,8 @@ function DeckPreview({
   onApplySuggestedLands,
   onUpdateCard,
   onSaveTokens,
-  deckRelatedTokens
+  deckRelatedTokens,
+  onEditInfo
 }: DeckPreviewProps) {
   const { t } = useTranslation();
   // While editing, the deck lives in a narrow pane, so stats open in a wide
@@ -263,11 +265,24 @@ function DeckPreview({
     return (
       <div className="deck-preview-section relative">
         <div className="panel-header relative z-50">
-          <div>
-            <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 flex items-center gap-2">
-              <FaFileAlt className="text-primary shrink-0" />
-              {selectedDeck.name}
-            </h3>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 flex items-center gap-2 min-w-0">
+                <FaFileAlt className="text-primary shrink-0" />
+                <span className="truncate">{selectedDeck.name}</span>
+              </h3>
+              {onEditInfo ? (
+                <button
+                  type="button"
+                  onClick={() => onEditInfo(selectedDeck)}
+                  className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                  title={t('deck.editDeckInfo')}
+                  aria-label={t('deck.editDeckInfo')}
+                >
+                  <FaPencilAlt className="text-xs" />
+                </button>
+              ) : null}
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-muted">
                 {t('validation.format')}:{' '}

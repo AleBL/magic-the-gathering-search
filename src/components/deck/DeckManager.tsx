@@ -110,6 +110,37 @@ function DeckManager({ showToast }: DeckManagerProps) {
 
   const [deckToExport, setDeckToExport] = useState<Deck | null>(null);
   const [deckForCover, setDeckForCover] = useState<Deck | null>(null);
+  // Deck whose name/format is being edited via the reused save dialog.
+  const [deckInfoEdit, setDeckInfoEdit] = useState<Deck | null>(null);
+  const [infoName, setInfoName] = useState('');
+  const [infoFormat, setInfoFormat] = useState<DeckFormat>(DeckFormatType.FREEFORM);
+
+  const openDeckInfoEditor = useCallback((deck: Deck) => {
+    setDeckInfoEdit(deck);
+    setInfoName(deck.name);
+    setInfoFormat(deck.format || DeckFormatType.FREEFORM);
+  }, []);
+
+  const handleSaveDeckInfo = useCallback(async () => {
+    if (!deckInfoEdit) return;
+    const result = await saveEditedDeck(
+      deckInfoEdit.id,
+      infoName.trim() || deckInfoEdit.name,
+      infoFormat,
+      deckInfoEdit.cards,
+      deckInfoEdit.notes,
+      deckInfoEdit.relatedTokens
+    );
+    if (result.success) {
+      setSelectedDeck((prev) =>
+        prev && prev.id === deckInfoEdit.id ? { ...prev, name: infoName.trim() || prev.name, format: infoFormat } : prev
+      );
+      setDeckInfoEdit(null);
+      showToast(t('deck.deckSaved'));
+    } else if (result.errorKey) {
+      showAlert(t('common.errorTitle'), t(result.errorKey), 'danger');
+    }
+  }, [deckInfoEdit, infoName, infoFormat, saveEditedDeck, setSelectedDeck, showToast, showAlert, t]);
 
   // Always-mounted file input for the mobile page menu's "import deck" item:
   // the toolbar's own input lives inside a dropdown that is hidden below `sm`.
@@ -536,6 +567,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
       onUpdateCard={onUpdateCard}
       onSaveTokens={handleSaveTokens}
       deckRelatedTokens={selectedDeck ? selectedDeck.relatedTokens : deckRelatedTokens}
+      onEditInfo={openDeckInfoEditor}
     />
   );
 
@@ -637,6 +669,18 @@ function DeckManager({ showToast }: DeckManagerProps) {
             setShowSaveDialog(false);
             setDeckName('');
           }}
+        />
+      ) : null}
+
+      {deckInfoEdit ? (
+        <DeckSaveDialog
+          deckName={infoName}
+          deckFormat={infoFormat}
+          onDeckNameChange={setInfoName}
+          onDeckFormatChange={setInfoFormat}
+          onSave={handleSaveDeckInfo}
+          onCancel={() => setDeckInfoEdit(null)}
+          title={t('deck.editDeckInfo')}
         />
       ) : null}
 
