@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { ValidationResult, ValidationError } from '../../utils/deckValidator';
+import { formatLabelKey } from '../../utils/formatLabel';
 
 interface DeckValidationBadgeProps {
   validation: ValidationResult;
@@ -40,7 +41,7 @@ function DeckValidationBadge({ validation, formatKey, variant = 'full' }: DeckVa
         disabled={!hasErrors}
       >
         <span className="font-bold flex items-center gap-2">
-          {t('validation.deckValidation')} ({t(formatKey)})
+          {t('validation.deckValidation')} ({t(formatLabelKey(formatKey))})
           {hasErrors ? (
             <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">
               ({isExpanded ? t('validation.hideDetails') : t('validation.viewDetails')})
