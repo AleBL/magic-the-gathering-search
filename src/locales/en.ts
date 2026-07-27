@@ -103,6 +103,7 @@ const en = {
       noResults: 'No cards found',
       other: 'Other',
       planeswalker: 'Planeswalker',
+      battle: 'Battle',
       rare: 'Rare',
       rarity: 'Rarity:',
       rateLimited: 'Too many requests to Scryfall. Please wait a moment and try again.',

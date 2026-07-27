@@ -103,6 +103,7 @@ const pt = {
       noResults: 'Nenhuma carta encontrada',
       other: 'Outros',
       planeswalker: 'Planeswalker',
+      battle: 'Batalha',
       rare: 'Rara',
       rarity: 'Raridade:',
       rateLimited: 'Muitas requisições ao Scryfall. Aguarde um instante e tente novamente.',

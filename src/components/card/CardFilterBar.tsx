@@ -112,8 +112,10 @@ export default function CardFilterBar({ filters, setFilters, mobileLayout = fals
       {/* Divider */}
       <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
 
-      {/* Types */}
-      <div className="flex items-center gap-2 flex-1 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar mask-linear-fade">
+      {/* Types — wrap onto multiple rows so every type stays visible instead of
+          hiding behind an awkward horizontal scroll (especially in the narrow
+          deck-editor pane). */}
+      <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
         {types.map((type: { code: string; name: string }) => {
           const isActive = filters.types.includes(type.code);
           return (
