@@ -92,7 +92,7 @@ export function DeckManagerToolbar({
             <button
               type="button"
               onClick={onOpenSuggestions}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+              className="deck-toolbar-btn-accent"
               title={t('deck.suggestionsTitle')}
             >
               <FaMagic className="text-xs shrink-0" />
@@ -105,7 +105,7 @@ export function DeckManagerToolbar({
               <button
                 type="button"
                 onClick={onOpenHistory}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="deck-toolbar-btn"
                 title={t('deck.versionHistory')}
               >
                 <FaHistory className="text-xs shrink-0" />
@@ -114,7 +114,7 @@ export function DeckManagerToolbar({
               <button
                 type="button"
                 onClick={onToggleDeckList}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="deck-toolbar-btn"
                 title={showDeckList ? t('deck.hideDeckList') : t('deck.showDeckList')}
               >
                 <FaColumns className="text-xs shrink-0" />
