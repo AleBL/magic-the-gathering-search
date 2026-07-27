@@ -254,6 +254,16 @@ html.dark .import-export-dropdown {
   @apply flex-1 sm:flex-none flex justify-center gap-1 items-center py-1.5 px-2.5 font-bold text-xs transition-all rounded-r-lg;
 }
 
+/* ─── Export dialog option rows ────────────────────────────────── */
+
+.export-option {
+  @apply flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/50 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-500/50 dark:hover:bg-slate-700;
+}
+
+.export-option-icon {
+  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base;
+}
+
 /* ─── Deck Box (Arena-style deck card) ─────────────────────────── */
 
 .deck-box {
