@@ -270,6 +270,11 @@ html.dark .deck-preview-section {
   @apply flex flex-col md:flex-row md:items-center justify-between gap-4;
 }
 
+/* Deck actions sit beside the title on md+. */
+.manager-title-actions {
+  @apply flex flex-wrap items-center gap-2 md:ml-auto;
+}
+
 .manager-subheader {
   @apply flex flex-col sm:flex-row sm:items-center gap-4 justify-between pt-2 border-t border-gray-300 dark:border-gray-700;
 }

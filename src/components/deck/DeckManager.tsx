@@ -570,9 +570,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
         onImportFile={handleImportDeck}
         onExportAll={exportAllDecks}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenSuggestions={
-          (selectedDeck?.cards.length ?? currentDeck.length) > 0 ? () => setIsSuggestionsOpen(true) : undefined
-        }
+        onOpenSuggestions={editingDeckId && currentDeck.length > 0 ? () => setIsSuggestionsOpen(true) : undefined}
       />
 
       {/* Hidden, always-mounted twin of the toolbar's file input: the mobile

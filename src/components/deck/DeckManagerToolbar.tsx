@@ -76,8 +76,8 @@ export function DeckManagerToolbar({
   return (
     <div className="workspace-header">
       <div className="manager-title-row">
-        <h2 className="text-gray-900 dark:text-white text-2xl font-serif font-bold transition-colors duration-300 flex items-center gap-2 w-full">
-          <FaBook className="text-primary text-xl" />
+        <h2 className="text-gray-900 dark:text-white text-xl lg:text-2xl font-serif font-bold transition-colors duration-300 flex items-center gap-2">
+          <FaBook className="text-primary text-xl shrink-0" />
           {t('deck.deckManager')}
           <div className="manager-info-tooltip-trigger group/tooltip">
             <button type="button" className="manager-info-tooltip-btn" aria-label={t('common.info')}>
@@ -87,21 +87,14 @@ export function DeckManagerToolbar({
               <p className="font-medium leading-relaxed">{t('validation.savedLocationNote')}</p>
             </div>
           </div>
+        </h2>
 
-          {onOpenSuggestions ? (
-            <button
-              type="button"
-              onClick={onOpenSuggestions}
-              className="deck-toolbar-btn-accent"
-              title={t('deck.suggestionsTitle')}
-            >
-              <FaMagic className="text-xs shrink-0" />
-              <span className="hidden sm:inline">{t('common.suggestions')}</span>
-            </button>
-          ) : null}
-
+        {/* Deck actions live beside the title on md+; hidden on phones, where the
+            navbar's MobilePageMenu covers save/clear/import and the
+            EditingDeckBanner covers cancel-edit. */}
+        <div className="manager-title-actions">
           {selectedDeck ? (
-            <div className="ml-auto flex items-center gap-2">
+            <>
               <button
                 type="button"
                 onClick={onOpenHistory}
@@ -118,24 +111,28 @@ export function DeckManagerToolbar({
                 title={showDeckList ? t('deck.hideDeckList') : t('deck.showDeckList')}
               >
                 <FaColumns className="text-xs shrink-0" />
-                <span>{showDeckList ? t('deck.hideDeckList') : t('deck.showDeckList')}</span>
+                <span className="hidden sm:inline">
+                  {showDeckList ? t('deck.hideDeckList') : t('deck.showDeckList')}
+                </span>
               </button>
-            </div>
-          ) : null}
-        </h2>
-      </div>
+            </>
+          ) : (
+            // Editing/save actions are covered by the navbar page menu on phones.
+            <div className="max-sm:hidden flex flex-wrap items-center gap-2">
+              {onOpenSuggestions ? (
+                <button
+                  type="button"
+                  onClick={onOpenSuggestions}
+                  className="deck-toolbar-btn-accent"
+                  title={t('deck.suggestionsTitle')}
+                >
+                  <FaMagic className="text-xs shrink-0" />
+                  <span className="hidden sm:inline">{t('common.suggestions')}</span>
+                </button>
+              ) : null}
 
-      {!selectedDeck ? (
-        // Hidden below `sm` (wrapper div: .manager-toolbar is unlayered CSS,
-        // so a utility on the same element could not override its display).
-        // The navbar's MobilePageMenu — visible at the same breakpoint —
-        // covers save/save-as-new/clear, text/file import and export-all;
-        // cancel-edit stays reachable via the EditingDeckBanner.
-        <div className="max-sm:hidden">
-          <div className="manager-toolbar">
-            <div className="toolbar-group">
               {editingDeckId ? (
-                <div className="toolbar-group-responsive">
+                <>
                   <button
                     id="save-changes-btn"
                     type="button"
@@ -167,7 +164,7 @@ export function DeckManagerToolbar({
                     <FaTimes className="text-xs shrink-0" />
                     <span className={labelClasses}>{t('common.cancel')}</span>
                   </button>
-                </div>
+                </>
               ) : (
                 <button
                   id="save-deck-btn"
@@ -197,9 +194,7 @@ export function DeckManagerToolbar({
                 <FaTrash className="text-xs shrink-0" />
                 <span className={labelClasses}>{clearLabel}</span>
               </button>
-            </div>
 
-            <div className="toolbar-actions">
               <div className="relative inline-block text-left">
                 <button
                   type="button"
@@ -207,7 +202,7 @@ export function DeckManagerToolbar({
                   className="primary-button text-xs py-1.5 px-3 flex items-center gap-1.5 cursor-pointer"
                 >
                   <FaFileImport className="text-xs shrink-0" />
-                  {t('deck.importExport')}
+                  <span className={labelClasses}>{t('deck.importExport')}</span>
                   <span className="text-[10px] opacity-75">▼</span>
                 </button>
                 {showImportExportDropdown ? (
@@ -268,9 +263,9 @@ export function DeckManagerToolbar({
                 ) : null}
               </div>
             </div>
-          </div>
+          )}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
