@@ -86,7 +86,9 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {editingDeck.deckId && (
+      {/* Only a reminder for when you're away from the deck editor — on the
+          deck and collection tabs the editor UI already makes it obvious. */}
+      {editingDeck.deckId && activeTab === 'search' && (
         <EditingDeckBanner
           deckName={editingDeck.deckName}
           deckFormat={editingDeck.deckFormat}
