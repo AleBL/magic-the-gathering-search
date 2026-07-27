@@ -88,7 +88,7 @@ export default function DeckVersionHistoryModal({ deck, onRestore, onClose }: De
         role="dialog"
         aria-modal="true"
         aria-labelledby="deck-history-title"
-        className="modal-container sm:max-w-lg w-full overflow-y-auto animate-fadeIn"
+        className="modal-container sm:max-w-lg w-full max-h-[85vh] overflow-y-auto animate-fadeIn"
       >
         <div className="flex items-center justify-between mb-1">
           <h3
@@ -162,7 +162,7 @@ export default function DeckVersionHistoryModal({ deck, onRestore, onClose }: De
                       ) : changes.length === 0 ? (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('deck.versionNoChanges')}</p>
                       ) : (
-                        <ul className="space-y-1">
+                        <ul className="space-y-1 max-h-56 overflow-y-auto pr-1">
                           {changes.map((change, index) => (
                             <li
                               key={`${change.type}-${change.name}-${index}`}
