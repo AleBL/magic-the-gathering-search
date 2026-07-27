@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FaCrown, FaBan, FaExclamationTriangle, FaPalette, FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { DeckFormat } from '../../types/Deck';
-import { DeckFormatType, DeckZone } from '../../types/enums';
+import { DeckFormatType } from '../../types/enums';
 import { getCardArtCropUrl } from '../../utils/deckGrouping';
 import { parseTextWithSymbols } from '../../utils/symbolHelper';
 
@@ -15,7 +15,6 @@ interface DeckCardListItemProps {
   isTokenZone: boolean;
   isLeaving?: boolean;
   onToggleCommander: (card: Card) => void;
-  onUpdateCardZone?: (cardId: string, zone: DeckZone) => void;
   onUpdateCard?: (card: Card) => void;
   onAddToDeck: (card: Card) => void;
   onRemoveFromDeck: (card: Card) => void;
@@ -33,7 +32,6 @@ export const DeckCardListItem = memo(function DeckCardListItem({
   isTokenZone,
   isLeaving = false,
   onToggleCommander,
-  onUpdateCardZone,
   onUpdateCard,
   onAddToDeck,
   onRemoveFromDeck,
@@ -55,6 +53,11 @@ export const DeckCardListItem = memo(function DeckCardListItem({
 
   const artCropUrl = getCardArtCropUrl(card);
 
+  // Only legendary cards (on any face) can be commanders.
+  const isLegendary =
+    /legendary/i.test(card.type_line ?? '') ||
+    (card.card_faces ?? []).some((face) => /legendary/i.test(face.type_line ?? ''));
+
   return (
     <div className={isLeaving ? 'motion-row-leaving' : 'animate-fadeIn'}>
       <div
@@ -69,6 +72,9 @@ export const DeckCardListItem = memo(function DeckCardListItem({
           if (isRemovable && !isTokenZone) {
             e.dataTransfer.setData('text/plain', card.id);
             e.dataTransfer.effectAllowed = 'move';
+            // Hide the floating card preview so it doesn't cover the zone tabs
+            // you're dragging onto.
+            onHoverLeave();
           }
         }}
         onClick={() => onSelectCard(card)}
@@ -152,7 +158,7 @@ export const DeckCardListItem = memo(function DeckCardListItem({
                 className="flex items-center gap-1 transition-opacity duration-200"
                 onClick={(e) => e.stopPropagation()}
               >
-                {activeFormat === 'commander' && !isTokenZone && (
+                {activeFormat === 'commander' && !isTokenZone && isLegendary && (
                   <button
                     type="button"
                     onClick={() => onToggleCommander(card)}
@@ -161,18 +167,6 @@ export const DeckCardListItem = memo(function DeckCardListItem({
                   >
                     <FaCrown className="text-[10px]" />
                   </button>
-                )}
-
-                {onUpdateCardZone && !isTokenZone && (
-                  <select
-                    value={card.zone || DeckZone.MAIN}
-                    onChange={(e) => onUpdateCardZone(card.id, e.target.value as DeckZone)}
-                    className="text-[10px] font-semibold bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-1.5 py-0.5 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm"
-                  >
-                    <option value={DeckZone.MAIN}>{t('strategy.mainDeckCompact')}</option>
-                    <option value={DeckZone.SIDEBOARD}>{t('strategy.sideboardCompact')}</option>
-                    <option value={DeckZone.MAYBEBOARD}>{t('strategy.maybeboardCompact')}</option>
-                  </select>
                 )}
 
                 {onUpdateCard && (
