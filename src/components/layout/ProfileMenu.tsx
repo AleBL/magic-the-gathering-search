@@ -14,6 +14,9 @@ import {
   FaMagic,
   FaDownload
 } from 'react-icons/fa';
+import enFlag from '../../assets/locales/en.svg';
+import ptFlag from '../../assets/locales/pt.svg';
+import esFlag from '../../assets/locales/es.svg';
 
 interface ProfileMenuProps {
   isDarkMode: boolean;
@@ -47,17 +50,17 @@ function ProfileMenu({ isDarkMode, setIsDarkMode }: ProfileMenuProps) {
     {
       key: 'en',
       label: 'English',
-      iconPath: new URL(`../assets/locales/en.svg`, import.meta.url).href
+      iconPath: enFlag
     },
     {
       key: 'pt',
       label: 'Português',
-      iconPath: new URL(`../assets/locales/pt.svg`, import.meta.url).href
+      iconPath: ptFlag
     },
     {
       key: 'es',
       label: 'Español',
-      iconPath: new URL(`../assets/locales/es.svg`, import.meta.url).href
+      iconPath: esFlag
     }
   ];
 
