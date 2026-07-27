@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFileAlt, FaLayerGroup, FaPencilAlt, FaBolt, FaExclamationTriangle, FaChartBar } from 'react-icons/fa';
 import { Card } from '../../types/Card';
@@ -24,6 +24,7 @@ import { DeckStatsFilteredCards } from '../deck/DeckStatsFilteredCards';
 import { DeckCollectionSummary } from '../deck/DeckCollectionSummary';
 import CardDetailModal from '../card/CardDetailModal';
 import DeckPreviewOverlays from './DeckPreviewOverlays';
+import DeckStatsModal from './DeckStatsModal';
 
 const DeckStats = lazy(() => import('../stats/DeckStats'));
 
@@ -80,6 +81,9 @@ function DeckPreview({
   deckRelatedTokens
 }: DeckPreviewProps) {
   const { t } = useTranslation();
+  // While editing, the deck lives in a narrow pane, so stats open in a wide
+  // modal instead of the cramped inline tab.
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
 
   const {
     viewMode,
@@ -175,8 +179,8 @@ function DeckPreview({
       </button>
       <button
         type="button"
-        onClick={() => setActiveNoteTab('stats')}
-        className={`deck-content-tab ${activeNoteTab === 'stats' ? 'deck-content-tab-active' : ''}`}
+        onClick={() => (editingDeckId ? setIsStatsModalOpen(true) : setActiveNoteTab('stats'))}
+        className={`deck-content-tab ${!editingDeckId && activeNoteTab === 'stats' ? 'deck-content-tab-active' : ''}`}
       >
         <FaChartBar className="text-[11px]" /> {t('stats.deckStats')}
       </button>
@@ -453,36 +457,6 @@ function DeckPreview({
 
       {activeNoteTab === 'notes' ? (
         <DeckNotesEditor initialNotes={editingDeckNotes} isEditable={true} onSave={onUpdateNotes} />
-      ) : activeNoteTab === 'stats' ? (
-        <Suspense
-          fallback={<div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>}
-        >
-          <DeckStats
-            currentDeck={activeCards}
-            onApplySuggestedLands={onApplySuggestedLands}
-            renderFilteredCards={(filteredCards) => (
-              <DeckStatsFilteredCards
-                filteredCards={filteredCards}
-                selectedDeck={selectedDeck}
-                activeFormat={activeFormat}
-                viewMode={viewMode}
-                groupBy={groupBy}
-                sortBy={sortBy}
-                cardSize={cardSize}
-                commanders={commanders}
-                onHoverEnter={handleHoverEnter}
-                onHoverMove={handleHoverMove}
-                onHoverLeave={handleHoverLeave}
-                onRemoveFromDeck={onRemoveFromDeck}
-                onAddToDeck={onAddToDeck}
-                onAddTokenToDeck={handleAddTokenCardCopy}
-                onToggleCommander={onToggleCommander}
-                onUpdateCard={onUpdateCard}
-                onUpdateCardZone={onUpdateCardZone}
-              />
-            )}
-          />
-        </Suspense>
       ) : (
         <>
           {currentDeck.length === 0 ? (
@@ -504,6 +478,35 @@ function DeckPreview({
           )}
         </>
       )}
+
+      {isStatsModalOpen ? (
+        <DeckStatsModal
+          cards={activeCards}
+          onApplySuggestedLands={onApplySuggestedLands}
+          onClose={() => setIsStatsModalOpen(false)}
+          renderFilteredCards={(filteredCards) => (
+            <DeckStatsFilteredCards
+              filteredCards={filteredCards}
+              selectedDeck={selectedDeck}
+              activeFormat={activeFormat}
+              viewMode={viewMode}
+              groupBy={groupBy}
+              sortBy={sortBy}
+              cardSize={cardSize}
+              commanders={commanders}
+              onHoverEnter={handleHoverEnter}
+              onHoverMove={handleHoverMove}
+              onHoverLeave={handleHoverLeave}
+              onRemoveFromDeck={onRemoveFromDeck}
+              onAddToDeck={onAddToDeck}
+              onAddTokenToDeck={handleAddTokenCardCopy}
+              onToggleCommander={onToggleCommander}
+              onUpdateCard={onUpdateCard}
+              onUpdateCardZone={onUpdateCardZone}
+            />
+          )}
+        />
+      ) : null}
 
       {viewMode === 'list' && activeNoteTab === 'cards' && hoveredCard ? (
         <DeckFloatingPreview card={hoveredCard} mousePos={mousePos} />
