@@ -43,6 +43,9 @@ import { CardDetailPrintsSidebar } from './CardDetailPrintsSidebar';
 import { CardDetailRelatedTokens } from './CardDetailRelatedTokens';
 import { CardCollectionControls } from './CardCollectionControls';
 
+/** Scryfall layouts whose faces are printed on one physical side (never flip). */
+const SAME_SIDE_LAYOUTS = new Set(['split', 'aftermath', 'flip', 'adventure']);
+
 function CardDetailModal({
   card: initialCard,
   imageUrl,
@@ -86,11 +89,14 @@ function CardDetailModal({
   }, [deckCards, initialCard.name, isDeckCard]);
 
   const hasArtChanged = useMemo(() => {
-    // Art changed if the internal card state has a selectedPrintId that differs from any pre-existing one
-    const currentPrintId = card.id; // handleSelectPrint sets card to the print's full data
-    const originalPrintId = initialCard.selectedPrintId || initialCard.id;
-    return currentPrintId !== originalPrintId;
-  }, [card.id, initialCard.id, initialCard.selectedPrintId]);
+    // Compare the *selected* printing on both sides. Using card.id alone left the
+    // button visible after applying (the committed card keeps the original id but
+    // carries the new print in selectedPrintId), so it looked like a second click
+    // was needed.
+    const currentPrintId = card.selectedPrintId || card.id;
+    const appliedPrintId = initialCard.selectedPrintId || initialCard.id;
+    return currentPrintId !== appliedPrintId;
+  }, [card.selectedPrintId, card.id, initialCard.id, initialCard.selectedPrintId]);
 
   // Token lightbox
   const [selectedToken, setSelectedToken] = useState<Card | null>(null);
@@ -98,11 +104,16 @@ function CardDetailModal({
   const { tokens: relatedTokens } = useCardRelatedTokensForCard(isToken ? null : card);
 
   const hasMultipleFaces = !!card.card_faces && card.card_faces.length > 1;
-  const faceImages = useMemo(() => getCardFaceImages(card), [card]);
+  // Layouts whose faces share a single physical image — they must never flip,
+  // regardless of whether a given printing happens to ship per-face images.
+  // Driven by `layout` (not image presence) so switching art can't misclassify
+  // a split card as double-faced.
+  const isSameSideLayout = !!card.layout && SAME_SIDE_LAYOUTS.has(card.layout);
+  const faceImages = useMemo(() => (isSameSideLayout ? null : getCardFaceImages(card)), [card, isSameSideLayout]);
   const [showBackFace, setShowBackFace] = useState(false);
   // Split / aftermath / flip cards have several faces but a single physical
   // image — they must not flip, and their text lives only in the faces.
-  const isSameSideMultiFace = hasMultipleFaces && !faceImages;
+  const isSameSideMultiFace = hasMultipleFaces && (isSameSideLayout || !faceImages);
   const canRotate = isSameSideMultiFace && (card.layout === 'split' || card.layout === 'aftermath');
 
   // Holographic foil sheen that tracks the cursor on rare & mythic cards.
@@ -188,6 +199,9 @@ function CardDetailModal({
     const imgUrl = getCardImageUrl(printCard);
     const updatedCard: Card = {
       ...printCard,
+      // `layout` is intrinsic to the card, not the printing — keep the current
+      // one if a print omits it, so split cards stay split after an art swap.
+      layout: printCard.layout ?? card.layout,
       selectedPrintId: printCard.id,
       selectedPrintImageUri: imgUrl
     };
