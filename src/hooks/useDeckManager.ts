@@ -10,7 +10,7 @@ import { db } from '../db/database';
 import { useTranslation } from 'react-i18next';
 import { dispatchToast } from '../utils/toastHelper';
 import { parseDeckText, fetchCardsFromParsedList, ImportProgressData } from '../services/deckImportService';
-import { saveDeckSnapshotIfChanged } from '../services/deckVersionService';
+import { saveDeckSnapshotIfChanged, saveDeckSnapshot } from '../services/deckVersionService';
 import { DecodedShareDeck, decodeShareString, parseDeckFileContent } from '../services/deckShare';
 
 export default function useDeckManager(
@@ -292,6 +292,8 @@ export default function useDeckManager(
         createdAt: new Date().toISOString()
       };
       await db.decks.put(copy);
+      // Seed the copy's version history with its initial state.
+      await saveDeckSnapshot(copy).catch(() => undefined);
       return copy;
     } catch (error) {
       logger.error('Failed to duplicate deck:', error);
