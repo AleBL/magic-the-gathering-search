@@ -92,9 +92,11 @@ export default function CardFilterBar({ filters, setFilters, mobileLayout = fals
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 sm:gap-4 py-2 sm:py-4 w-full">
+    // Colors and types on their own wrapping rows: aligned, and no empty space
+    // left beside a single color row when the types wrap to several rows.
+    <div className="flex flex-col gap-2.5 py-2 sm:py-3 w-full">
       {/* Colors */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {colors.map((color: { code: string; name: string }) => (
           <button
             key={color.code}
@@ -109,13 +111,9 @@ export default function CardFilterBar({ filters, setFilters, mobileLayout = fals
         ))}
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-
       {/* Types — wrap onto multiple rows so every type stays visible instead of
-          hiding behind an awkward horizontal scroll (especially in the narrow
-          deck-editor pane). */}
-      <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          hiding behind an awkward horizontal scroll. */}
+      <div className="flex flex-wrap items-center gap-2">
         {types.map((type: { code: string; name: string }) => {
           const isActive = filters.types.includes(type.code);
           return (
