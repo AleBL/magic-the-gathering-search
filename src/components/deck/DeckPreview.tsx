@@ -401,9 +401,15 @@ function DeckPreview({
                   {t('deck.activeEditingMode')}
                 </span>
               </div>
-              <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 text-left truncate">
-                {activeCards.length > 0 ? `${activeCards.length} ${t('common.cards')}` : t('deck.addCardsMessage')}
-              </h3>
+              {activeCards.length > 0 ? (
+                <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 text-left truncate">
+                  {activeCards.length} {t('common.cards')}
+                </h3>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-left leading-snug">
+                  {t('deck.addCardsMessage')}
+                </p>
+              )}
             </>
           ) : (
             <>
