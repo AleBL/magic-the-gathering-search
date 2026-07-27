@@ -120,11 +120,11 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat, enableAddDrag
               (not conditionally rendered) so its pendingAction listener keeps
               working; its BottomSheet portals to <body>, escaping this
               hidden container. */}
-          <div className="hidden sm:flex flex-col xl:flex-row xl:items-center justify-between gap-2 xl:gap-4">
+          <div className="hidden sm:flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-4">
             <div className="flex-1 overflow-hidden">
               <CardFilterBar filters={filters} setFilters={setFilters} />
             </div>
-            <div className="flex flex-row flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0 pb-1 sm:pb-3 xl:pb-0 w-full xl:w-auto">
+            <div className="flex flex-row flex-wrap items-center justify-start gap-2 sm:gap-3 shrink-0 pb-1 sm:pb-3 lg:pb-0 w-full lg:w-auto">
               <SearchFilters
                 filters={filters}
                 setFilters={setFilters}
