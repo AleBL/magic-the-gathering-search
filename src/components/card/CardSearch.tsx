@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaFilter } from 'react-icons/fa';
 import CardGrid from './CardGrid';
 import CardSizeSelector from './CardSizeSelector';
 import SearchFilters from './SearchFilters';
@@ -110,6 +110,18 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat, enableAddDrag
               className="px-5 sm:px-8 py-3.5 bg-primary hover:bg-blue-500 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 active:scale-95 whitespace-nowrap"
             >
               {t('search.searchButton')}
+            </button>
+            {/* Below sm the filter row is hidden; this opens the same filters
+                sheet — needed inside the deck editor, where the navbar shows the
+                page menu instead of the search filter button. */}
+            <button
+              type="button"
+              onClick={() => setPendingAction('open-search-filters')}
+              className="sm:hidden shrink-0 w-14 flex items-center justify-center rounded-2xl bg-gray-100 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
+              aria-label={t('search.advancedFilters')}
+              title={t('search.advancedFilters')}
+            >
+              <FaFilter />
             </button>
           </div>
 
