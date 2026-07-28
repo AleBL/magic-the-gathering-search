@@ -11,7 +11,9 @@ import {
   FaFileImport,
   FaFilter,
   FaLayerGroup,
-  FaEdit
+  FaEdit,
+  FaHistory,
+  FaColumns
 } from 'react-icons/fa';
 import { PendingAction, useDeckStore } from '../../store/useDeckStore';
 import { deckActionLabels } from '../../utils/deckActionLabels';
@@ -84,6 +86,8 @@ function MobilePageMenu({ activeTab }: MobilePageMenuProps) {
         action: 'export-deck',
         disabled: !hasSelectedCards
       },
+      { key: 'history', label: t('deck.versionHistory'), icon: <FaHistory />, action: 'open-history' },
+      { key: 'toggle-list', label: t('deck.hideDeckList'), icon: <FaColumns />, action: 'toggle-deck-list' },
       { key: 'saved', label: t('deck.savedDecks'), icon: <FaLayerGroup />, action: 'show-saved-decks' }
     ];
   } else {

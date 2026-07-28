@@ -505,6 +505,13 @@ function DeckManager({ showToast }: DeckManagerProps) {
       setIsMobileDeckListOpen(true);
       setSelectedDeck(null);
       setPendingAction(null);
+    } else if (pendingAction === 'open-history') {
+      setIsHistoryOpen(true);
+      setPendingAction(null);
+    } else if (pendingAction === 'toggle-deck-list') {
+      setShowDeckList((visible) => !visible);
+      setIsMobileDeckListOpen((open) => !open);
+      setPendingAction(null);
     }
   }, [
     pendingAction,
