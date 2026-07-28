@@ -488,9 +488,9 @@ function DeckPreview({
               action={{
                 label: t('search.searchForCards'),
                 onClick: () => {
-                  const setPendingAction = useDeckStore.getState().setPendingAction;
-                  setPendingAction('focus-search');
-                  document.getElementById('nav-search-btn')?.click(); // Fallback for changing tab, as activeTab is in App state
+                  // In the two-pane editor the search is already on screen — just
+                  // focus it rather than switching to the standalone search tab.
+                  useDeckStore.getState().setPendingAction('focus-search');
                 }
               }}
             />
