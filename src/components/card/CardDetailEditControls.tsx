@@ -109,7 +109,7 @@ export function CardDetailEditControls({
               }`}
             >
               <FaPalette className="text-xs shrink-0" />
-              {t('cardDetails.changeArt')}
+              {t('cardDetails.showEditions')}
             </button>
           )}
 

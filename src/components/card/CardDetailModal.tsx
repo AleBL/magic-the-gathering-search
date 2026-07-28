@@ -219,6 +219,12 @@ function CardDetailModal({
       set: card.set,
       set_name: card.set_name,
       collector_number: card.collector_number,
+      // Carry the printing's language so the deck shows the chosen localized
+      // name/type/text (not just the new art).
+      printed_name: card.printed_name,
+      printed_type_line: card.printed_type_line,
+      printed_text: card.printed_text,
+      lang: card.lang,
       selectedPrintId: card.id, // the new print id
       selectedPrintImageUri: currentImageUrl // the resolved image URL
     };

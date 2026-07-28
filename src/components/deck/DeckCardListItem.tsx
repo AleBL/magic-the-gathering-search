@@ -5,6 +5,7 @@ import { Card } from '../../types/Card';
 import { DeckFormat } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
 import { getCardArtCropUrl } from '../../utils/deckGrouping';
+import { localizedCardName } from '../../utils/cardFaces';
 import { parseTextWithSymbols } from '../../utils/symbolHelper';
 
 interface DeckCardListItemProps {
@@ -52,6 +53,7 @@ export const DeckCardListItem = memo(function DeckCardListItem({
     card.legalities?.[activeFormat as keyof typeof card.legalities] === 'restricted';
 
   const artCropUrl = getCardArtCropUrl(card);
+  const displayName = localizedCardName(card);
 
   // Only legendary cards (on any face) can be commanders.
   const isLegendary =
@@ -63,7 +65,7 @@ export const DeckCardListItem = memo(function DeckCardListItem({
       <div
         role="button"
         tabIndex={0}
-        aria-label={card.printed_name || card.name}
+        aria-label={displayName}
         className={`group relative overflow-hidden transition-all duration-200 h-11 border-b border-gray-300 dark:border-gray-800 cursor-pointer ${
           isBanned ? 'ring-1 ring-inset ring-red-500' : isRestricted ? 'ring-1 ring-inset ring-amber-500' : ''
         }`}
@@ -117,7 +119,7 @@ export const DeckCardListItem = memo(function DeckCardListItem({
             <span
               className={`font-semibold truncate text-sm hover:text-primary dark:hover:text-blue-400 transition-colors drop-shadow-sm ${isBanned ? 'text-red-800 dark:text-red-300 font-extrabold' : 'text-gray-900 dark:text-white'}`}
             >
-              {card.printed_name || card.name}
+              {displayName}
             </span>
 
             {card.isCommander && (

@@ -346,6 +346,7 @@ const es = {
       commanderBadge: 'Comandante',
       commanders: 'Comandantes',
       changeArt: 'Cambiar Arte',
+      showEditions: 'Mostrar Ediciones',
       deleteCard: 'Eliminar todas las copias',
       flipAction: 'Voltear Carta',
       rotateAction: 'Girar Carta',

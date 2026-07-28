@@ -65,7 +65,7 @@ export function CardDetailPrintsSidebar({
             onMouseEnter={() => onHoverImageUrl(getCardFaceImageUrl(printCard))}
             onMouseLeave={() => onHoverImageUrl(null)}
             onClick={() => onSelectPrint(printCard)}
-            title={`${printCard.set_name} · ${printCard.set?.toUpperCase()} #${printCard.collector_number || ''}`}
+            title={`${printCard.set_name} · ${printCard.set?.toUpperCase()} #${printCard.collector_number || ''}${printCard.lang ? ` · ${printCard.lang.toUpperCase()}` : ''}`}
             aria-pressed={isSelected}
             className={`group relative shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 px-1.5 py-2 min-w-[52px] md:w-14 cursor-pointer ${
               isSelected
@@ -77,6 +77,11 @@ export function CardDetailPrintsSidebar({
             <span className="text-[7px] font-semibold select-none mt-0.5 leading-none opacity-70">
               #{printCard.collector_number || ''}
             </span>
+            {printCard.lang ? (
+              <span className="mt-0.5 rounded bg-black/10 dark:bg-white/10 px-1 text-[7px] font-black uppercase leading-none tracking-wide">
+                {printCard.lang}
+              </span>
+            ) : null}
             <span
               className={`mt-1 w-1 h-1 rounded-full inline-block transition-opacity ${
                 rarity === 'mythic'

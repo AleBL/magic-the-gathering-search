@@ -32,17 +32,16 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     const targetLang = i18n.language || 'en';
     const cleanLang = targetLang.split('-')[0].toLowerCase();
 
-    // Construct a language query that tries to fetch the target language OR English for each print
-    const langCondition = cleanLang !== 'en' ? `(lang:${cleanLang} OR lang:en)` : 'lang:en';
-
+    // Every printing in every language (`lang:any` + `unique:prints`), so the
+    // user can switch a card's language/edition, not just its art.
     let query = '';
     if (isToken) {
       // Use name:!"name" for exact name match on Scryfall
-      query = `t:token name:!"${cardName}" unique:prints ${langCondition}`;
+      query = `t:token name:!"${cardName}" unique:prints lang:any`;
     } else if (targetOracleId && !targetOracleId.startsWith('token-oracle-')) {
-      query = `oracle_id:${targetOracleId} unique:prints ${langCondition}`;
+      query = `oracle_id:${targetOracleId} unique:prints lang:any`;
     } else {
-      query = `!"${cardName}" unique:prints ${langCondition}`;
+      query = `!"${cardName}" unique:prints lang:any`;
     }
 
     const results: Card[] = [];
@@ -66,10 +65,8 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     });
 
     emitter.on('done', () => {
-      // Group prints by set & collector number, prioritizing the target language print
-      const uniqueMap = new Map<string, Card>();
-      results.forEach((printCard) => {
-        // If it's a token and we have the original attributes, filter out non-matching tokens
+      // Keep every printing (all languages); only filter mismatched tokens.
+      const filtered = results.filter((printCard) => {
         if (isToken && isCardObject) {
           const powerMatches = (printCard.power || '') === (originalPower || '');
           const toughnessMatches = (printCard.toughness || '') === (originalToughness || '');
@@ -77,34 +74,21 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
           const typeLineMatches = (printCard.type_line || '') === (originalTypeLine || '');
           const oracleTextMatches =
             (printCard.oracle_text || '').trim().toLowerCase() === (originalOracleText || '').trim().toLowerCase();
-
-          if (!powerMatches || !toughnessMatches || !colorsMatches || !typeLineMatches || !oracleTextMatches) {
-            return;
-          }
+          return powerMatches && toughnessMatches && colorsMatches && typeLineMatches && oracleTextMatches;
         }
-
-        const key = `${printCard.set}_${printCard.collector_number || ''}`;
-        const existing = uniqueMap.get(key);
-        if (!existing) {
-          uniqueMap.set(key, printCard);
-        } else {
-          const existingIsEnglish = existing.lang === 'en' || !existing.lang;
-          const newIsPreferred = printCard.lang === cleanLang;
-          if (existingIsEnglish && newIsPreferred) {
-            uniqueMap.set(key, printCard);
-          }
-        }
+        return true;
       });
 
-      const uniqueResults = Array.from(uniqueMap.values());
-
-      // Sort: place versions with images first
-      const sorted = uniqueResults.sort((a, b) => {
+      // Sort: printings with images first, then the app-language ones, so the
+      // most relevant editions surface at the top of a potentially long list.
+      const sorted = filtered.sort((a, b) => {
         const aImg = a.image_uris?.normal || a.card_faces?.[0]?.image_uris?.normal;
         const bImg = b.image_uris?.normal || b.card_faces?.[0]?.image_uris?.normal;
         if (aImg && !bImg) return -1;
         if (!aImg && bImg) return 1;
-        return 0;
+        const aLang = a.lang === cleanLang ? 0 : 1;
+        const bLang = b.lang === cleanLang ? 0 : 1;
+        return aLang - bLang;
       });
       setPrints(sorted);
       setIsLoading(false);

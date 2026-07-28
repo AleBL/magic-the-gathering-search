@@ -342,6 +342,7 @@ const pt = {
       commanderBadge: 'Comandante',
       commanders: 'Comandantes',
       changeArt: 'Trocar Arte',
+      showEditions: 'Mostrar Edições',
       deleteCard: 'Remover todas as cópias',
       flipAction: 'Virar Carta',
       rotateAction: 'Girar Carta',
