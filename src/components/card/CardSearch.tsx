@@ -20,11 +20,20 @@ interface CardSearchProps {
   activeFormat?: DeckFormat;
   /** Makes results draggable into the deck editor's drop zone (two-pane mode). */
   enableAddDrag?: boolean;
+  /** Initial card size — the editor embeds this in a narrow pane, so it opts
+   *  into a denser default. */
+  defaultCardSize?: CardSize;
 }
 
-function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat, enableAddDrag = false }: CardSearchProps) {
+function CardSearch({
+  onAddToDeck,
+  onAddTokenToDeck,
+  activeFormat,
+  enableAddDrag = false,
+  defaultCardSize = 'medium'
+}: CardSearchProps) {
   const { i18n, t } = useTranslation();
-  const [cardSize, setCardSize] = useState<CardSize>('medium');
+  const [cardSize, setCardSize] = useState<CardSize>(defaultCardSize);
 
   const {
     searchQuery,

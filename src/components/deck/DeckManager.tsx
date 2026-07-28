@@ -635,6 +635,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
                 onAddTokenToDeck={handleAddTokenToDeck}
                 activeFormat={activeFormat}
                 enableAddDrag
+                defaultCardSize="small"
               />
             }
             deck={deckPreviewElement}
