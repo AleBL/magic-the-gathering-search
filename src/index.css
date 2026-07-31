@@ -9,10 +9,8 @@
 @import "./style/deck-stack-view.css";
 @import "./style/motion-effects.css";
 
-
 /* Dark mode via class strategy */
 @custom-variant dark (&:where(.dark, .dark *));
-
 
 /* Base styles */
 @layer base {
@@ -51,9 +49,6 @@
   /* Theme transitions — scoped to containers, not every DOM node */
   body,
   .header-container,
-  .workspace-content,
-  .workspace-sidebar,
-  .workspace-main,
   .deck-preview-section,
   .deck-list-section,
   .modal-container,
@@ -61,17 +56,9 @@
   .panel-header,
   .tab-button,
   .tab-group,
-  .filters-panel,
-  .filters-content,
   .editing-banner,
   .alert-banner,
   .profile-menu-panel,
-  .card-item-container {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-  }
-
   /* ── Global interactive cursor ── */
   button,
   [role="button"],
@@ -157,9 +144,6 @@
     animation: toastEnter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
-  .animate-toast-leave {
-    animation: toastLeave 0.2s ease-in forwards;
-  }
 }
 
 /* ── Modal / drawer enter-exit transitions ──────────────────
@@ -254,8 +238,6 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(107, 114, 128, 0.9);
   /* gray-500/90 */
 }
-
-
 
 @keyframes fadeIn {
   from {
@@ -394,10 +376,6 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   50% {
     box-shadow: 0 0 15px 5px rgba(99, 102, 241, 0.15);
   }
-}
-
-.drop-zone-active {
-  animation: drop-zone-pulse 1.5s ease-in-out infinite;
 }
 
 /* Floating particles */

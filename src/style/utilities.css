@@ -30,20 +30,6 @@
   @apply bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300;
 }
 
-.alert-toast {
-  @apply fixed bottom-5 right-5 z-50 bg-success dark:bg-success-hover text-white px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3 border border-green-500 transition-all duration-300;
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Spinners and Pulse Loaders */
-.loading-spinner {
-  @apply w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin;
-}
-
-.placeholder-pulse {
-  @apply rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse;
-}
-
 /* Editing Deck Banner */
 .editing-banner {
   @apply bg-gradient-to-r from-primary to-blue-700 dark:from-slate-800 dark:to-slate-900 dark:border-y dark:border-blue-500/30 text-white px-4 py-2 flex items-center justify-between text-xs sm:text-sm transition-all duration-300 shadow-sm;
@@ -53,53 +39,8 @@
   @apply font-bold flex h-2 w-2 rounded-full bg-green-400 animate-pulse;
 }
 
-.banner-button-secondary {
-  @apply px-2 py-1 bg-white text-primary dark:text-blue-800 rounded font-semibold text-xs hover:bg-gray-100 dark:hover:bg-gray-100 transition-all duration-200 cursor-pointer shadow-sm;
-}
-
-.banner-button-danger {
-  @apply px-2 py-1 bg-red-500 text-white rounded font-semibold text-xs hover:bg-danger dark:hover:bg-danger-hover transition-all duration-200 cursor-pointer shadow-sm;
-}
-
-
-.active-edit-badge {
-  @apply text-xs bg-yellow-500/20 text-yellow-800 dark:text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded font-medium animate-pulse flex items-center gap-1 transition-all duration-200;
-}
-
-.alert-banner-info {
-  @apply bg-blue-50 dark:bg-blue-900/20 rounded p-3 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2 transition-all duration-200 border border-blue-200/50 dark:border-blue-800/50;
-}
-
-.info-note {
-  @apply text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 p-3 rounded-lg max-w-xl transition-all duration-200 border border-gray-300 dark:border-slate-600 flex items-start gap-2;
-}
-
 .text-muted {
   @apply text-xs text-gray-600 dark:text-gray-400 transition-colors duration-200;
-}
-
-.error-text {
-  @apply text-red-500 text-xl font-semibold;
-}
-
-.empty-state-container {
-  @apply flex flex-col items-center justify-center h-full min-h-64 gap-4 text-center py-8;
-}
-
-.empty-state-icon {
-  @apply text-gray-400 dark:text-gray-600 text-5xl opacity-50;
-}
-
-.empty-state-text {
-  @apply text-gray-500 dark:text-gray-400 text-base font-medium transition-colors duration-200;
-}
-
-.empty-state-subtext {
-  @apply text-gray-400 dark:text-gray-500 text-xs transition-colors duration-200;
-}
-
-.center-container {
-  @apply flex justify-center items-center h-full;
 }
 
 /* Badge list styles */
@@ -134,7 +75,6 @@
   @apply text-[9px] font-extrabold bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50;
 }
 
-.deck-quick-action-button,
 .deck-quick-action-commander,
 .deck-quick-action-art,
 .deck-quick-action-add,
