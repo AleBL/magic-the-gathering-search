@@ -30,6 +30,7 @@ const pt = {
       edit: 'Editar',
       empty: 'Vazio',
       errorBoundaryMessage: 'O aplicativo encontrou um erro inesperado. Recarregue para continuar.',
+      sectionErrorMessage: 'Não foi possível carregar esta seção. O restante do app continua disponível.',
       errorFetchingSymbology: 'Erro ao buscar simbologia do Scryfall:',
       errorTitle: 'Erro',
       errorTranslatingBatch: 'Erro ao traduzir lote de cartas:',

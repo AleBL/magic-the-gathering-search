@@ -30,6 +30,7 @@ const en = {
       edit: 'Edit',
       empty: 'Empty',
       errorBoundaryMessage: 'The application encountered an unexpected error. Please reload to continue.',
+      sectionErrorMessage: 'This section could not be loaded. The rest of the app is still available.',
       errorFetchingSymbology: 'Error fetching Scryfall symbology:',
       errorTitle: 'Error',
       errorTranslatingBatch: 'Error translating card batch:',

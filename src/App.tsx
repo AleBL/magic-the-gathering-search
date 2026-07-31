@@ -13,6 +13,7 @@ import { useDeckActions } from './hooks/useDeckActions';
 import { useGlobalRipple } from './hooks/useGlobalRipple';
 import { useVisualEffects } from './hooks/useVisualEffects';
 import useOnlineStatus from './hooks/useOnlineStatus';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // 'search' is the landing tab and stays in the entry chunk so first paint costs no
 // extra round trip. The other two are split out and then warmed on idle below, so
@@ -172,13 +173,18 @@ function App() {
             activeFormat={editingDeck.deckFormat}
           />
         ) : (
-          <Suspense
-            fallback={
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>
-            }
-          >
-            {activeTab === 'collection' ? <CollectionManager /> : <DeckManager showToast={showToast} />}
-          </Suspense>
+          // Scoped so a failed IndexedDB read inside one tab degrades that tab instead of
+          // the whole app: Dexie's useLiveQuery throws during render, and the only other
+          // boundary is the root one in main.tsx.
+          <ErrorBoundary variant="section">
+            <Suspense
+              fallback={
+                <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>
+              }
+            >
+              {activeTab === 'collection' ? <CollectionManager /> : <DeckManager showToast={showToast} />}
+            </Suspense>
+          </ErrorBoundary>
         )}
       </div>
     </RootLayout>
