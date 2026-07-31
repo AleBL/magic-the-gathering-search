@@ -48,26 +48,20 @@ export function ManaBaseOptimizerPanel({ stats, onApplySuggestedLands }: ManaBas
           {/* Current → target → delta at a glance; the chart below only shows
               HOW the added basics are split across colors. */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-                {t('stats.currentLands')}
-              </span>
+            <div className="stat-tile">
+              <span className="stat-tile-label">{t('stats.currentLands')}</span>
               <span className="text-base font-extrabold text-gray-700 dark:text-gray-200 tabular-nums">
                 {stats.totalLands}
               </span>
             </div>
-            <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-                {t('stats.targetLands')}
-              </span>
+            <div className="stat-tile">
+              <span className="stat-tile-label">{t('stats.targetLands')}</span>
               <span className="text-base font-extrabold text-gray-700 dark:text-gray-200 tabular-nums">
                 {stats.targetTotalLands}
               </span>
             </div>
-            <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-                {t('stats.landsToAdd')}
-              </span>
+            <div className="stat-tile">
+              <span className="stat-tile-label">{t('stats.landsToAdd')}</span>
               <span className="text-base font-extrabold text-primary dark:text-blue-400 tabular-nums">
                 +{stats.neededBasicLands}
               </span>
@@ -88,9 +82,7 @@ export function ManaBaseOptimizerPanel({ stats, onApplySuggestedLands }: ManaBas
 
           {chartData.length > 0 ? (
             <>
-              <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-                {t('stats.suggestedDistribution')}
-              </span>
+              <span className="stat-tile-label">{t('stats.suggestedDistribution')}</span>
               <ChartFrame style={{ height: rowHeight }} className="mt-1">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart

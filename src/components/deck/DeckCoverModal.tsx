@@ -50,7 +50,7 @@ export default function DeckCoverModal({ deck, onSelect, onClose }: DeckCoverMod
         className="modal-container sm:max-w-2xl w-full max-h-[85vh] overflow-y-auto animate-fadeIn"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 id="deck-cover-title" className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h3 id="deck-cover-title" className="modal-title">
             <FaImage className="text-primary" />
             {t('deck.setCover')}
           </h3>

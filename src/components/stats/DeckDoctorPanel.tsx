@@ -142,8 +142,8 @@ const SEVERITY_STYLE: Record<DeckRecommendation['severity'], { wrap: string; ico
 
 function StatTile({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">{label}</span>
+    <div className="stat-tile">
+      <span className="stat-tile-label">{label}</span>
       <span className={`text-base font-extrabold tabular-nums ${tone ?? 'text-gray-700 dark:text-gray-200'}`}>
         {value}
       </span>
@@ -265,9 +265,7 @@ export function DeckDoctorPanel({ currentDeck, stats }: DeckDoctorPanelProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Consistency score + explainable breakdown */}
           <div className="space-y-3">
-            <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-              {t('deckDoctor.consistencyScore')}
-            </span>
+            <span className="stat-tile-label">{t('deckDoctor.consistencyScore')}</span>
             <ScoreGauge score={score} />
             <div className="space-y-3">
               {score.components.map((component) => (
@@ -372,9 +370,7 @@ export function DeckDoctorPanel({ currentDeck, stats }: DeckDoctorPanelProps) {
 
           {/* Natural-language recommendations */}
           <div className="lg:col-span-2 space-y-2">
-            <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-              {t('deckDoctor.recommendations')}
-            </span>
+            <span className="stat-tile-label">{t('deckDoctor.recommendations')}</span>
             {recommendations.map((rec) => {
               const style = SEVERITY_STYLE[rec.severity];
               return (

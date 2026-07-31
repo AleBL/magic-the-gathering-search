@@ -59,10 +59,7 @@ export default function DeckSuggestionsModal({ cards, format, onAddToDeck, onClo
         className="modal-container sm:max-w-3xl w-full overflow-y-auto animate-fadeIn"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3
-            id="deck-suggestions-title"
-            className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"
-          >
+          <h3 id="deck-suggestions-title" className="modal-title">
             <FaMagic className="text-primary" />
             {t('deck.suggestionsTitle')}
           </h3>

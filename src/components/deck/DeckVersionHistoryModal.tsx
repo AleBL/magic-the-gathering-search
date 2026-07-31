@@ -91,10 +91,7 @@ export default function DeckVersionHistoryModal({ deck, onRestore, onClose }: De
         className="modal-container sm:max-w-lg w-full max-h-[85vh] overflow-y-auto animate-fadeIn"
       >
         <div className="flex items-center justify-between mb-1">
-          <h3
-            id="deck-history-title"
-            className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"
-          >
+          <h3 id="deck-history-title" className="modal-title">
             <FaHistory className="text-primary" />
             {t('deck.versionHistory')}
           </h3>
