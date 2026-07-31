@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSkull, FaBan } from 'react-icons/fa';
 import cardBack from '../../assets/card-back.jpg';
@@ -6,7 +5,7 @@ import { usePlaytestContext } from './PlaytestContext';
 import { PlaytestDragData } from '../../types/Playtest';
 import { PLAYTEST_PILE_SIZE_CLASSES } from '../../constants';
 
-export const PlaytestLibraryGraveyard: React.FC = () => {
+export function PlaytestLibraryGraveyard() {
   const { t } = useTranslation();
   const {
     library,
@@ -221,4 +220,4 @@ export const PlaytestLibraryGraveyard: React.FC = () => {
       </div>
     </div>
   );
-};
+}

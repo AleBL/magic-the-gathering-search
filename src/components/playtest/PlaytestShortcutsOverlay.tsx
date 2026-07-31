@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaKeyboard, FaTimes } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
@@ -20,7 +19,7 @@ const SHORTCUTS: ShortcutRow[] = [
 ];
 
 /** Modal listing the playtest keyboard shortcuts, toggled with the "?" key. */
-export const PlaytestShortcutsOverlay: React.FC = () => {
+export function PlaytestShortcutsOverlay() {
   const { t } = useTranslation();
   const { isShortcutsOpen, setIsShortcutsOpen } = usePlaytestContext();
   const closeOverlay = () => setIsShortcutsOpen(false);
@@ -85,4 +84,4 @@ export const PlaytestShortcutsOverlay: React.FC = () => {
       </div>
     </div>
   );
-};
+}

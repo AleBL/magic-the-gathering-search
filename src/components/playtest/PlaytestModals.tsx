@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSkull, FaBan } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
@@ -13,7 +12,7 @@ import { PLAYTEST_CARD_DETAIL_Z_INDEX } from '../../constants';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-export const PlaytestModals: React.FC<{ deckRelatedTokens: DeckRelatedToken[] }> = ({ deckRelatedTokens }) => {
+export function PlaytestModals({ deckRelatedTokens }: { deckRelatedTokens: DeckRelatedToken[] }) {
   const { t } = useTranslation();
   const {
     contextMenu,
@@ -428,4 +427,4 @@ export const PlaytestModals: React.FC<{ deckRelatedTokens: DeckRelatedToken[] }>
       )}
     </>
   );
-};
+}

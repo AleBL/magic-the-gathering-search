@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface ErrorStateProps {
@@ -8,7 +7,7 @@ interface ErrorStateProps {
   retryLabel?: string;
 }
 
-const ErrorState: React.FC<ErrorStateProps> = ({ title, message, onRetry, retryLabel }) => {
+function ErrorState({ title, message, onRetry, retryLabel }: ErrorStateProps) {
   const { t } = useTranslation();
 
   const displayTitle = title || t('common.somethingWentWrong');
@@ -30,6 +29,6 @@ const ErrorState: React.FC<ErrorStateProps> = ({ title, message, onRetry, retryL
       )}
     </div>
   );
-};
+}
 
 export default ErrorState;

@@ -167,7 +167,7 @@ const PlaytestBattlefieldCard = memo(
 
 PlaytestBattlefieldCard.displayName = 'PlaytestBattlefieldCard';
 
-export const PlaytestBattlefield: React.FC = () => {
+export function PlaytestBattlefield() {
   const { t } = useTranslation();
   const {
     battlefield,
@@ -243,4 +243,4 @@ export const PlaytestBattlefield: React.FC = () => {
       )}
     </div>
   );
-};
+}

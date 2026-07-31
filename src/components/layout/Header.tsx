@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSearch, FaLayerGroup, FaBoxOpen } from 'react-icons/fa';
 import pwLogo from '../../assets/pw-logo.svg';
@@ -21,7 +20,7 @@ interface HeaderProps {
   setIsDarkMode: (val: boolean) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({
+function Header({
   activeTab,
   setActiveTab,
   currentDeckLength,
@@ -29,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({
   onCancelEdit,
   isDarkMode,
   setIsDarkMode
-}) => {
+}: HeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -97,6 +96,6 @@ const Header: React.FC<HeaderProps> = ({
       )}
     </header>
   );
-};
+}
 
 export default Header;

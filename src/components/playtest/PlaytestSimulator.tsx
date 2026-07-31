@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FaExclamationTriangle, FaCheck } from 'react-icons/fa';
@@ -27,11 +27,15 @@ interface PlaytestSimulatorProps {
   deckRelatedTokens?: DeckRelatedToken[];
 }
 
-const PlaytestSimulatorContent: React.FC<{
+function PlaytestSimulatorContent({
+  onClose,
+  deckCards,
+  deckRelatedTokens
+}: {
   onClose: () => void;
   deckCards: Card[];
   deckRelatedTokens: DeckRelatedToken[];
-}> = ({ onClose, deckCards, deckRelatedTokens }) => {
+}) {
   const { t } = useTranslation();
   const createRipple = useRipple();
   const {
@@ -171,7 +175,7 @@ const PlaytestSimulatorContent: React.FC<{
       <PlaytestShortcutsOverlay />
     </div>
   );
-};
+}
 
 export default function PlaytestSimulator({
   isOpen,

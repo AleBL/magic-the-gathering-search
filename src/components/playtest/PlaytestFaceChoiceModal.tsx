@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlaytestContext } from './PlaytestContext';
 import { faceImage } from '../../utils/cardFaces';
@@ -10,7 +9,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
  * hand: the player must choose which face enters the battlefield. Each face is
  * a large clickable card showing its image, name and type line.
  */
-export const PlaytestFaceChoiceModal: React.FC = () => {
+export function PlaytestFaceChoiceModal() {
   const { t } = useTranslation();
   const { pendingFaceChoice, handleChooseFace, handleCancelFaceChoice } = usePlaytestContext();
 
@@ -97,4 +96,4 @@ export const PlaytestFaceChoiceModal: React.FC = () => {
       </div>
     </div>
   );
-};
+}

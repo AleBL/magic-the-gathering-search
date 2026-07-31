@@ -128,7 +128,7 @@ const PlaytestHandCard = memo(
 
 PlaytestHandCard.displayName = 'PlaytestHandCard';
 
-export const PlaytestHand: React.FC = () => {
+export function PlaytestHand() {
   const { t } = useTranslation();
   const {
     hand,
@@ -209,4 +209,4 @@ export const PlaytestHand: React.FC = () => {
       </div>
     </div>
   );
-};
+}

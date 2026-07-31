@@ -1,11 +1,10 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRight, FaLayerGroup, FaDiceD20, FaSync, FaPlus, FaUndo } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
 import { useRipple } from '../../hooks/useRipple';
 import { Card } from '../../types/Card';
 
-export const PlaytestControlBarBottom: React.FC<{ deckCards: Card[] }> = ({ deckCards }) => {
+export function PlaytestControlBarBottom({ deckCards }: { deckCards: Card[] }) {
   const { t } = useTranslation();
   const createRipple = useRipple();
   const {
@@ -120,4 +119,4 @@ export const PlaytestControlBarBottom: React.FC<{ deckCards: Card[] }> = ({ deck
       </div>
     </div>
   );
-};
+}
