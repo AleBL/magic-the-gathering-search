@@ -18,6 +18,7 @@ import { PlaytestShortcutsOverlay } from '../playtest/PlaytestShortcutsOverlay';
 import { PlaytestParticles } from './PlaytestParticles';
 import AmbientGlow from '../ui/AmbientGlow';
 import { useRipple } from '../../hooks/useRipple';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface PlaytestSimulatorProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ function PlaytestSimulatorContent({
 }) {
   const { t } = useTranslation();
   const createRipple = useRipple();
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
   const {
     isMulliganPhase,
     mulligans,
@@ -107,7 +109,17 @@ function PlaytestSimulatorContent({
 
   return (
     <div className="modal-overlay p-2 sm:p-4 !z-[var(--z-playtest)]" style={{ zIndex: 'var(--z-playtest)' }}>
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl w-full h-full max-w-none shadow-2xl flex flex-col overflow-hidden transition-all duration-300">
+      {/* The simulator hosts its own dialogs (scry/surveil, tokens, shortcuts…), each with
+          its own trap. Nesting works because the inner container's keydown handler runs
+          first and stops the Tab there; this outer trap only catches focus that would
+          otherwise fall through to the page behind. */}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('playtest.playtestSimulator')}
+        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl w-full h-full max-w-none shadow-2xl flex flex-col overflow-hidden transition-all duration-300"
+      >
         <PlaytestControlBarTop onClose={onClose} />
 
         {isMulliganPhase ? (
