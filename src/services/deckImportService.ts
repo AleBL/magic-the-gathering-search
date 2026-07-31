@@ -1,6 +1,7 @@
 import { Card } from '../types/Card';
 import { DeckZone } from '../types/enums';
 import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
+import { translateCards } from '../utils/translationHelper';
 
 const MAX_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
@@ -299,7 +300,6 @@ export const fetchCardsFromParsedList = async (
         message: t ? t('deck.translatingCards') : 'Traduzindo cartas...'
       });
     }
-    const { translateCards } = await import('../utils/translationHelper');
     translatedCardsList = await translateCards(allResolvedCards, currentLang);
   }
 
