@@ -81,7 +81,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
     };
 
     fetchTokens();
-  }, [card, i18n.language]);
+  }, [card, i18n.language, t]);
 
   return { tokens, isLoading, error };
 }

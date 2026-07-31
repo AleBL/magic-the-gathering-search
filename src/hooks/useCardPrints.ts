@@ -124,7 +124,8 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     originalToughness,
     originalColors,
     originalTypeLine,
-    originalOracleText
+    originalOracleText,
+    t
   ]);
 
   return { prints, isLoading, error };
