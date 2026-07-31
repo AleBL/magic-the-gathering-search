@@ -114,7 +114,7 @@ export function useDeckActions(showToast: ShowToastFn) {
     (cardToRemove: Card) => {
       const removedCard = removeCard(cardToRemove.id);
       if (removedCard) {
-        showToast(`${cardToRemove.name}: Removido`, 'info', {
+        showToast(`${cardToRemove.name}: ${t('cardDetails.cardRemoved')}`, 'info', {
           label: t('common.undo'),
           onClick: () => {
             handleAddToDeck(cardToRemove);

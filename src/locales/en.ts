@@ -337,6 +337,7 @@ const en = {
       addToDeck: 'Add to Deck',
       banned: 'Banned',
       cardAdded: 'Card added to deck!',
+      cardRemoved: 'Card removed from deck',
       cardEditions: 'Card editions',
       commanderBadge: 'Commander',
       commanders: 'Commanders',

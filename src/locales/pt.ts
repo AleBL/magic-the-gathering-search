@@ -338,6 +338,7 @@ const pt = {
       addToDeck: '+ Deck',
       banned: 'Banida',
       cardAdded: 'Carta adicionada ao deck!',
+      cardRemoved: 'Carta removida do deck',
       cardEditions: 'Edições da carta',
       commanderBadge: 'Comandante',
       commanders: 'Comandantes',

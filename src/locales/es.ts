@@ -342,6 +342,7 @@ const es = {
       addToDeck: '+ Mazo',
       banned: 'Baneada',
       cardAdded: '¡Carta añadida al mazo!',
+      cardRemoved: 'Carta eliminada del mazo',
       cardEditions: 'Ediciones de la carta',
       commanderBadge: 'Comandante',
       commanders: 'Comandantes',
