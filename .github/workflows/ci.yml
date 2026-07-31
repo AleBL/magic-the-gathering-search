@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   verify:
-    name: Type-check, lint, test & build
+    name: Type-check, lint & test
     runs-on: ubuntu-latest
 
     steps:
