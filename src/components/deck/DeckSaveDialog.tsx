@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { FaCheck, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { DeckFormat } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface DeckSaveDialogProps {
   deckName: string;
@@ -33,12 +35,22 @@ function DeckSaveDialog({
   title
 }: DeckSaveDialogProps) {
   const { t } = useTranslation();
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
+  useEscapeKey(onCancel);
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1000 }}>
-      <div className="modal-container modal-container-medium w-full flex flex-col !p-0 overflow-hidden animate-fadeIn mx-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deck-save-title"
+        className="modal-container modal-container-medium w-full flex flex-col !p-0 overflow-hidden animate-fadeIn mx-auto"
+      >
         <div className="p-6 md:p-8 flex-1 overflow-y-auto flex flex-col">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{title ?? t('deck.saveDeck')}</h3>
+          <h3 id="deck-save-title" className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            {title ?? t('deck.saveDeck')}
+          </h3>
 
           <div className="space-y-4 mb-6">
             <div>

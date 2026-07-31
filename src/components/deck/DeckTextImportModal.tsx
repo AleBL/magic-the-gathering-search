@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFileImport, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface DeckTextImportModalProps {
   isOpen: boolean;
@@ -10,15 +12,12 @@ interface DeckTextImportModalProps {
   errorMsg: string | null;
 }
 
-const DeckTextImportModal: React.FC<DeckTextImportModalProps> = ({
-  isOpen,
-  onClose,
-  onImport,
-  isImporting,
-  errorMsg
-}) => {
+function DeckTextImportModal({ isOpen, onClose, onImport, isImporting, errorMsg }: DeckTextImportModalProps) {
   const { t } = useTranslation();
   const [textDeckList, setTextDeckList] = useState('');
+  // Mounted even while closed (it renders null), so both are gated on isOpen.
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
+  useEscapeKey(onClose, isOpen);
 
   useEffect(() => {
     if (!isOpen) {
@@ -30,16 +29,26 @@ const DeckTextImportModal: React.FC<DeckTextImportModalProps> = ({
 
   return (
     <div className="modal-overlay animate-fadeIn">
-      <div className="modal-container modal-container-medium w-full flex flex-col max-h-[90vh] overflow-hidden !p-0">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deck-text-import-title"
+        className="modal-container modal-container-medium w-full flex flex-col max-h-[90vh] overflow-hidden !p-0"
+      >
         {/* Modal Header */}
         <div className="modal-header-container">
-          <h3 className="text-gray-900 dark:text-white text-lg font-bold flex items-center gap-2">
+          <h3
+            id="deck-text-import-title"
+            className="text-gray-900 dark:text-white text-lg font-bold flex items-center gap-2"
+          >
             <FaFileImport className="text-blue-500" />
             {t('deck.importTextListTitle')}
           </h3>
           <button
             type="button"
             onClick={onClose}
+            aria-label={t('common.close')}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
           >
             <FaTimes />
@@ -94,6 +103,6 @@ const DeckTextImportModal: React.FC<DeckTextImportModalProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default DeckTextImportModal;

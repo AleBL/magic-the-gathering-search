@@ -6,6 +6,8 @@ import { DeckRelatedToken } from '../../types/Deck';
 import { DeckZone } from '../../types/enums';
 import { useProxyPrint, resolveFaceImageUrl } from '../../hooks/useProxyPrint';
 import { ProxyPrintSettingsBar } from '../deck/ProxyPrintSettingsBar';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface DeckProxyPrintProps {
   isOpen: boolean;
@@ -59,20 +61,34 @@ function DeckProxyPrint({
     handlePrint
   } = useProxyPrint({ cards, deckRelatedTokens, defaultZone });
 
+  // Mounted even while closed (it renders null), so both are gated on isOpen.
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (
     <>
       <div className="modal-overlay animate-fadeIn" style={{ zIndex: 9999 }}>
-        <div className="proxy-modal-container">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="proxy-print-title"
+          className="proxy-modal-container"
+        >
           <div className="modal-header-container">
-            <h3 className="text-gray-900 dark:text-white text-lg font-bold flex items-center gap-2">
+            <h3
+              id="proxy-print-title"
+              className="text-gray-900 dark:text-white text-lg font-bold flex items-center gap-2"
+            >
               <FaPrint className="text-blue-500" />
               {t('print.printProxiesTitle')}
             </h3>
             <button
               type="button"
               onClick={onClose}
+              aria-label={t('common.close')}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
             >
               <FaTimes />

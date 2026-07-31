@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlaytestCard } from '../../types/Playtest';
 import { FaTimes, FaArrowLeft, FaArrowRight, FaArrowDown, FaArrowUp } from 'react-icons/fa';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export interface ScrySurveilModalProps {
   type: 'scry' | 'surveil';
@@ -15,6 +17,8 @@ export default function ScrySurveilModal({ type, amount, initialCards, onComplet
   const { t } = useTranslation();
   const [topCards, setTopCards] = useState<PlaytestCard[]>(initialCards);
   const [otherCards, setOtherCards] = useState<PlaytestCard[]>([]);
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
+  useEscapeKey(onClose);
 
   const title = type === 'scry' ? t('playtest.scryAmount', { amount }) : t('playtest.surveilAmount', { amount });
   const otherZoneName = type === 'scry' ? t('playtest.bottomOfLibrary') : t('playtest.graveyard');
@@ -63,11 +67,20 @@ export default function ScrySurveilModal({ type, amount, initialCards, onComplet
 
   return (
     <div className="modal-overlay" style={{ zIndex: 3000 }}>
-      <div className="w-full max-w-5xl mx-4 bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] animate-fadeIn">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="scry-surveil-title"
+        className="w-full max-w-5xl mx-4 bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] animate-fadeIn"
+      >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h2>
+          <h2 id="scry-surveil-title" className="text-2xl font-bold text-slate-900 dark:text-white">
+            {title}
+          </h2>
           <button
             onClick={onClose}
+            aria-label={t('common.close')}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
           >
             <FaTimes className="w-5 h-5" />
