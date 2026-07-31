@@ -26,10 +26,10 @@ export default defineConfig({
       // lower than the old numbers only because the denominator is now ~4x larger.
       // Raise them as tests land; never widen the gap to make a red run pass.
       thresholds: {
-        statements: 44,
-        branches: 40,
-        functions: 45,
-        lines: 45
+        statements: 50,
+        branches: 44,
+        functions: 48,
+        lines: 50
       }
     }
   }
