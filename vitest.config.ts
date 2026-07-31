@@ -14,34 +14,22 @@ export default defineConfig({
     css: false,
     coverage: {
       provider: 'v8',
-      // Scoped to the modules this first-pass suite actually targets, so the numbers
-      // reflect tested code rather than being diluted by not-yet-covered utilities.
-      include: [
-        'src/utils/deckGrouping.ts',
-        'src/utils/deckValidator.ts',
-        'src/utils/symbolHelper.tsx',
-        'src/utils/translationHelper.ts',
-        'src/utils/deckDoctor.ts',
-        'src/utils/deckStatistics.ts',
-        'src/utils/collectionMath.ts',
-        'src/utils/deckText.ts',
-        'src/services/collectionCsv.ts',
-        'src/services/deckShare.ts',
-        'src/store/useDeckStore.ts',
-        'src/hooks/usePlaytestSimulator.ts',
-        'src/hooks/useInstallPrompt.ts',
-        'src/hooks/useOnlineStatus.ts',
-        'src/components/stats/DeckStats.tsx',
-        'src/components/card/CardItem.tsx'
-      ],
+      // The whole logic layer, not a hand-picked list. An allow-list of already-tested
+      // modules reports a flattering number that says nothing about the project: adding
+      // an untested util simply left it out of the denominator. Components are excluded
+      // on purpose — they are covered through E2E/manual QA, and gating them here would
+      // push the floor so low it stops catching anything.
+      include: ['src/utils/**/*.{ts,tsx}', 'src/services/**/*.ts', 'src/store/**/*.ts', 'src/hooks/**/*.ts'],
       // 'json-summary' + 'json' feed the PR coverage-report action; 'text' for CI logs.
       reporter: ['text', 'text-summary', 'json', 'json-summary', 'html'],
-      // Hard floor: CI fails if coverage drops below these. Tune upward as tests grow.
+      // Ratchet, set just under the measured value at the time of writing. These read
+      // lower than the old numbers only because the denominator is now ~4x larger.
+      // Raise them as tests land; never widen the gap to make a red run pass.
       thresholds: {
-        statements: 60,
-        branches: 45,
-        functions: 60,
-        lines: 62
+        statements: 44,
+        branches: 40,
+        functions: 45,
+        lines: 45
       }
     }
   }

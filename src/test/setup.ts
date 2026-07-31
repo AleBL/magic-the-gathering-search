@@ -11,12 +11,11 @@ afterEach(() => {
   cleanup();
 });
 
-// TODO(test-coverage): first-pass suite intentionally scoped to the pure logic and
-// components that the upcoming refactors (V5 phases A.3, B, C) will touch. Still
-// untested and worth adding as those land:
-//   - utils: deckStatistics, cardTypePredicates, formatLabel, contextMenuPosition, toastHelper
-//   - store/hooks: useDeckManager, useDeckActions, useDeckTextImport, useCardSearch,
+// TODO(test-coverage): the coverage gate in vitest.config.ts now spans the whole
+// logic layer (utils/services/store/hooks), so the gaps below show up as real
+// numbers rather than being excluded from the denominator. Highest value first:
+//   - hooks: useDeckManager, useDeckActions, useDeckTextImport, useCardSearch,
 //     useSearchFilters, useShortcuts, and playtest undo/redo + mulligan flows
 //   - services: deckImportService, fileDownload
-//   - components: SearchFilters, DeckManager, PlaytestSimulator, stats/* panels,
-//     and deckValidator's commander partnership / color-identity branches
+//   - utils: cardTypePredicates, formatLabel, contextMenuPosition, rippleEffect
+//   - deckValidator's commander partnership / color-identity branches
