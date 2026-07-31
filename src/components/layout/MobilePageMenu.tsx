@@ -16,6 +16,7 @@ import {
   FaColumns
 } from 'react-icons/fa';
 import { PendingAction, useDeckStore } from '../../store/useDeckStore';
+import { dispatchPendingAction } from '../../hooks/usePendingAction';
 import { deckActionLabels } from '../../utils/deckActionLabels';
 import BottomSheet from '../ui/BottomSheet';
 import { AppTab } from '../../types';
@@ -44,8 +45,6 @@ interface PageMenuItem {
 function MobilePageMenu({ activeTab }: MobilePageMenuProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
   const currentDeckLength = useDeckStore((state) => state.currentDeck.length);
   const editingDeck = useDeckStore((state) => state.editingDeck);
   const selectedDeckSummary = useDeckStore((state) => state.selectedDeckSummary);
@@ -141,7 +140,7 @@ function MobilePageMenu({ activeTab }: MobilePageMenuProps) {
 
   const handleItemClick = (action: PendingAction) => {
     setIsOpen(false);
-    setPendingAction(action);
+    dispatchPendingAction(action);
   };
 
   // The search tab only ever offered two items here (focus search — redundant
@@ -150,7 +149,7 @@ function MobilePageMenu({ activeTab }: MobilePageMenuProps) {
   // Go straight to the filters sheet instead.
   const handleButtonClick = () => {
     if (activeTab === 'search') {
-      setPendingAction('open-search-filters');
+      dispatchPendingAction('open-search-filters');
       return;
     }
     setIsOpen(true);

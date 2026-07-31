@@ -47,9 +47,35 @@ DeckStoreState {
     deckFormat: DeckFormat                     // Standard, Modern, Commander, etc.
     deckNotes?: string
   }
-  pendingAction: string | null                 // 'save-deck' | 'playtest-deck' | 'clear-deck'
+  pendingAction: PendingAction | null          // Cross-component command channel — see below
 }
 ```
+
+### The `pendingAction` command channel
+
+Emitters that have no path to the owning component — keyboard shortcuts, the command
+palette, and the navbar's mobile page menu (which below `sm` replaces the on-screen
+toolbars entirely) — park a command on `pendingAction`; whichever mounted component owns
+that command runs it and clears the channel.
+
+Both halves live in `src/hooks/usePendingAction.ts`:
+
+```typescript
+usePendingAction({ 'clear-deck': clearDeckWithConfirm })  // receive
+dispatchPendingAction('focus-search')                     // send
+```
+
+Rules that hold the channel together:
+
+- **One owner per command.** A command with no handler in the receiving component is left
+  on the channel — clearing it would swallow it before its owner ever saw it.
+- **`PendingAction` is a union, not `string`,** so a typo'd command fails to compile.
+- **Handlers are read through a ref.** They are rebuilt every render, so listing them as
+  dependencies would re-run the effect constantly; the effect must fire when a *command
+  arrives*, not when unrelated state changes.
+
+Current owners: `CardSearch` (`focus-search`), `SearchFilters` (`open-search-filters`),
+`DeckPreview` (`playtest-deck`, `print-proxies`), `DeckManager` (the other ten).
 
 **Key Mutations**:
 - `addCard(card)` → Add card to currentDeck
@@ -148,17 +174,48 @@ i18n.changeLanguage('es');                      // Switch to Spanish
 | File | Purpose | Lines |
 |------|---------|-------|
 | `src/main.tsx` | App entry point (web/Electron) | ~20 |
-| `src/App.tsx` | Root React component, tab routing | ~100 |
+| `src/App.tsx` | Root React component, tab routing | ~180 |
 | `src/store/useDeckStore.ts` | Global Zustand store | ~160 |
 | `src/db/database.ts` | Dexie schema definition | ~20 |
-| `src/hooks/useDeckManager.ts` | Load/save deck logic | ~250 |
-| `src/hooks/useCardSearch.ts` | Scryfall API integration | ~300 |
-| `src/hooks/usePlaytestSimulator.ts` | Playtest game state | ~450 |
-| `src/services/deckImportService.ts` | Parse deck formats | ~200 |
-| `src/utils/deckValidator.ts` | Format legality rules | ~150 |
-| `src/utils/symbolHelper.tsx` | Render mana symbols | ~100 |
-| `src/components/DeckManager.tsx` | Deck editor UI | ~350 |
-| `src/components/PlaytestSimulator.tsx` | Playtest UI | ~400 |
+| `src/hooks/useDeckManager.ts` | Load/save deck logic | ~440 |
+| `src/hooks/useCardSearch.ts` | Scryfall API integration | ~350 |
+| `src/hooks/usePlaytestSimulator.ts` | Playtest game state | ~610 |
+| `src/services/deckImportService.ts` | Parse deck formats | ~365 |
+| `src/utils/deckValidator.ts` | Format legality rules | ~280 |
+| `src/utils/symbolHelper.tsx` | Render mana symbols | ~110 |
+| `src/components/deck/DeckManager.tsx` | Deck editor UI | ~765 |
+| `src/components/playtest/PlaytestSimulator.tsx` | Playtest UI | ~215 |
+
+## Code Splitting
+
+The app has no router, so chunks are cut at the two seams that actually matter:
+the tab switch and the heavy modals.
+
+| Chunk | Split at | Why |
+|---|---|---|
+| entry | — | React, i18n, Dexie, Scryfall SDK, and `CardSearch` (the landing tab) |
+| `DeckManager` | `App.tsx` (`lazy`) | Only needed once the user opens the deck tab |
+| `CollectionManager` | `App.tsx` (`lazy`) | Same, for the collection tab |
+| `DeckStats` | `DeckPreview` / `DeckStatsModal` | Pulls in all of Recharts — by far the largest single dependency |
+| `PlaytestSimulator` | `DeckPreviewOverlays` | Full-screen mode most sessions never enter |
+| `DeckProxyPrint` | `DeckPreviewOverlays` | Print-only view |
+
+`App.tsx` warms the two tab chunks on `requestIdleCallback` after boot, so the
+split costs startup work without making the first tab switch wait on a download.
+
+## Browser Persistence
+
+Two separate stores, with different rules:
+
+- **Dexie / IndexedDB** — the decks and collection themselves (see schema above).
+- **localStorage** — UI preferences only, never deck data and never anything
+  sensitive. Every key lives in `src/constants/storage.ts`; nothing else in the
+  codebase should write a raw key string.
+
+The key *values* in that file are frozen: they are already in users' browsers, so
+renaming one discards the preference it holds. `darkMode` and `visualEffects`
+predate the `deckforge_` prefix and stay as-is for exactly that reason —
+migrating them means reading the legacy key as a fallback, not editing a literal.
 
 ## Deployment
 

@@ -1,11 +1,11 @@
-import { useState, useEffect, Dispatch, SetStateAction, ReactNode } from 'react';
+import { useState, Dispatch, SetStateAction, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFilter, FaTimes, FaUndo } from 'react-icons/fa';
 import { SearchFilters as SearchFiltersType } from '../../types';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useDeckStore } from '../../store/useDeckStore';
+import { usePendingAction } from '../../hooks/usePendingAction';
 import BottomSheet from '../ui/BottomSheet';
 
 interface SearchFiltersProps {
@@ -30,17 +30,11 @@ function SearchFilters({ filters, setFilters, mobileExtras }: SearchFiltersProps
   const { rarities, clearFilters, setRarity, setCmc } = useSearchFilters(filters, setFilters);
   useEscapeKey(() => setIsExpanded(false), isExpanded && !isMobile);
 
-  const pendingAction = useDeckStore((state) => state.pendingAction);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
-
   // The navbar's mobile page menu asks us to open via the shared pendingAction
   // channel (same mechanism keyboard shortcuts use).
-  useEffect(() => {
-    if (pendingAction === 'open-search-filters') {
-      setIsExpanded(true);
-      setPendingAction(null);
-    }
-  }, [pendingAction, setPendingAction]);
+  usePendingAction({
+    'open-search-filters': () => setIsExpanded(true)
+  });
 
   const hasActiveFilters =
     filters.rarity !== '' || filters.cmc !== '' || filters.colors.length > 0 || filters.types.length > 0;

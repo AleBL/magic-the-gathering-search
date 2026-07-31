@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../../types/Card';
 import { Deck, DeckFormat, DeckRelatedToken } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
-import { CardSize } from '../../types';
 import { ShowToastFn } from '../../types/Toast';
-import { CARD_SIZES } from '../../constants';
 import SavedDecksPanel from './SavedDecksPanel';
 import DeckVersionHistoryModal from './DeckVersionHistoryModal';
 import DeckSuggestionsModal from './DeckSuggestionsModal';
@@ -25,6 +23,10 @@ import { DeckManagerToolbar } from '../deck/DeckManagerToolbar';
 import { DeckExportDialog } from '../deck/DeckExportDialog';
 import { useDeckTextImport } from '../../hooks/useDeckTextImport';
 import { useSuggestedLands } from '../../hooks/useSuggestedLands';
+import { useCardSizePreference } from '../../hooks/useCardSizePreference';
+import { useDeckInfoEditor } from '../../hooks/useDeckInfoEditor';
+import { useSelectedDeckSync } from '../../hooks/useSelectedDeckSync';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface DeckManagerProps {
   readonly showToast: ShowToastFn;
@@ -32,14 +34,7 @@ interface DeckManagerProps {
 
 function DeckManager({ showToast }: DeckManagerProps) {
   const { t, i18n } = useTranslation();
-  const [cardSize, setCardSize] = useState<CardSize>(() => {
-    const saved = localStorage.getItem('deckforge_card_size');
-    return saved && (CARD_SIZES as readonly string[]).includes(saved) ? (saved as CardSize) : 'small';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('deckforge_card_size', cardSize);
-  }, [cardSize]);
+  const [cardSize, setCardSize] = useCardSizePreference();
   const [showDeckList, setShowDeckList] = useState(true);
   // Below lg the saved-decks list is collapsed by default so the main deck
   // area gets the whole viewport; the toggle (or the navbar page menu) opens it.
@@ -67,8 +62,6 @@ function DeckManager({ showToast }: DeckManagerProps) {
   const { handleAddToDeck, handleAddTokenToDeck, handleRemoveFromDeckWithToast } = useDeckActions(showToast);
 
   const [isTextImportOpen, setIsTextImportOpen] = useState(false);
-
-  const lastEditingIdRef = useRef<string | null>(null);
 
   const { dialogState, showAlert, showConfirm, closeDialog } = useDialog();
 
@@ -101,64 +94,28 @@ function DeckManager({ showToast }: DeckManagerProps) {
     closeFileImportModal
   } = useDeckManager(currentDeck, editingDeckId, editingDeckFormat, onCancelEdit);
 
-  const pendingAction = useDeckStore((state) => state.pendingAction);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
   const pendingSharedDeck = useDeckStore((state) => state.pendingSharedDeck);
   const setPendingSharedDeck = useDeckStore((state) => state.setPendingSharedDeck);
-  const setSelectedDeckSummary = useDeckStore((state) => state.setSelectedDeckSummary);
-  const setSavedDeckCount = useDeckStore((state) => state.setSavedDeckCount);
 
   const [deckToExport, setDeckToExport] = useState<Deck | null>(null);
   const [deckForCover, setDeckForCover] = useState<Deck | null>(null);
   // Deck whose name/format is being edited via the reused save dialog.
-  const [deckInfoEdit, setDeckInfoEdit] = useState<Deck | null>(null);
-  const [infoName, setInfoName] = useState('');
-  const [infoFormat, setInfoFormat] = useState<DeckFormat>(DeckFormatType.FREEFORM);
-
-  const openDeckInfoEditor = useCallback((deck: Deck) => {
-    setDeckInfoEdit(deck);
-    setInfoName(deck.name);
-    setInfoFormat(deck.format || DeckFormatType.FREEFORM);
-  }, []);
-
-  const handleSaveDeckInfo = useCallback(async () => {
-    if (!deckInfoEdit) return;
-    const result = await saveEditedDeck(
-      deckInfoEdit.id,
-      infoName.trim() || deckInfoEdit.name,
-      infoFormat,
-      deckInfoEdit.cards,
-      deckInfoEdit.notes,
-      deckInfoEdit.relatedTokens
-    );
-    if (result.success) {
-      setSelectedDeck((prev) =>
-        prev && prev.id === deckInfoEdit.id ? { ...prev, name: infoName.trim() || prev.name, format: infoFormat } : prev
-      );
-      setDeckInfoEdit(null);
-      showToast(t('deck.deckSaved'));
-    } else if (result.errorKey) {
-      showAlert(t('common.errorTitle'), t(result.errorKey), 'danger');
-    }
-  }, [deckInfoEdit, infoName, infoFormat, saveEditedDeck, setSelectedDeck, showToast, showAlert, t]);
+  const {
+    deckInfoEdit,
+    infoName,
+    infoFormat,
+    setInfoName,
+    setInfoFormat,
+    openDeckInfoEditor,
+    closeDeckInfoEditor,
+    handleSaveDeckInfo
+  } = useDeckInfoEditor({ saveEditedDeck, setSelectedDeck, showToast, showAlert });
 
   // Always-mounted file input for the mobile page menu's "import deck" item:
   // the toolbar's own input lives inside a dropdown that is hidden below `sm`.
   const menuImportFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Publish what the mobile page menu needs to build its item list: whether a
-  // saved deck is open for viewing (and its card count) plus how many decks
-  // exist. Cleared on unmount — selectedDeck is local state and dies with us.
-  useEffect(() => {
-    setSelectedDeckSummary(
-      selectedDeck ? { id: selectedDeck.id, name: selectedDeck.name, cardCount: selectedDeck.cards.length } : null
-    );
-    return () => setSelectedDeckSummary(null);
-  }, [selectedDeck, setSelectedDeckSummary]);
-
-  useEffect(() => {
-    setSavedDeckCount(savedDecks.length);
-  }, [savedDecks.length, setSavedDeckCount]);
+  useSelectedDeckSync({ selectedDeck, setSelectedDeck, savedDecks, editingDeckId });
 
   // Import a deck handed over from a `?deck=` share link (see App). Consume the
   // payload exactly once so re-renders don't re-trigger the network import.
@@ -168,19 +125,26 @@ function DeckManager({ showToast }: DeckManagerProps) {
     importSharedDeckString(pendingSharedDeck);
   }, [pendingSharedDeck, setPendingSharedDeck, importSharedDeckString]);
 
-  useEffect(() => {
-    if (editingDeckId) {
-      lastEditingIdRef.current = editingDeckId;
-    } else if (lastEditingIdRef.current) {
-      const deckToSelect = savedDecks.find((d) => d.id === lastEditingIdRef.current);
-      if (deckToSelect && (!selectedDeck || selectedDeck.id !== deckToSelect.id)) {
-        setSelectedDeck(deckToSelect);
-      }
-      lastEditingIdRef.current = null;
-    }
-  }, [editingDeckId, savedDecks, selectedDeck, setSelectedDeck]);
-
   const activeFormat = editingDeckId ? editingDeckFormat : deckFormat;
+
+  /**
+   * The deck currently open in the editor, shaped as a `Deck`. It has no saved
+   * counterpart until it is saved, so both the saved-decks list and the export
+   * command have to synthesise one — building it in a single place keeps the two
+   * synthesised decks from drifting apart.
+   */
+  const buildEditingDeckSnapshot = useCallback(
+    (format: DeckFormat): Deck => ({
+      id: editingDeckId ?? '',
+      name: editingDeckName || t('deck.unnamedDeck'),
+      format,
+      cards: currentDeck,
+      notes: editingDeckNotes,
+      relatedTokens: deckRelatedTokens,
+      createdAt: new Date().toISOString()
+    }),
+    [editingDeckId, editingDeckName, currentDeck, editingDeckNotes, deckRelatedTokens, t]
+  );
 
   const displayDecks = useMemo(() => {
     if (!editingDeckId) return savedDecks;
@@ -194,27 +158,10 @@ function DeckManager({ showToast }: DeckManagerProps) {
     });
 
     if (!found && editingDeckId) {
-      mapped.unshift({
-        id: editingDeckId,
-        name: editingDeckName || t('deck.unnamedDeck'),
-        format: editingDeckFormat,
-        cards: currentDeck,
-        notes: editingDeckNotes,
-        relatedTokens: deckRelatedTokens,
-        createdAt: new Date().toISOString()
-      });
+      mapped.unshift(buildEditingDeckSnapshot(editingDeckFormat));
     }
     return mapped;
-  }, [
-    savedDecks,
-    editingDeckId,
-    editingDeckName,
-    editingDeckFormat,
-    currentDeck,
-    editingDeckNotes,
-    deckRelatedTokens,
-    t
-  ]);
+  }, [savedDecks, editingDeckId, editingDeckName, editingDeckFormat, buildEditingDeckSnapshot]);
 
   const {
     isImporting: isTextImporting,
@@ -328,6 +275,25 @@ function DeckManager({ showToast }: DeckManagerProps) {
     );
   }, [showConfirm, t, onClearDeck, showToast]);
 
+  // Reachable from two places each — the on-screen toolbar and the pendingAction
+  // channel (shortcuts / command palette / mobile page menu). They were written out
+  // twice, so a change to one silently diverged from the other.
+  const openSaveDialog = useCallback(() => {
+    setDeckName('');
+    setShowSaveDialog(true);
+  }, [setDeckName, setShowSaveDialog]);
+
+  const openSaveAsNewDialog = useCallback(() => {
+    setDeckName(`${editingDeckName} (${t('common.copy')})`);
+    setDeckFormat(editingDeckFormat);
+    setShowSaveDialog(true);
+  }, [setDeckName, editingDeckName, t, setDeckFormat, editingDeckFormat, setShowSaveDialog]);
+
+  const openTextImport = useCallback(() => {
+    setTextErrorMsg(null);
+    setIsTextImportOpen(true);
+  }, [setTextErrorMsg]);
+
   const confirmDeleteDeck = (deck: Deck) => {
     showConfirm(
       t('deck.confirmDelete'),
@@ -440,101 +406,48 @@ function DeckManager({ showToast }: DeckManagerProps) {
     [setSelectedDeck, onLoadDeckToEdit, showToast, t]
   );
 
-  // Executes commands dispatched through the store's pendingAction channel
-  // (keyboard shortcuts, command palette and the navbar's mobile page menu —
-  // which below `sm` replaces the on-screen toolbars entirely).
-  useEffect(() => {
-    if (!pendingAction) return;
-    if (pendingAction === 'save-deck') {
-      if (editingDeckId) {
-        handleSaveEditedDeck();
-      } else {
-        setDeckName('');
-        setShowSaveDialog(true);
-      }
-      setPendingAction(null);
-    } else if (pendingAction === 'save-deck-as-new') {
-      setDeckName(`${editingDeckName} (${t('common.copy')})`);
-      setDeckFormat(editingDeckFormat);
-      setShowSaveDialog(true);
-      setPendingAction(null);
-    } else if (pendingAction === 'clear-deck') {
-      clearDeckWithConfirm();
-      setPendingAction(null);
-    } else if (pendingAction === 'export-deck') {
+  // Commands dispatched through the store's pendingAction channel: keyboard
+  // shortcuts, the command palette, and the navbar's mobile page menu, which
+  // below `sm` replaces the on-screen toolbars entirely. Handlers shared with the
+  // toolbar are defined above so both entry points stay in step.
+  usePendingAction({
+    'save-deck': () => (editingDeckId ? handleSaveEditedDeck() : openSaveDialog()),
+    'save-deck-as-new': openSaveAsNewDialog,
+    'clear-deck': clearDeckWithConfirm,
+    'export-deck': () => {
       // Export the deck on screen: the saved deck being viewed, else the
       // deck being worked on (saved deck when editing / temporary snapshot).
       if (selectedDeck) {
         setDeckToExport(selectedDeck);
       } else if (currentDeck.length > 0) {
-        setDeckToExport({
-          id: editingDeckId ?? '',
-          name: editingDeckName || t('deck.unnamedDeck'),
-          format: activeFormat,
-          cards: currentDeck,
-          notes: editingDeckNotes,
-          relatedTokens: deckRelatedTokens,
-          createdAt: new Date().toISOString()
-        });
+        setDeckToExport(buildEditingDeckSnapshot(activeFormat));
       }
-      setPendingAction(null);
-    } else if (pendingAction === 'export-all-decks') {
-      exportAllDecks();
-      setPendingAction(null);
-    } else if (pendingAction === 'import-deck-text') {
-      setTextErrorMsg(null);
-      setIsTextImportOpen(true);
-      setPendingAction(null);
-    } else if (pendingAction === 'import-deck-file') {
-      menuImportFileInputRef.current?.click();
-      setPendingAction(null);
-    } else if (pendingAction === 'edit-selected-deck') {
-      if (selectedDeck) {
-        handleLoadDeckToEdit(
-          selectedDeck.id,
-          selectedDeck.name,
-          selectedDeck.format || DeckFormatType.FREEFORM,
-          selectedDeck.cards,
-          selectedDeck.notes,
-          selectedDeck.relatedTokens
-        );
-      }
-      setPendingAction(null);
-    } else if (pendingAction === 'show-saved-decks') {
+    },
+    'export-all-decks': exportAllDecks,
+    'import-deck-text': openTextImport,
+    'import-deck-file': () => menuImportFileInputRef.current?.click(),
+    'edit-selected-deck': () => {
+      if (!selectedDeck) return;
+      handleLoadDeckToEdit(
+        selectedDeck.id,
+        selectedDeck.name,
+        selectedDeck.format || DeckFormatType.FREEFORM,
+        selectedDeck.cards,
+        selectedDeck.notes,
+        selectedDeck.relatedTokens
+      );
+    },
+    'show-saved-decks': () => {
       setShowDeckList(true);
       setIsMobileDeckListOpen(true);
       setSelectedDeck(null);
-      setPendingAction(null);
-    } else if (pendingAction === 'open-history') {
-      setIsHistoryOpen(true);
-      setPendingAction(null);
-    } else if (pendingAction === 'toggle-deck-list') {
+    },
+    'open-history': () => setIsHistoryOpen(true),
+    'toggle-deck-list': () => {
       setShowDeckList((visible) => !visible);
       setIsMobileDeckListOpen((open) => !open);
-      setPendingAction(null);
     }
-  }, [
-    pendingAction,
-    editingDeckId,
-    editingDeckName,
-    editingDeckNotes,
-    editingDeckFormat,
-    activeFormat,
-    currentDeck,
-    deckRelatedTokens,
-    selectedDeck,
-    handleSaveEditedDeck,
-    handleLoadDeckToEdit,
-    exportAllDecks,
-    setDeckName,
-    setDeckFormat,
-    setShowSaveDialog,
-    setPendingAction,
-    setSelectedDeck,
-    setTextErrorMsg,
-    clearDeckWithConfirm,
-    t
-  ]);
+  });
 
   const handleSaveTokens = useCallback(
     (deckId: string, tokens: DeckRelatedToken[]) => {
@@ -591,21 +504,11 @@ function DeckManager({ showToast }: DeckManagerProps) {
         showImportExportDropdown={showImportExportDropdown}
         setShowImportExportDropdown={setShowImportExportDropdown}
         onSaveChanges={handleSaveEditedDeck}
-        onSaveAsNew={() => {
-          setDeckName(`${editingDeckName} (${t('common.copy')})`);
-          setDeckFormat(editingDeckFormat);
-          setShowSaveDialog(true);
-        }}
+        onSaveAsNew={openSaveAsNewDialog}
         onCancelEdit={onCancelEdit}
-        onOpenSaveDialog={() => {
-          setDeckName('');
-          setShowSaveDialog(true);
-        }}
+        onOpenSaveDialog={openSaveDialog}
         onClearDeck={clearDeckWithConfirm}
-        onOpenTextImport={() => {
-          setTextErrorMsg(null);
-          setIsTextImportOpen(true);
-        }}
+        onOpenTextImport={openTextImport}
         onImportFile={handleImportDeck}
         onExportAll={exportAllDecks}
         onOpenHistory={() => setIsHistoryOpen(true)}
@@ -687,7 +590,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
           onDeckNameChange={setInfoName}
           onDeckFormatChange={setInfoFormat}
           onSave={handleSaveDeckInfo}
-          onCancel={() => setDeckInfoEdit(null)}
+          onCancel={closeDeckInfoEditor}
           title={t('deck.editDeckInfo')}
         />
       ) : null}

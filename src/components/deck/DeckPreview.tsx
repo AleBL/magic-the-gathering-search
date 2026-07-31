@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFileAlt, FaLayerGroup, FaPencilAlt, FaBolt, FaExclamationTriangle, FaChartBar } from 'react-icons/fa';
 import { Card } from '../../types/Card';
@@ -9,7 +9,7 @@ import { useDeckPreviewState } from '../../hooks/useDeckPreviewState';
 import { DeckFormatType, DeckZone } from '../../types/enums';
 import { formatLabelKey } from '../../utils/formatLabel';
 import { useTokenHandlers } from '../../hooks/useTokenHandlers';
-import { useDeckStore } from '../../store/useDeckStore';
+import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingAction';
 import EmptyState from '../ui/EmptyState';
 import DeckValidationBadge from './DeckValidationBadge';
 import DeckFloatingPreview from '../deck/DeckFloatingPreview';
@@ -118,6 +118,11 @@ function DeckPreview({
     handleHoverLeave
   } = useDeckPreviewState({ selectedDeck, currentDeck, activeFormat, deckRelatedTokens });
 
+  // Passed to two memoised CardGrids. Built inline it was a fresh array on every
+  // render, which fails memo's shallow compare and re-rendered both grids — and every
+  // memoised CardItem inside them — on any unrelated DeckPreview state change.
+  const activeTokenCards = useMemo(() => activeTokens.map((token) => token.tokenCard), [activeTokens]);
+
   const { handleDeleteTokenCard, handleAddTokenCardCopy, handleUpdateTokenCard } = useTokenHandlers({
     activeTokens,
     selectedDeckId: selectedDeck?.id,
@@ -144,18 +149,10 @@ function DeckPreview({
   const handleOpenPlaytest = useCallback(() => setIsPlaytestOpen(true), [setIsPlaytestOpen]);
   const handleOpenProxyPrint = useCallback(() => setIsProxyPrintOpen(true), [setIsProxyPrintOpen]);
 
-  const pendingAction = useDeckStore((state) => state.pendingAction);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
-
-  useEffect(() => {
-    if (pendingAction === 'playtest-deck') {
-      setIsPlaytestOpen(true);
-      setPendingAction(null);
-    } else if (pendingAction === 'print-proxies') {
-      setIsProxyPrintOpen(true);
-      setPendingAction(null);
-    }
-  }, [pendingAction, setIsPlaytestOpen, setIsProxyPrintOpen, setPendingAction]);
+  usePendingAction({
+    'playtest-deck': handleOpenPlaytest,
+    'print-proxies': handleOpenProxyPrint
+  });
 
   const handleLoadSelectedDeckToEdit = useCallback(() => {
     if (selectedDeck) {
@@ -393,7 +390,7 @@ function DeckPreview({
             onClose={handleCloseTokenModal}
             isDeckCard={true}
             isToken={true}
-            deckCards={activeTokens.map((t) => t.tokenCard)}
+            deckCards={activeTokenCards}
             isEditMode={false}
             deckRelatedTokens={activeTokens}
           />
@@ -490,7 +487,7 @@ function DeckPreview({
                 onClick: () => {
                   // In the two-pane editor the search is already on screen — just
                   // focus it rather than switching to the standalone search tab.
-                  useDeckStore.getState().setPendingAction('focus-search');
+                  dispatchPendingAction('focus-search');
                 }
               }}
             />
@@ -552,7 +549,7 @@ function DeckPreview({
           onClose={handleCloseTokenModal}
           isDeckCard={true}
           isToken={true}
-          deckCards={activeTokens.map((t) => t.tokenCard)}
+          deckCards={activeTokenCards}
           onSelectPrint={handleUpdateTokenCard}
           onRemoveFromDeck={handleDeleteTokenCard}
           onAddToDeck={handleAddTokenCardCopy}

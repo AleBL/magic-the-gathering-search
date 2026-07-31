@@ -13,7 +13,7 @@ import {
   FaKeyboard,
   FaGlobe
 } from 'react-icons/fa';
-import { useDeckStore } from '../../store/useDeckStore';
+import { dispatchPendingAction } from '../../hooks/usePendingAction';
 import { SUPPORTED_LANGUAGES } from '../../constants';
 import { AppTab } from '../../types';
 import { useMountTransition } from '../../hooks/useMountTransition';
@@ -50,7 +50,6 @@ export default function CommandPalette({
   onShowShortcuts
 }: CommandPaletteProps) {
   const { t, i18n } = useTranslation();
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -68,7 +67,7 @@ export default function CommandPalette({
         keywords: 'search buscar cards cartas find',
         run: () => {
           setActiveTab('search');
-          setPendingAction('focus-search');
+          dispatchPendingAction('focus-search');
         }
       },
       {
@@ -93,7 +92,7 @@ export default function CommandPalette({
         keywords: 'save salvar guardar deck',
         run: () => {
           setActiveTab('deck');
-          setPendingAction('save-deck');
+          dispatchPendingAction('save-deck');
         }
       },
       {
@@ -104,7 +103,7 @@ export default function CommandPalette({
         keywords: 'playtest simular test jugar jogar',
         run: () => {
           setActiveTab('deck');
-          setPendingAction('playtest-deck');
+          dispatchPendingAction('playtest-deck');
         }
       },
       {
@@ -115,7 +114,7 @@ export default function CommandPalette({
         keywords: 'clear limpar limpiar deck reset',
         run: () => {
           setActiveTab('deck');
-          setPendingAction('clear-deck');
+          dispatchPendingAction('clear-deck');
         }
       },
       {
@@ -144,7 +143,7 @@ export default function CommandPalette({
     }));
 
     return [...base, ...languageCommands];
-  }, [t, i18n, isDarkMode, setActiveTab, setIsDarkMode, setPendingAction, onShowShortcuts]);
+  }, [t, i18n, isDarkMode, setActiveTab, setIsDarkMode, onShowShortcuts]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

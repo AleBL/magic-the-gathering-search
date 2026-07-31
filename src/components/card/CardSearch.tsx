@@ -10,7 +10,7 @@ import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
 import { useCardSearch } from '../../hooks/useCardSearch';
-import { useDeckStore } from '../../store/useDeckStore';
+import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingAction';
 import ErrorState from '../ui/ErrorState';
 import EmptyState from '../ui/EmptyState';
 
@@ -53,16 +53,12 @@ function CardSearch({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const pendingAction = useDeckStore((state) => state.pendingAction);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
-
-  useEffect(() => {
-    if (pendingAction === 'focus-search') {
+  usePendingAction({
+    'focus-search': () => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
-      setPendingAction(null);
     }
-  }, [pendingAction, setPendingAction]);
+  });
 
   useEffect(() => {
     const handleEscape = () => {
@@ -125,7 +121,7 @@ function CardSearch({
                 page menu instead of the search filter button. */}
             <button
               type="button"
-              onClick={() => setPendingAction('open-search-filters')}
+              onClick={() => dispatchPendingAction('open-search-filters')}
               className="sm:hidden shrink-0 w-14 flex items-center justify-center rounded-2xl bg-gray-100 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
               aria-label={t('search.advancedFilters')}
               title={t('search.advancedFilters')}
