@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { Currency } from '../types/Collection';
+import { STORAGE_KEYS } from '../constants/storage';
 
-const STORAGE_KEY = 'deckforge_collection_currency';
+const STORAGE_KEY = STORAGE_KEYS.collectionCurrency;
 
 const readInitialCurrency = (): Currency => {
   try {

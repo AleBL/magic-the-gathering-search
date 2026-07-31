@@ -4,6 +4,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, 
 import { FaCoins, FaStar } from 'react-icons/fa';
 import { DeckStatistics } from '../../utils/deckStatistics';
 import { planBudgetCuts } from '../../utils/budgetPlanner';
+import { STORAGE_KEYS } from '../../constants/storage';
 import { CHART_BAR_RADIUS_HORIZONTAL, CHART_SEQUENTIAL, CHART_TICK_STYLE } from './chartTheme';
 import { ChartFrame, ChartSkeleton, ChartTooltip, useChartReady } from './ChartPrimitives';
 
@@ -12,7 +13,7 @@ interface BudgetEstimatorPanelProps {
 }
 
 const BAR_COLOR = CHART_SEQUENTIAL[2];
-const BUDGET_TARGET_KEY = 'deckforge_budget_target';
+const BUDGET_TARGET_KEY = STORAGE_KEYS.budgetTarget;
 
 export function BudgetEstimatorPanel({ stats }: BudgetEstimatorPanelProps) {
   const { t } = useTranslation();
@@ -50,18 +51,14 @@ export function BudgetEstimatorPanel({ stats }: BudgetEstimatorPanelProps) {
       </h4>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-            {t('stats.totalUsd')}
-          </span>
+        <div className="stat-tile">
+          <span className="stat-tile-label">{t('stats.totalUsd')}</span>
           <span className="text-base font-extrabold text-purple-600 dark:text-purple-400 tabular-nums">
             ${stats.totalUsdPrice.toFixed(2)}
           </span>
         </div>
-        <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">
-            {t('stats.totalEur')}
-          </span>
+        <div className="stat-tile">
+          <span className="stat-tile-label">{t('stats.totalEur')}</span>
           <span className="text-base font-extrabold text-purple-600 dark:text-purple-400 tabular-nums">
             €{stats.totalEurPrice.toFixed(2)}
           </span>

@@ -153,6 +153,7 @@ CardSearch Component
 ## Styling
 
 - **Tailwind CSS v4** (utility-first)
-- **Dark mode**: Toggle via useDarkMode hook, persisted to localStorage
+- **Dark mode**: Toggle via useDarkMode hook, persisted under `STORAGE_KEYS.darkMode`
+  (`src/constants/storage.ts` — the single registry for every localStorage key)
 - **Custom CSS**: src/style/ for global variables and components
 - **Responsive**: Mobile-first breakpoints (sm, md, lg, xl)

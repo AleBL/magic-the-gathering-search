@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 
+import { STORAGE_KEYS, readStoredPreference } from '../constants/storage';
+
 export default function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const savedDarkMode = localStorage.getItem('darkMode');
+    const savedDarkMode = readStoredPreference(STORAGE_KEYS.darkMode);
     if (savedDarkMode !== null) return savedDarkMode === 'true';
     // No saved preference yet — respect the OS-level prefers-color-scheme instead of forcing dark.
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -17,7 +19,7 @@ export default function useDarkMode() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('darkMode', isDarkMode.toString());
+    localStorage.setItem(STORAGE_KEYS.darkMode, isDarkMode.toString());
   }, [isDarkMode]);
 
   return [isDarkMode, setIsDarkMode] as const;
