@@ -177,15 +177,11 @@ try {
         };
       }
       return () => {};
-    },
-
-    // Remove listener
-    off: (channel: ReceiveChannel, callback: (...args: unknown[]) => void) => {
-      if (ALLOWED_RECEIVE_CHANNELS.includes(channel)) {
-        ipcRenderer.off(channel, callback as any);
-      }
     }
   });
 } catch (error) {
+  // Preload runs before the renderer exists, so there is no logger or toast to
+  // report through — console is the only channel available here.
+  // eslint-disable-next-line no-console
   console.error('Failed to expose electronAPI', error);
 }

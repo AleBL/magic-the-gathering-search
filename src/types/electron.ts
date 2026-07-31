@@ -2,8 +2,8 @@
 interface ElectronAPI {
   send: (channel: string, ...args: unknown[]) => void;
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+  /** Subscribes to a main-process channel; returns the unsubscribe function. */
   on: (channel: string, listener: (...args: unknown[]) => void) => () => void;
-  off: (channel: string, listener: (...args: unknown[]) => void) => void;
 }
 
 export interface WindowWithElectronAPI {
