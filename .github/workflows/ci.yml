@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   verify:
-    name: Type-check, lint & test
+    name: Type-check, lint, test & build
     runs-on: ubuntu-latest
 
     steps:
@@ -59,8 +59,59 @@ jobs:
       - name: Test with coverage
         run: yarn test:coverage
 
+      # Type-check does not exercise the bundlers: a change can compile and pass tests
+      # while breaking the Vite build, the PWA/service-worker generation or the Electron
+      # renderer. Both builds take a few seconds, so gate on them rather than finding out
+      # at release time.
+      - name: Build (web / PWA)
+        run: yarn build:web
+
+      # vite build via vite.config.ts (Electron renderer) + tsc for the main process.
+      - name: Build (Electron)
+        run: yarn build
+
       # Posts / updates a coverage summary comment on the PR and flags threshold status.
+      # always() so the comment still lands when a later step above has failed.
       - name: Report coverage on PR
         if: ${{ always() && github.event_name == 'pull_request' }}
         continue-on-error: true
         uses: davelosert/vitest-coverage-report-action@v2
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    # Unit tests and type-checking are far cheaper; no point booting a browser to learn
+    # the code does not compile.
+    needs: verify
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # Playwright's own pinned chromium rather than the runner's Chrome, so a runner
+      # image update cannot change what the suite is tested against.
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: yarn test:e2e
+
+      # The report is how you diagnose a failure you cannot reproduce locally.
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
