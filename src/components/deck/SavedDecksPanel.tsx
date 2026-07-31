@@ -24,7 +24,12 @@ function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...
         aria-controls="saved-decks-panel"
         className="lg:hidden w-full min-h-11 flex items-center justify-between gap-2 px-4 py-2.5 mb-2 rounded-xl bg-white dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-800 dark:text-gray-200 shadow-sm active:scale-[0.99] transition-all duration-200 cursor-pointer"
       >
-        <span className="flex items-center gap-2">
+        {/* `relative` is load-bearing: .count-badge is absolutely positioned, so without a
+            positioned ancestor here it resolves against the initial containing block and
+            lands 6px past the right edge of the *page* instead of on this label's corner. */}
+        {/* pr-3 keeps the badge clear of the label's last letter, since an absolutely
+            positioned child contributes no width of its own. */}
+        <span className="relative flex items-center gap-2 pr-3">
           <FaLayerGroup className="text-primary shrink-0" />
           {t('deck.savedDecks')}
           <span className="count-badge">{savedDeckCount}</span>

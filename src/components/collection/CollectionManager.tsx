@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt } from 'react-icons/fa';
-import { CardSize, SearchFilters } from '../../types';
-import { EMPTY_SEARCH_FILTERS, CARD_SIZES } from '../../constants';
+import { SearchFilters } from '../../types';
+import { EMPTY_SEARCH_FILTERS } from '../../constants';
+import { useCardSizePreference } from '../../hooks/useCardSizePreference';
 import { useCollection, CollectionView } from '../../hooks/useCollection';
 import { useCollectionImportExport } from '../../hooks/useCollectionImportExport';
 import { useCollectionSettings } from '../../store/useCollectionSettings';
@@ -12,6 +13,7 @@ import CardFilterBar from '../card/CardFilterBar';
 import CardGrid from '../card/CardGrid';
 import CardSizeSelector from '../card/CardSizeSelector';
 import EmptyState from '../ui/EmptyState';
+import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
 import useDialog from '../../hooks/useDialog';
 import { CollectionSummaryBar } from './CollectionSummaryBar';
@@ -21,12 +23,9 @@ function CollectionManager() {
   const [view, setView] = useState<CollectionView>('owned');
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_SEARCH_FILTERS);
   const [setFilter, setSetFilter] = useState('');
-  const [cardSize, setCardSize] = useState<CardSize>(() => {
-    const saved = localStorage.getItem('deckforge_card_size');
-    return saved && (CARD_SIZES as readonly string[]).includes(saved) ? (saved as CardSize) : 'small';
-  });
+  const [cardSize, setCardSize] = useCardSizePreference();
 
-  const { entries, visibleEntries, summary } = useCollection(view, filters);
+  const { entries, visibleEntries, summary, isLoading } = useCollection(view, filters);
   const currency = useCollectionSettings((state) => state.currency);
   const setCurrency = useCollectionSettings((state) => state.setCurrency);
   const { rarities } = useSearchFilters(filters, setFilters);
@@ -66,7 +65,10 @@ function CollectionManager() {
       type="button"
       onClick={() => setView(value)}
       aria-pressed={view === value}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+      // `relative` is load-bearing: .count-badge is absolutely positioned, so without a
+      // positioned ancestor it resolves against the initial containing block and lands
+      // past the right edge of the page instead of on this button's corner.
+      className={`relative flex items-center gap-2 px-4 py-2 pr-5 rounded-xl text-sm font-bold transition-all ${
         view === value
           ? 'bg-primary text-white shadow-md shadow-blue-500/25'
           : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
@@ -174,7 +176,15 @@ function CollectionManager() {
             </div>
           </div>
 
-          {cards.length > 0 ? (
+          {/* Skeletons while IndexedDB answers: showing the empty state here would tell
+              someone with a full collection that they own nothing. */}
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+              {Array.from({ length: 14 }).map((_, index) => (
+                <CardSkeleton key={index} />
+              ))}
+            </div>
+          ) : cards.length > 0 ? (
             <CardGrid cards={cards} size={cardSize} showCollectionControls />
           ) : (
             <EmptyState

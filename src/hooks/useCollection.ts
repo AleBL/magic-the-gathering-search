@@ -9,6 +9,12 @@ import { useCollectionSettings } from '../store/useCollectionSettings';
 
 export type CollectionView = 'owned' | 'wishlist';
 
+/**
+ * Stable fallback for the first render, before useLiveQuery resolves. A fresh `[]`
+ * here would be a new reference every render and would invalidate both memos below.
+ */
+const NO_ENTRIES: CollectionEntry[] = [];
+
 /** True when the card passes the active client-side filter bar selection. */
 const matchesFilters = (card: Card, filters: SearchFilters): boolean => {
   if (filters.colors.length > 0) {
@@ -41,7 +47,14 @@ const matchesFilters = (card: Card, filters: SearchFilters): boolean => {
  * {@link SearchFilters} shape as the search bar so CardFilterBar drops straight in.
  */
 export function useCollection(view: CollectionView, filters: SearchFilters) {
-  const entries = useLiveQuery(() => db.collection.orderBy('name').toArray(), []) ?? [];
+  // `useLiveQuery` returns undefined until IndexedDB answers. Collapsing that straight to
+  // an empty array — as this did — makes "still loading" indistinguishable from "you own
+  // nothing", so a full collection greeted its owner with the empty state and a prompt to
+  // go add cards on every visit. Keep the stable NO_ENTRIES reference for the memos below,
+  // but report the difference.
+  const liveEntries = useLiveQuery(() => db.collection.orderBy('name').toArray(), []);
+  const entries = liveEntries ?? NO_ENTRIES;
+  const isLoading = liveEntries === undefined;
   const currency = useCollectionSettings((state) => state.currency);
 
   const summary = useMemo(() => computeCollectionSummary(entries, currency), [entries, currency]);
@@ -51,5 +64,5 @@ export function useCollection(view: CollectionView, filters: SearchFilters) {
     return byView.filter((entry) => matchesFilters(entry.card, filters));
   }, [entries, view, filters]);
 
-  return { entries, visibleEntries, summary, currency };
+  return { entries, visibleEntries, summary, currency, isLoading };
 }

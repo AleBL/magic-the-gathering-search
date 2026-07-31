@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { FaBoxOpen, FaCheckCircle, FaChevronDown } from 'react-icons/fa';
 import { db } from '../../db/database';
 import { Card } from '../../types/Card';
+import { CollectionEntry } from '../../types/Collection';
 import { computeDeckCollectionGap, formatCurrency } from '../../utils/collectionMath';
 import { useCollectionSettings } from '../../store/useCollectionSettings';
 
@@ -11,11 +12,17 @@ interface DeckCollectionSummaryProps {
   cards: Card[];
 }
 
+/**
+ * Stable fallback for the first render, before useLiveQuery resolves. A fresh `[]`
+ * here would be a new reference every render and would invalidate the memo below.
+ */
+const NO_ENTRIES: CollectionEntry[] = [];
+
 /** Compares the deck against the owned collection: how many cards are still to buy and the estimated cost. */
 export function DeckCollectionSummary({ cards }: DeckCollectionSummaryProps) {
   const { t } = useTranslation();
   const currency = useCollectionSettings((state) => state.currency);
-  const entries = useLiveQuery(() => db.collection.toArray(), []) ?? [];
+  const entries = useLiveQuery(() => db.collection.toArray(), []) ?? NO_ENTRIES;
   const [expanded, setExpanded] = useState(false);
 
   const gap = useMemo(() => computeDeckCollectionGap(cards, entries, currency), [cards, entries, currency]);
