@@ -76,11 +76,15 @@ function CardDetailModal({
     defaultShowPrints !== undefined ? defaultShowPrints : !isDeckCard && !hidePrintsSidebar
   );
 
-  // Sync card state when initialCard or imageUrl changes from parent
+  // Sync card state when the parent hands us a *different* card. Keyed on the id and
+  // not on `initialCard` itself on purpose: parents rebuild that object on every
+  // render, and depending on it would discard the locally selected printing
+  // (`card`) mid-interaction.
   useEffect(() => {
     setCard(initialCard);
     setCurrentImageUrl(imageUrl);
     setIsRotated(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCard.id, imageUrl]);
 
   const copiesCount = useMemo(() => {
