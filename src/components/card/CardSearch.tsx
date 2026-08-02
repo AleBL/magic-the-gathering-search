@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 import CardGrid from './CardGrid';
 import CardSizeSelector from './CardSizeSelector';
+import CollectionFilterSelector from './CollectionFilterSelector';
 import SearchFilters from './SearchFilters';
 import CardFilterBar from './CardFilterBar';
 import CardSkeleton from './CardSkeleton';
@@ -11,6 +12,7 @@ import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
 import { useCardSearch } from '../../hooks/useCardSearch';
 import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingAction';
+import { useCollectionOwnership, OwnershipFilter } from '../../hooks/useCollectionOwnership';
 import ErrorState from '../ui/ErrorState';
 import EmptyState from '../ui/EmptyState';
 
@@ -49,6 +51,14 @@ function CardSearch({
     loadNextPage,
     buildQuery
   } = useCardSearch(i18n.language || 'en');
+
+  const [ownership, setOwnership] = useState<OwnershipFilter>('all');
+  const { apply: applyOwnership } = useCollectionOwnership();
+
+  // Filters the results already fetched. Scryfall has no "cards I own" query, so this is
+  // necessarily page-local: a page can legitimately yield nothing, which the empty state
+  // below says out loud rather than pretending the search found nothing.
+  const visibleCards = applyOwnership(cards, ownership);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -156,9 +166,17 @@ function CardSearch({
                       </span>
                       <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
                     </div>
+                    <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
+                      <span className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                        {t('search.ownership')}
+                      </span>
+                      <CollectionFilterSelector value={ownership} onChange={setOwnership} />
+                    </div>
                   </div>
                 }
               />
+              <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 hidden sm:block"></div>
+              <CollectionFilterSelector value={ownership} onChange={setOwnership} />
               <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 hidden sm:block"></div>
               <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
             </div>
@@ -218,10 +236,19 @@ function CardSearch({
             />
           )}
 
-          {!isLoadingInitial && !error && cards.length > 0 && (
+          {/* Results exist but the collection filter hid all of them on this page. */}
+          {!isLoadingInitial && !error && cards.length > 0 && visibleCards.length === 0 && (
+            <EmptyState
+              icon={<FaSearch />}
+              title={t('search.noResults')}
+              description={t('search.noneMatchOwnership')}
+            />
+          )}
+
+          {!isLoadingInitial && !error && visibleCards.length > 0 && (
             <div className="animate-in fade-in duration-500">
               <CardGrid
-                cards={cards}
+                cards={visibleCards}
                 size={cardSize}
                 onAddToDeck={onAddToDeck}
                 onAddTokenToDeck={onAddTokenToDeck}

@@ -83,6 +83,12 @@ const es = {
       black: 'Negro',
       blue: 'Azul',
       cardSize: 'Tamaño de cartas:',
+      ownership: 'Colección',
+      ownershipAll: 'Todas',
+      ownershipOwned: 'Tengo',
+      ownershipMissing: 'No tengo',
+      noneMatchOwnership:
+        'Ninguna carta de esta página coincide con ese filtro de colección. Sigue desplazándote para cargar más resultados.',
       clearFilter: 'Limpiar Filtro',
       clearFilters: 'Limpiar Filtros',
       cmc: 'Coste de Maná Convertido (CMC):',

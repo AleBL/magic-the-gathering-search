@@ -83,6 +83,12 @@ const pt = {
       black: 'Preto',
       blue: 'Azul',
       cardSize: 'Tamanho das cartas:',
+      ownership: 'Coleção',
+      ownershipAll: 'Todas',
+      ownershipOwned: 'Tenho',
+      ownershipMissing: 'Não tenho',
+      noneMatchOwnership:
+        'Nenhuma carta desta página corresponde a esse filtro de coleção. Continue rolando para carregar mais resultados.',
       clearFilter: 'Limpar Filtro',
       clearFilters: 'Limpar Filtros',
       cmc: 'Custo de Mana Convertido (CMC):',
