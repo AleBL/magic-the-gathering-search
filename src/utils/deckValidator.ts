@@ -1,6 +1,6 @@
 import { Card } from '../types/Card';
 import { DeckFormat } from '../types/Deck';
-import { DeckFormatType } from '../types/enums';
+import { DeckFormatType, DeckZone } from '../types/enums';
 import i18n from '../plugins/i18n';
 import { BASIC_LAND_NAMES, MIN_DECK_SIZE, COMMANDER_DECK_SIZE } from '../constants';
 
@@ -53,7 +53,18 @@ const matchesPhraseList = (text: string, key: CheckListKey): boolean => {
 export function validateDeck(cards: Card[], format: DeckFormat): ValidationResult {
   const errors: ValidationError[] = [];
 
-  if (cards.length === 0) {
+  // A card carries no zone until one is assigned, so an unset zone is the main deck.
+  const zoneOf = (card: Card): DeckZone => card.zone ?? DeckZone.MAIN;
+
+  /**
+   * The maybeboard is a scratchpad and tokens are generated rather than played from the
+   * deck, so neither is validated at all. Beyond that the rules split: deck *size* counts
+   * the main deck only, while copy limits, rarity and ban lists cover the sideboard too.
+   */
+  const mainDeck = cards.filter((card) => zoneOf(card) === DeckZone.MAIN);
+  const playableCards = cards.filter((card) => zoneOf(card) === DeckZone.MAIN || zoneOf(card) === DeckZone.SIDEBOARD);
+
+  if (mainDeck.length === 0) {
     return {
       isValid: false,
       errors: [{ key: 'validationEmptyDeck' }]
@@ -67,7 +78,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   // Count copies of each card (excluding basic lands)
   const cardCounts: { [name: string]: number } = {};
 
-  cards.forEach((card) => {
+  playableCards.forEach((card) => {
     const { name } = card;
     const isBasic = card.type_line?.toLowerCase().includes('basic land') || BASIC_LAND_NAMES.includes(name);
     if (!isBasic) {
@@ -83,10 +94,10 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     DeckFormatType.PAUPER
   ];
   if (limitedCopyFormats.includes(format)) {
-    if (cards.length < MIN_DECK_SIZE) {
+    if (mainDeck.length < MIN_DECK_SIZE) {
       errors.push({
         key: 'validationMinCards',
-        params: { count: cards.length }
+        params: { count: mainDeck.length }
       });
     }
 
@@ -102,10 +113,10 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
 
   // Commander Format Rules
   if (format === DeckFormatType.COMMANDER) {
-    if (cards.length !== COMMANDER_DECK_SIZE) {
+    if (mainDeck.length !== COMMANDER_DECK_SIZE) {
       errors.push({
         key: 'validationCommanderExactCards',
-        params: { count: cards.length }
+        params: { count: mainDeck.length }
       });
     }
 
@@ -120,7 +131,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     });
 
     // 1. Check if there is at least one designated Commander in the deck
-    const commanders = cards.filter((card) => card.isCommander);
+    const commanders = mainDeck.filter((card) => card.isCommander);
     if (commanders.length === 0) {
       errors.push({
         key: 'validationCommanderNoCommander'
@@ -198,7 +209,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       });
 
       const invalidCards: { name: string; colors: string[] }[] = [];
-      cards.forEach((card) => {
+      playableCards.forEach((card) => {
         if (card.isCommander) return;
 
         if (card.color_identity) {
@@ -231,7 +242,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
 
   // Pauper Format Rules
   if (format === DeckFormatType.PAUPER) {
-    const nonCommonCards = cards.filter((card) => card.rarity !== 'common');
+    const nonCommonCards = playableCards.filter((card) => card.rarity !== 'common');
     if (nonCommonCards.length > 0) {
       const uniqueNonCommons = Array.from(new Set(nonCommonCards.map((c) => c.name)));
       const list = uniqueNonCommons.slice(0, 5).join(', ') + (uniqueNonCommons.length > 5 ? '...' : '');
@@ -246,7 +257,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   const bannedMatches: string[] = [];
   const restrictedMatches: string[] = [];
 
-  cards.forEach((card) => {
+  playableCards.forEach((card) => {
     const cardName = card.name;
 
     // Check if card is banned in the selected format

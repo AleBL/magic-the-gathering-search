@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHECK_LIST_KEYS, validateDeck } from './deckValidator';
-import { DeckFormatType } from '../types/enums';
+import { DeckFormatType, DeckZone } from '../types/enums';
 import { makeCard } from '../test/factories';
 import { Card } from '../types/Card';
 import i18n from '../plugins/i18n';
@@ -273,5 +273,62 @@ describe('validateDeck — Vintage restricted list', () => {
   it('ignores the restricted status outside Vintage', () => {
     const deck = [restricted('Black Lotus'), restricted('Black Lotus'), ...uniqueCards(58)];
     expect(errorKeys(deck, DeckFormatType.MODERN)).not.toContain('validationRestrictedList');
+  });
+});
+
+// Zones existed in the model and in the UI, but validation ignored them entirely: every
+// card in the deck object was counted, whichever pile it sat in. A maybeboard is a
+// scratchpad — counting it toward the 60-card minimum, or toward the 4-copy limit, makes
+// the validator answer a question nobody asked.
+describe('validateDeck — deck zones', () => {
+  const inZone = (zone: DeckZone, n: number, overrides: Partial<Card> = {}): Card[] =>
+    Array.from({ length: n }, (_, i) => makeCard({ ...overrides, name: `${zone} ${i}`, zone }));
+
+  it('does not count maybeboard cards toward the minimum deck size', () => {
+    const deck = [...uniqueCards(59, { rarity: 'common' }), ...inZone(DeckZone.MAYBEBOARD, 10)];
+    expect(errorKeys(deck, DeckFormatType.STANDARD)).toContain('validationMinCards');
+  });
+
+  it('does not count sideboard cards toward the minimum deck size', () => {
+    const deck = [...uniqueCards(59, { rarity: 'common' }), ...inZone(DeckZone.SIDEBOARD, 15)];
+    expect(errorKeys(deck, DeckFormatType.STANDARD)).toContain('validationMinCards');
+  });
+
+  it('ignores maybeboard copies when applying the four-copy limit', () => {
+    const deck = [
+      ...copies(4, { name: 'Lightning Bolt' }),
+      ...copies(3, { name: 'Lightning Bolt', zone: DeckZone.MAYBEBOARD }),
+      ...uniqueCards(56, { rarity: 'common' })
+    ];
+    expect(errorKeys(deck, DeckFormatType.STANDARD)).not.toContain('validationMaxCopies');
+  });
+
+  // The sideboard is part of the deck for copy limits: 3 main + 2 side is 5 copies.
+  it('counts sideboard copies toward the four-copy limit', () => {
+    const deck = [
+      ...copies(3, { name: 'Lightning Bolt' }),
+      ...copies(2, { name: 'Lightning Bolt', zone: DeckZone.SIDEBOARD }),
+      ...uniqueCards(57, { rarity: 'common' })
+    ];
+    const violation = validateDeck(deck, DeckFormatType.STANDARD).errors.find((e) => e.key === 'validationMaxCopies');
+    expect(violation?.params).toMatchObject({ name: 'Lightning Bolt', count: 5 });
+  });
+
+  it("counts only the main deck toward Commander's exact 100", () => {
+    const commander = makeCard({ name: 'Cmd', type_line: 'Legendary Creature — Human', isCommander: true });
+    const deck = [commander, ...uniqueCards(99), ...inZone(DeckZone.MAYBEBOARD, 5)];
+    expect(errorKeys(deck, DeckFormatType.COMMANDER)).not.toContain('validationCommanderExactCards');
+  });
+
+  it('still flags a non-common sitting in the Pauper sideboard', () => {
+    const deck = [
+      ...uniqueCards(60, { rarity: 'common' }),
+      makeCard({ name: 'Fancy', rarity: 'rare', zone: DeckZone.SIDEBOARD })
+    ];
+    expect(errorKeys(deck, DeckFormatType.PAUPER)).toContain('validationPauperCommonsOnly');
+  });
+
+  it('reports a deck that exists only in the maybeboard as empty', () => {
+    expect(errorKeys(inZone(DeckZone.MAYBEBOARD, 60), DeckFormatType.STANDARD)).toEqual(['validationEmptyDeck']);
   });
 });
