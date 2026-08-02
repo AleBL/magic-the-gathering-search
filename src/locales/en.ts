@@ -207,6 +207,7 @@ const en = {
       saveDeckNamed: 'Save Deck "{{name}}"',
       saveError: 'Failed to save the deck. Please try again.',
       savedDecks: 'Saved Decks',
+      viewAllDecks: 'View all decks',
       suggestionsTitle: 'Card Suggestions',
       suggestionsLoading: 'Finding cards that fit your deck…',
       suggestionsEmpty: 'No suggestions found.',

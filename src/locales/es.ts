@@ -209,6 +209,7 @@ const es = {
       saveDeckNamed: 'Guardar Mazo "{{name}}"',
       saveError: 'No se pudo guardar el mazo. Inténtalo de nuevo.',
       savedDecks: 'Mazos Guardados',
+      viewAllDecks: 'Ver todos los mazos',
       suggestionsTitle: 'Sugerencias de Cartas',
       suggestionsLoading: 'Buscando cartas que encajen con tu mazo…',
       suggestionsEmpty: 'No se encontraron sugerencias.',

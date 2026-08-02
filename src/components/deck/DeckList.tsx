@@ -21,6 +21,14 @@ export interface DeckListProps {
   onNewFromDeck: (deck: Deck) => void;
   onDeleteDeck: (deck: Deck) => void;
   onChangeCover: (deck: Deck) => void;
+  /**
+   * `column` is the sidebar: one deck per row, in a 300px lane. `grid` is the
+   * all-decks modal, which has the width to show several per row — the sidebar's
+   * density problem is the lane, not the card.
+   */
+  layout?: 'column' | 'grid';
+  /** The modal supplies its own dialog title, so the list's heading would repeat it. */
+  hideHeading?: boolean;
 }
 
 function DeckList({
@@ -33,16 +41,20 @@ function DeckList({
   onDuplicateDeck,
   onNewFromDeck,
   onDeleteDeck,
-  onChangeCover
+  onChangeCover,
+  layout = 'column',
+  hideHeading = false
 }: DeckListProps) {
   const { t } = useTranslation();
 
   return (
     <div className="deck-list-section">
-      <h3 className="text-gray-900 dark:text-white text-xl font-bold mb-4 transition-colors duration-300">
-        {t('deck.savedDecks')} ({decks.length})
-      </h3>
-      <div className="space-y-2.5">
+      {hideHeading ? null : (
+        <h3 className="text-gray-900 dark:text-white text-xl font-bold mb-4 transition-colors duration-300">
+          {t('deck.savedDecks')} ({decks.length})
+        </h3>
+      )}
+      <div className={layout === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : 'space-y-2.5'}>
         {decks.length === 0 ? (
           <div className="empty-deck-list-state group">
             <div className="empty-deck-list-state-bg" />

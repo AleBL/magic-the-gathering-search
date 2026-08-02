@@ -208,6 +208,7 @@ const pt = {
       saveDeckNamed: 'Salvar Deck "{{name}}"',
       saveError: 'Falha ao salvar o deck. Tente novamente.',
       savedDecks: 'Decks Salvos',
+      viewAllDecks: 'Ver todos os decks',
       suggestionsTitle: 'Sugestões de Cartas',
       suggestionsLoading: 'Buscando cartas que combinam com seu deck…',
       suggestionsEmpty: 'Nenhuma sugestão encontrada.',
