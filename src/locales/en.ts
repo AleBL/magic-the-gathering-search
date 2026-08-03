@@ -292,6 +292,7 @@ const en = {
       shortcutsTitle: 'Keyboard shortcuts'
     },
     validation: {
+      basicLandCheckList: 'basic',
       backgroundCheckList: 'background',
       backgroundCreatureCheckList: 'choose a background',
       canBeCommanderCheckList: 'can be your commander',

@@ -30,7 +30,9 @@ export const CHECK_LIST_KEYS = {
   legendary: 'validation.legendaryCheckList',
   canBeCommander: 'validation.canBeCommanderCheckList',
   creature: 'search.creature',
-  planeswalker: 'search.planeswalker'
+  planeswalker: 'search.planeswalker',
+  basicLand: 'validation.basicLandCheckList',
+  land: 'search.land'
 } as const;
 
 type CheckListKey = (typeof CHECK_LIST_KEYS)[keyof typeof CHECK_LIST_KEYS];
@@ -80,7 +82,18 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
 
   playableCards.forEach((card) => {
     const { name } = card;
-    const isBasic = card.type_line?.toLowerCase().includes('basic land') || BASIC_LAND_NAMES.includes(name);
+    /**
+     * Matched as two separate words rather than the literal "basic land": Scryfall puts
+     * the snow supertype between them ("Basic Snow Land — Forest"), so a substring check
+     * misses every snow-covered basic and reports 28 Snow-Covered Forests as a singleton
+     * violation. Going through the phrase lists also covers pt/es type lines, which the
+     * English substring never matched — those only worked because of the name list, and
+     * that list has no Spanish names at all.
+     */
+    const typeLine = card.type_line || '';
+    const isBasic =
+      (matchesPhraseList(typeLine, CHECK_LIST_KEYS.basicLand) && matchesPhraseList(typeLine, CHECK_LIST_KEYS.land)) ||
+      BASIC_LAND_NAMES.includes(name);
     if (!isBasic) {
       cardCounts[name] = (cardCounts[name] || 0) + 1;
     }

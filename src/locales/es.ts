@@ -294,6 +294,7 @@ const es = {
       shortcutsTitle: 'Atajos de teclado'
     },
     validation: {
+      basicLandCheckList: 'básica,básico',
       backgroundCheckList: 'trasfondo',
       backgroundCreatureCheckList: 'elegir un trasfondo',
       canBeCommanderCheckList: 'puede ser tu comandante',

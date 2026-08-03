@@ -294,6 +294,7 @@ const pt = {
       shortcutsTitle: 'Atalhos de teclado'
     },
     validation: {
+      basicLandCheckList: 'básico,básica',
       backgroundCheckList: 'segundo plano',
       backgroundCreatureCheckList: 'escolha um segundo plano',
       canBeCommanderCheckList: 'pode ser seu comandante,pode ser sua comandante',

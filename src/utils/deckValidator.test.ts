@@ -332,3 +332,49 @@ describe('validateDeck — deck zones', () => {
     expect(errorKeys(inZone(DeckZone.MAYBEBOARD, 60), DeckFormatType.STANDARD)).toEqual(['validationEmptyDeck']);
   });
 });
+
+// Reported from a real Commander deck: 28 Snow-Covered Forests flagged as a singleton
+// violation. Scryfall types them "Basic Snow Land — Forest", so the old substring check
+// for "basic land" never matched — the snow supertype sits between the two words.
+describe('validateDeck — basic land detection', () => {
+  const commander = () => makeCard({ name: 'Cmd', type_line: 'Legendary Creature — Elf Druid', isCommander: true });
+
+  const singletonErrorsFor = (typeLine: string, name: string) => {
+    const deck = [commander(), ...Array.from({ length: 28 }, () => makeCard({ name, type_line: typeLine }))];
+    return validateDeck(deck, DeckFormatType.COMMANDER).errors.filter((e) => e.key === 'validationCommanderSingleton');
+  };
+
+  it.each([
+    ['Basic Land — Forest', 'Forest'],
+    ['Basic Snow Land — Forest', 'Snow-Covered Forest'],
+    ['Basic Snow Land — Island', 'Snow-Covered Island'],
+    // Localised type lines: these never matched the English substring, and Spanish basic
+    // names are absent from BASIC_LAND_NAMES entirely.
+    ['Terreno Básico — Floresta', 'Floresta'],
+    ['Terreno Básico da Neve — Floresta', 'Floresta Coberta de Neve'],
+    ['Tierra Básica — Bosque', 'Bosque'],
+    ['Tierra básica nívea — Bosque', 'Bosque Nevado']
+  ])('exempts %s from the Commander singleton rule', (typeLine, name) => {
+    expect(singletonErrorsFor(typeLine, name)).toEqual([]);
+  });
+
+  // The exemption must stay narrow: a non-basic land is still singleton-bound.
+  it('still applies the singleton rule to a non-basic land', () => {
+    const errors = singletonErrorsFor('Land — Forest', 'Snow-Covered Wastes Impostor');
+    expect(errors[0]?.params).toMatchObject({ count: 28 });
+  });
+
+  it('still applies the four-copy limit to a non-basic land in Standard', () => {
+    const deck = [...copies(5, { name: 'Sunken Ruins', type_line: 'Land' }), ...uniqueCards(55, { rarity: 'common' })];
+    const errors = validateDeck(deck, DeckFormatType.STANDARD).errors.filter((e) => e.key === 'validationMaxCopies');
+    expect(errors[0]?.params).toMatchObject({ name: 'Sunken Ruins', count: 5 });
+  });
+
+  it('exempts basic lands from the four-copy limit whatever their type line says', () => {
+    const deck = [
+      ...copies(24, { name: 'Snow-Covered Mountain', type_line: 'Basic Snow Land — Mountain' }),
+      ...uniqueCards(36, { rarity: 'common' })
+    ];
+    expect(errorKeys(deck, DeckFormatType.STANDARD)).not.toContain('validationMaxCopies');
+  });
+});
