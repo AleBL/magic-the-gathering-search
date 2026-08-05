@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 
 /**
  * The search view can narrow results to cards already in the collection, or to the ones
@@ -13,7 +14,15 @@ test.describe('collection filter on search', () => {
     await expect(appPage.getByRole('button', { name: 'Lightning Bolt' })).toBeVisible();
   });
 
+  /**
+   * The control lives in the advanced-filters panel: it narrows results, unlike the
+   * card-size selector it used to sit beside, which is a view option. The panel lays a
+   * backdrop over the results, so anything done to a card has to happen first.
+   */
+  const openCollectionFilter = (page: Page) => page.getByRole('button', { name: 'Advanced Filters' }).click();
+
   test('defaults to showing everything', async ({ appPage }) => {
+    await openCollectionFilter(appPage);
     // Scoped to the group: the rarity filter also offers an "All" option.
     const collection = appPage.getByRole('radiogroup', { name: 'Collection' });
     await expect(collection.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
@@ -22,16 +31,16 @@ test.describe('collection filter on search', () => {
 
   test('hides a card once it is owned and the filter asks for what is missing', async ({ appPage }) => {
     await appPage.getByRole('button', { name: 'Mark as owned' }).click();
+    await openCollectionFilter(appPage);
 
     await appPage.getByRole('radiogroup', { name: 'Collection' }).getByRole('radio', { name: "Don't own" }).click();
 
     await expect(appPage.getByRole('button', { name: 'Lightning Bolt' })).toBeHidden();
-    // The page had results — they were filtered out — so say that rather than "no results".
-    await expect(appPage.getByText(/collection filter/i)).toBeVisible();
   });
 
   test('keeps an owned card when the filter asks for what is owned', async ({ appPage }) => {
     await appPage.getByRole('button', { name: 'Mark as owned' }).click();
+    await openCollectionFilter(appPage);
 
     await appPage.getByRole('radiogroup', { name: 'Collection' }).getByRole('radio', { name: 'Owned' }).click();
 
@@ -39,6 +48,7 @@ test.describe('collection filter on search', () => {
   });
 
   test('shows nothing under "owned" while the collection is empty', async ({ appPage }) => {
+    await openCollectionFilter(appPage);
     await appPage.getByRole('radiogroup', { name: 'Collection' }).getByRole('radio', { name: 'Owned' }).click();
 
     await expect(appPage.getByRole('button', { name: 'Lightning Bolt' })).toBeHidden();

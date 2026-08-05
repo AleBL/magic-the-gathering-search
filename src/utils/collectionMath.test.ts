@@ -101,6 +101,45 @@ describe('computeCollectionSummary', () => {
     expect(summary.totalValue).toBeCloseTo(11); // 2*3 + 1*5
   });
 
+  // The two tabs used to print the same number, which read as a bug because it was one:
+  // the bar always showed the owned value whichever tab was open.
+  describe('wishlistValue', () => {
+    it('counts each wanted printing once, however many copies are owned', () => {
+      const entries = [
+        entry(makeCard({ prices: { usd: '4.00' } }), { quantity: 3, wishlist: true }),
+        entry(makeCard({ prices: { usd: '6.00' } }), { quantity: 0, wishlist: true })
+      ];
+      const summary = computeCollectionSummary(entries, 'usd');
+
+      // Owned multiplies by quantity; the wishlist does not.
+      expect(summary.totalValue).toBeCloseTo(12); // 3 × 4
+      expect(summary.wishlistValue).toBeCloseTo(10); // 4 + 6
+    });
+
+    it('is zero when nothing is wishlisted, even with a valuable collection', () => {
+      const entries = [entry(makeCard({ prices: { usd: '50.00' } }), { quantity: 2 })];
+      const summary = computeCollectionSummary(entries, 'usd');
+
+      expect(summary.totalValue).toBeCloseTo(100);
+      expect(summary.wishlistValue).toBe(0);
+    });
+
+    it('ignores unpriced wishlist rows rather than counting them as free', () => {
+      const entries = [
+        entry(makeCard({ prices: { usd: null } }), { quantity: 0, wishlist: true }),
+        entry(makeCard({ prices: { usd: '7.50' } }), { quantity: 0, wishlist: true })
+      ];
+      expect(computeCollectionSummary(entries, 'usd').wishlistValue).toBeCloseTo(7.5);
+    });
+
+    it('follows the selected currency', () => {
+      const entries = [entry(makeCard({ prices: { usd: '10.00', eur: '9.00' } }), { quantity: 0, wishlist: true })];
+
+      expect(computeCollectionSummary(entries, 'usd').wishlistValue).toBeCloseTo(10);
+      expect(computeCollectionSummary(entries, 'eur').wishlistValue).toBeCloseTo(9);
+    });
+  });
+
   it('skips unpriced cards in the value total but still counts the copies', () => {
     const entries = [
       entry(makeCard({ prices: { usd: null } }), { quantity: 4 }),

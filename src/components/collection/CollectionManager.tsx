@@ -23,6 +23,7 @@ function CollectionManager() {
   const [view, setView] = useState<CollectionView>('owned');
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_SEARCH_FILTERS);
   const [setFilter, setSetFilter] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
   const [cardSize, setCardSize] = useCardSizePreference();
 
   const { entries, visibleEntries, summary, isLoading } = useCollection(view, filters);
@@ -43,10 +44,18 @@ function CollectionManager() {
     return Array.from(seen, ([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [entries]);
 
-  const displayedEntries = useMemo(
-    () => (setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries),
-    [visibleEntries, setFilter]
-  );
+  const displayedEntries = useMemo(() => {
+    const bySet = setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries;
+    const term = nameQuery.trim().toLowerCase();
+    if (!term) return bySet;
+
+    // Matches the printed (localised) name too: a collection imported in Portuguese is
+    // searched with the words actually shown on the card.
+    return bySet.filter((entry) => {
+      const printed = entry.card.printed_name?.toLowerCase() ?? '';
+      return entry.name.toLowerCase().includes(term) || printed.includes(term);
+    });
+  }, [visibleEntries, setFilter, nameQuery]);
 
   const cards = useMemo(() => displayedEntries.map((entry) => entry.card), [displayedEntries]);
 
@@ -130,7 +139,7 @@ function CollectionManager() {
             aria-hidden="true"
           />
 
-          <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} />
+          <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
 
           <div className="flex flex-wrap items-center gap-2">
             {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
@@ -141,6 +150,16 @@ function CollectionManager() {
             <CardFilterBar filters={filters} setFilters={setFilters} />
             {/* Below sm the selects stack full-width for comfortable tapping. */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px]">
+                <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
+                <input
+                  type="search"
+                  value={nameQuery}
+                  onChange={(event) => setNameQuery(event.target.value)}
+                  placeholder={t('collection.searchPlaceholder')}
+                  className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </label>
               <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
                 {t('search.rarity')}
                 <select

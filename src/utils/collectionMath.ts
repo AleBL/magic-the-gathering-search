@@ -46,8 +46,17 @@ export interface CollectionSummary {
   uniquePrintings: number;
   /** Entries flagged for the wishlist. */
   wishlistCount: number;
-  /** Estimated value of owned copies in the chosen currency. */
+  /**
+   * Estimated value of owned copies: unit price × quantity, so ten copies of a card
+   * count ten times.
+   */
   totalValue: number;
+  /**
+   * Estimated value of the wishlist: one unit price per wishlisted printing. A wishlist
+   * entry records *that* you want a card, not how many, so multiplying by quantity would
+   * be meaningless — a wishlisted card you already own three of is still one wish.
+   */
+  wishlistValue: number;
   /** Owned entries whose value came from the English-printing fallback price. */
   fallbackPricedCount: number;
   currency: Currency;
@@ -58,10 +67,15 @@ export function computeCollectionSummary(entries: CollectionEntry[], currency: C
   let uniquePrintings = 0;
   let wishlistCount = 0;
   let totalValue = 0;
+  let wishlistValue = 0;
   let fallbackPricedCount = 0;
 
   for (const entry of entries) {
-    if (entry.wishlist) wishlistCount += 1;
+    if (entry.wishlist) {
+      wishlistCount += 1;
+      const wanted = getEntryPrice(entry, currency);
+      if (wanted !== null) wishlistValue += wanted.price;
+    }
     if (entry.quantity > 0) {
       totalCopies += entry.quantity;
       uniquePrintings += 1;
@@ -73,7 +87,7 @@ export function computeCollectionSummary(entries: CollectionEntry[], currency: C
     }
   }
 
-  return { totalCopies, uniquePrintings, wishlistCount, totalValue, fallbackPricedCount, currency };
+  return { totalCopies, uniquePrintings, wishlistCount, totalValue, wishlistValue, fallbackPricedCount, currency };
 }
 
 export interface DeckGapCardRow {

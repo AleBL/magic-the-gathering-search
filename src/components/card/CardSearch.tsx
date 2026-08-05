@@ -157,6 +157,14 @@ function CardSearch({
               <SearchFilters
                 filters={filters}
                 setFilters={setFilters}
+                extraFilters={
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                      {t('search.ownership')}
+                    </span>
+                    <CollectionFilterSelector value={ownership} onChange={setOwnership} />
+                  </div>
+                }
                 mobileExtras={
                   <div className="space-y-3">
                     <CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />
@@ -166,17 +174,9 @@ function CardSearch({
                       </span>
                       <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
                     </div>
-                    <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
-                      <span className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                        {t('search.ownership')}
-                      </span>
-                      <CollectionFilterSelector value={ownership} onChange={setOwnership} />
-                    </div>
                   </div>
                 }
               />
-              <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 hidden sm:block"></div>
-              <CollectionFilterSelector value={ownership} onChange={setOwnership} />
               <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 hidden sm:block"></div>
               <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
             </div>
@@ -202,7 +202,7 @@ function CardSearch({
             />
           )}
 
-          {!isLoadingInitial && !error && cards.length === 0 && (
+          {!isLoadingInitial && !error && visibleCards.length === 0 && (
             <EmptyState
               icon={<FaSearch />}
               title={t('search.noResults')}
@@ -236,15 +236,6 @@ function CardSearch({
             />
           )}
 
-          {/* Results exist but the collection filter hid all of them on this page. */}
-          {!isLoadingInitial && !error && cards.length > 0 && visibleCards.length === 0 && (
-            <EmptyState
-              icon={<FaSearch />}
-              title={t('search.noResults')}
-              description={t('search.noneMatchOwnership')}
-            />
-          )}
-
           {!isLoadingInitial && !error && visibleCards.length > 0 && (
             <div className="animate-in fade-in duration-500">
               <CardGrid
@@ -261,13 +252,21 @@ function CardSearch({
 
           {!isLoadingInitial && hasMore && (
             <div ref={sentinelRef} className="mt-8 mb-12">
-              {isLoadingMore && (
+              {/* Under a collection filter most of an incoming page is discarded, so card
+                  skeletons promise results that may never appear — the strip then reads as
+                  "stuck" rather than "still looking". Say what is actually happening. */}
+              {isLoadingMore && ownership !== 'all' ? (
+                <p className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400">
+                  {t('search.loadingMoreFiltered')}
+                </p>
+              ) : null}
+              {isLoadingMore && ownership === 'all' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4 opacity-50">
                   {Array.from({ length: 7 }).map((_, i) => (
                     <CardSkeleton key={i} />
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>

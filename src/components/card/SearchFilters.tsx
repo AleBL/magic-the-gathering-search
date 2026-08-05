@@ -18,12 +18,19 @@ interface SearchFiltersProps {
    * quick filters, card size — are re-homed here to stay reachable.
    */
   mobileExtras?: ReactNode;
+  /**
+   * Extra filter controls rendered inside the advanced panel. Placed here rather than in
+   * the toolbar because they are narrowing tools, not view options like card size —
+   * and `filterFields` is shared by the desktop dropdown and the mobile sheet, so one
+   * slot covers both surfaces.
+   */
+  extraFilters?: ReactNode;
 }
 
 // Pairs with Tailwind's `sm` breakpoint used by the dropdown markup below.
 const MOBILE_QUERY = '(max-width: 639px)';
 
-function SearchFilters({ filters, setFilters, mobileExtras }: SearchFiltersProps) {
+function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: SearchFiltersProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const isMobile = useMediaQuery(MOBILE_QUERY);
@@ -41,6 +48,7 @@ function SearchFilters({ filters, setFilters, mobileExtras }: SearchFiltersProps
 
   const filterFields = (
     <>
+      {extraFilters ? <div className="pb-4 border-b border-gray-100 dark:border-slate-800">{extraFilters}</div> : null}
       <div className="space-y-4">
         <div>
           <label
