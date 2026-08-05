@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../types/Card';
 
@@ -28,6 +29,38 @@ export function CardDetailPrintsSidebar({
 }: CardDetailPrintsSidebarProps) {
   const { t } = useTranslation();
 
+  const listRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  const selectedPrintId = currentCard.selectedPrintId || currentCard.id;
+
+  /**
+   * Keeps the chosen edition centred in the strip. Picking one re-renders this list, which
+   * drops the scroll position back to the start — so with many printings the edition you
+   * just chose scrolls out of sight.
+   *
+   * Scrolls the container directly instead of `scrollIntoView`, which would also scroll
+   * the modal body and jump the card image around.
+   */
+  useEffect(() => {
+    const list = listRef.current;
+    const selected = selectedRef.current;
+    if (!list || !selected) return;
+
+    // Measured from bounding rects, not offsetTop: the list is not a positioned ancestor,
+    // so offsetTop is relative to some element further up and the arithmetic silently
+    // centres on the wrong origin.
+    const listBox = list.getBoundingClientRect();
+    const selectedBox = selected.getBoundingClientRect();
+
+    // The strip is a column on desktop and a row on phones; centre on whichever axis
+    // actually overflows.
+    if (list.scrollHeight > list.clientHeight) {
+      list.scrollTop += selectedBox.top - listBox.top - (list.clientHeight - selectedBox.height) / 2;
+    } else if (list.scrollWidth > list.clientWidth) {
+      list.scrollLeft += selectedBox.left - listBox.left - (list.clientWidth - selectedBox.width) / 2;
+    }
+  }, [selectedPrintId, prints]);
+
   if (isLoading) {
     return (
       <div
@@ -50,11 +83,12 @@ export function CardDetailPrintsSidebar({
 
   return (
     <div
+      ref={listRef}
       className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto max-w-full max-h-24 md:max-h-[400px] pr-1 pb-1 md:pb-0 select-none py-1 shrink-0 animate-fadeIn custom-scrollbar"
       aria-label={t('cardDetails.cardEditions')}
     >
       {prints.map((printCard) => {
-        const isSelected = (currentCard.selectedPrintId || currentCard.id) === printCard.id;
+        const isSelected = selectedPrintId === printCard.id;
         const rarity = printCard.rarity?.toLowerCase() as keyof typeof RARITY_STYLES;
         const rarityStyle = RARITY_STYLES[rarity] || RARITY_STYLES.common;
 
@@ -62,6 +96,7 @@ export function CardDetailPrintsSidebar({
           <button
             type="button"
             key={printCard.id}
+            ref={isSelected ? selectedRef : undefined}
             onMouseEnter={() => onHoverImageUrl(getCardFaceImageUrl(printCard))}
             onMouseLeave={() => onHoverImageUrl(null)}
             onClick={() => onSelectPrint(printCard)}
