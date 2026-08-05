@@ -67,11 +67,10 @@ export function CardDetailPrintsSidebar({
             onClick={() => onSelectPrint(printCard)}
             title={`${printCard.set_name} · ${printCard.set?.toUpperCase()} #${printCard.collector_number || ''}${printCard.lang ? ` · ${printCard.lang.toUpperCase()}` : ''}`}
             aria-pressed={isSelected}
-            className={`group relative shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 px-1.5 py-2 min-w-[52px] md:w-14 cursor-pointer ${
-              isSelected
+            className={`group relative shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 px-1.5 py-2 min-w-[52px] md:w-14 cursor-pointer ${isSelected
                 ? 'border-blue-500 bg-blue-500/15 text-primary dark:text-blue-400 ring-2 ring-blue-500/30 shadow-md brightness-110'
                 : `${rarityStyle} hover:border-blue-400/60 hover:bg-blue-500/5 hover:brightness-110 hover:shadow-xs`
-            }`}
+              }`}
           >
             <span className="text-[10px] uppercase font-black tracking-tight leading-none">{printCard.set}</span>
             <span className="text-[7px] font-semibold select-none mt-0.5 leading-none opacity-70">
@@ -82,17 +81,7 @@ export function CardDetailPrintsSidebar({
                 {printCard.lang}
               </span>
             ) : null}
-            <span
-              className={`mt-1 w-1 h-1 rounded-full inline-block transition-opacity ${
-                rarity === 'mythic'
-                  ? 'bg-orange-500'
-                  : rarity === 'rare'
-                    ? 'bg-amber-500'
-                    : rarity === 'uncommon'
-                      ? 'bg-slate-400'
-                      : 'bg-gray-400'
-              } ${isSelected ? 'opacity-100' : 'opacity-50 group-hover:opacity-80'}`}
-            />
+
             {isSelected && (
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm" />
             )}

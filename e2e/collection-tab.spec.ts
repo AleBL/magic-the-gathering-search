@@ -54,4 +54,65 @@ test.describe('collection tab', () => {
 
     await expect(appPage.getByRole('button', { name: 'Lightning Bolt' })).toBeHidden();
   });
+
+  /**
+   * Two printings of the same card differ only by art — identical for a straight reprint —
+   * yet they are priced and counted separately. Seeded directly: the UI can only mark the
+   * printing the search happened to return.
+   */
+  test('tells two printings of the same card apart', async ({ appPage }) => {
+    await appPage.getByRole('button', { name: 'My Collection' }).click();
+    await appPage.evaluate(async () => {
+      const row = (id: string, set: string, quantity: number, lang: string) => ({
+        id,
+        oracleId: 'bolt-oracle',
+        name: 'Lightning Bolt',
+        set,
+        rarity: 'common',
+        quantity,
+        wishlist: false,
+        updatedAt: new Date().toISOString(),
+        card: {
+          id,
+          oracle_id: 'bolt-oracle',
+          name: 'Lightning Bolt',
+          set,
+          set_name: set.toUpperCase(),
+          lang,
+          type_line: 'Instant',
+          rarity: 'common',
+          cmc: 1,
+          colors: ['R'],
+          color_identity: ['R'],
+          collector_number: '1',
+          prices: { usd: set === 'm10' ? '2.00' : '9.00' }
+        }
+      });
+
+      const database: IDBDatabase = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('MagicDecksDB');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('collection', 'readwrite');
+        const store = transaction.objectStore('collection');
+        store.put(row('p-m10', 'm10', 10, 'en'));
+        store.put(row('p-lea', 'lea', 5, 'pt'));
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+    });
+
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'My Collection' }).click();
+
+    // One row per printing, each labelled — and the language only when it is not English.
+    await expect(appPage.getByText('m10', { exact: true })).toBeVisible();
+    await expect(appPage.getByText('lea · pt', { exact: true })).toBeVisible();
+
+    // 15 copies across 2 printings, valued independently: 10 × $2 + 5 × $9.
+    await expect(appPage.getByText('15')).toBeVisible();
+    await expect(appPage.getByText('$65.00')).toBeVisible();
+  });
 });

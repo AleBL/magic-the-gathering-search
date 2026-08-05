@@ -67,6 +67,12 @@ interface CardItemProps {
   isEditMode?: boolean;
   /** Shows the own/wishlist overlay controls (search results & collection view). */
   showCollectionControls?: boolean;
+  /**
+   * Shows which printing this is (set code, plus language when it is not English). The
+   * collection tracks one row per printing and prices them separately, so two rows of the
+   * same card are only distinguishable by their art — identical for a straight reprint.
+   */
+  showPrintingBadge?: boolean;
   /** Lets a (non-deck) search result be dragged into the deck editor. Emits the
    *  full card as JSON under a custom MIME so it never collides with the
    *  zone-move drag (which carries only the deck card id via `text/plain`). */
@@ -116,6 +122,7 @@ function CardItem({
   isEditMode = false,
   onUpdateCardZone,
   showCollectionControls = false,
+  showPrintingBadge = false,
   isAddDraggable = false
 }: CardItemProps) {
   const { t } = useTranslation();
@@ -291,6 +298,13 @@ function CardItem({
       )}
 
       {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="overlay" />}
+
+      {showPrintingBadge && card.set ? (
+        <span className="absolute bottom-2 left-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+          {card.set}
+          {card.lang && card.lang !== 'en' ? ` · ${card.lang}` : ''}
+        </span>
+      ) : null}
 
       {/* Fast circular Add/Remove buttons on hover */}
       {(onAddToDeck || onRemoveFromDeck || onUpdateCardZone) && (

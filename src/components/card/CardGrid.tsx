@@ -22,6 +22,7 @@ interface CardGridProps {
   onUpdateCardZone?: (cardId: string, zone: DeckZone) => void;
   stackDuplicates?: boolean;
   showCollectionControls?: boolean;
+  showPrintingBadge?: boolean;
   isAddDraggable?: boolean;
 }
 
@@ -48,6 +49,7 @@ function CardGrid({
   onUpdateCardZone,
   stackDuplicates = false,
   showCollectionControls = false,
+  showPrintingBadge = false,
   isAddDraggable = false
 }: CardGridProps) {
   const entries = useMemo(
@@ -84,6 +86,7 @@ function CardGrid({
               isEditMode={isEditMode}
               onUpdateCardZone={onUpdateCardZone}
               showCollectionControls={showCollectionControls}
+              showPrintingBadge={showPrintingBadge}
               isAddDraggable={isAddDraggable}
             />
             {count > 1 ? <span className="deck-stack-count-badge">{count}x</span> : null}

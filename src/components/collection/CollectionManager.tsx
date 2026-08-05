@@ -204,7 +204,7 @@ function CollectionManager() {
               ))}
             </div>
           ) : cards.length > 0 ? (
-            <CardGrid cards={cards} size={cardSize} showCollectionControls />
+            <CardGrid cards={cards} size={cardSize} showCollectionControls showPrintingBadge />
           ) : (
             <EmptyState
               icon={view === 'wishlist' ? <FaHeart /> : <FaBoxOpen />}
