@@ -9,10 +9,8 @@ interface AllDecksModalProps extends DeckListProps {
 }
 
 /**
- * Every saved deck, with the same actions as the sidebar, in a window wide enough to show
- * several per row. The sidebar lane is ~300px, so one deck card fills it and a 30-deck
- * collection becomes roughly thirteen screens of scrolling; the same cards in a grid are
- * a handful of rows. The body scrolls on its own so the dialog never outgrows the screen.
+ * Every saved deck in a grid, with the sidebar's actions. The sidebar lane fits one deck
+ * per row, which turns 30 decks into ~13 screens of scrolling; this is the wide view.
  */
 function AllDecksModal({ onClose, ...deckListProps }: AllDecksModalProps) {
   const { t } = useTranslation();

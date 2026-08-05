@@ -1,12 +1,8 @@
 import { expect, test } from './fixtures';
 
 /**
- * The breakpoint sweep from the audit brief, as an assertion rather than an eyeball.
- *
- * A page that scrolls horizontally is the one responsive failure that is unambiguous:
- * something is wider than the viewport and the user has to pan to read it. Comparing
- * `documentElement.scrollWidth` against `innerWidth` catches it at every width without
- * anyone deciding whether a screenshot "looks right".
+ * Horizontal overflow is the one responsive failure with no judgement call in it, so the
+ * breakpoint sweep is an assertion rather than a screenshot review.
  */
 
 const VIEWPORTS = [
@@ -49,8 +45,7 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
-// The base tabs passing says nothing about overlays, which is where the audit brief
-// expected trouble: a dialog with a fixed min-width is the classic 320px failure.
+// Overlays are where 320px usually breaks: a dialog with a fixed min-width.
 test('an open modal does not overflow the narrowest phone', async ({ appPage }) => {
   await appPage.setViewportSize({ width: 320, height: 640 });
   await appPage.goto('/');

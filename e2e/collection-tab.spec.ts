@@ -1,10 +1,6 @@
 import { expect, test, stubCard, mockScryfall } from './fixtures';
 
-/**
- * The collection tab's totals strip used to print the same value on both tabs, because it
- * always reported owned value regardless of which was open. These journeys pin the two
- * apart, and cover the name filter added alongside.
- */
+/** The totals strip used to print the owned value on both tabs; these pin the two apart. */
 test.describe('collection tab', () => {
   test.beforeEach(async ({ appPage }) => {
     await mockScryfall(appPage, [
@@ -58,11 +54,7 @@ test.describe('collection tab', () => {
     await expect(appPage.getByRole('button', { name: 'Lightning Bolt' })).toBeHidden();
   });
 
-  /**
-   * Two printings of the same card differ only by art — identical for a straight reprint —
-   * yet they are priced and counted separately. Seeded directly: the UI can only mark the
-   * printing the search happened to return.
-   */
+  // Seeded directly: the UI can only mark whichever printing the search returned.
   test('tells two printings of the same card apart', async ({ appPage }) => {
     await appPage.getByRole('button', { name: 'My Collection' }).click();
     await appPage.evaluate(async () => {

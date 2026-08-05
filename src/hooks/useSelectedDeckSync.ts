@@ -11,15 +11,9 @@ interface UseSelectedDeckSyncParams {
 }
 
 /**
- * Owns the lifecycle of the *selected* saved deck: restoring the selection when an edit
- * session ends, and publishing what the navbar's mobile page menu needs to build its
- * item list.
- *
- * These three effects live together because they are one concern seen from two sides —
- * `selectedDeck` is local component state, but the page menu renders outside the deck
- * manager's subtree and cannot receive it through props, so it has to be mirrored into
- * the store. Keeping the mirror next to the thing being mirrored is what stops the two
- * drifting apart.
+ * Owns the selected saved deck: restores the selection when an edit session ends, and
+ * mirrors it into the store for the navbar's mobile page menu, which renders outside this
+ * subtree and cannot receive it through props.
  */
 export function useSelectedDeckSync({
   selectedDeck,
@@ -32,9 +26,7 @@ export function useSelectedDeckSync({
 
   const lastEditingIdRef = useRef<string | null>(null);
 
-  // Cleared on unmount: selectedDeck is local state and dies with the deck manager, so
-  // leaving a stale summary behind would offer the page menu actions on a deck that is
-  // no longer on screen.
+  // Cleared on unmount, or the page menu would offer actions on a deck no longer shown.
   useEffect(() => {
     setSelectedDeckSummary(
       selectedDeck ? { id: selectedDeck.id, name: selectedDeck.name, cardCount: selectedDeck.cards.length } : null
@@ -46,9 +38,7 @@ export function useSelectedDeckSync({
     setSavedDeckCount(savedDecks.length);
   }, [savedDecks.length, setSavedDeckCount]);
 
-  // When an edit session ends, put the user back where they were: viewing the deck they
-  // had just been editing. The ref remembers which deck that was, because by the time
-  // editing stops `editingDeckId` has already been cleared.
+  // The ref is needed because `editingDeckId` is already cleared by the time editing stops.
   useEffect(() => {
     if (editingDeckId) {
       lastEditingIdRef.current = editingDeckId;

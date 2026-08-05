@@ -1,11 +1,7 @@
 import { expect, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
-/**
- * The search view can narrow results to cards already in the collection, or to the ones
- * still missing. Ownership is stored per printing in IndexedDB and matched by oracle id,
- * so this journey exercises the whole path: mark a card owned, then filter on it.
- */
+/** Ownership is stored per printing and matched by oracle id; this drives the whole path. */
 test.describe('collection filter on search', () => {
   test.beforeEach(async ({ appPage }) => {
     await appPage.goto('/');
@@ -17,11 +13,7 @@ test.describe('collection filter on search', () => {
     await appPage.getByRole('radio', { name: 'Large', exact: true }).click();
   });
 
-  /**
-   * The control lives in the advanced-filters panel: it narrows results, unlike the
-   * card-size selector it used to sit beside, which is a view option. The panel lays a
-   * backdrop over the results, so anything done to a card has to happen first.
-   */
+  // The panel lays a backdrop over the results, so card actions must happen before it opens.
   const openCollectionFilter = (page: Page) => page.getByRole('button', { name: 'Advanced Filters' }).click();
 
   test('defaults to showing everything', async ({ appPage }) => {

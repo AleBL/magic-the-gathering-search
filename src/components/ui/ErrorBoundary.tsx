@@ -6,14 +6,11 @@ import ErrorState from '../ui/ErrorState';
 interface ErrorBoundaryProps {
   children: ReactNode;
   /**
-   * `page` (the default) is the last line of defence at the root: the whole screen is
-   * gone, so the only honest offer is a reload.
+   * `section` keeps a failure inside one panel and offers a retry that remounts it;
+   * `page` (default) is the root fallback, where a reload is the only honest offer.
    *
-   * `section` wraps one part of the UI. Dexie's `useLiveQuery` throws during render, so
-   * a failed IndexedDB read in the deck or collection panel propagates to the nearest
-   * boundary — at the root that means one failed read blanks the entire app, header and
-   * other tabs included. Scoped boundaries keep the damage inside the panel that broke
-   * and offer a retry that remounts just that subtree.
+   * Scoping matters because Dexie's `useLiveQuery` throws during render, so one failed
+   * IndexedDB read would otherwise blank the whole app from the root boundary.
    */
   variant?: 'page' | 'section';
 }

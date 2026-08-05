@@ -15,11 +15,9 @@ export interface ValidationResult {
 }
 
 /**
- * Full resource paths of the phrase lists the Commander rules match card text against.
- * `getResource` walks the namespace by path and returns `undefined` for a miss — it does
- * not warn and does not fall back — so a wrong path here silently turns every check below
- * into `false`, which reads as "no card is a legal commander". They are named once here
- * and asserted to resolve in `deckValidator.test.ts`, so a locale reshuffle fails loudly.
+ * Full resource paths. `getResource` returns `undefined` for a miss without warning, so a
+ * wrong path here turns every check below into `false` — i.e. "no card is a legal
+ * commander". A test asserts each one resolves.
  */
 export const CHECK_LIST_KEYS = {
   partner: 'validation.partnerCheckList',
@@ -59,9 +57,8 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   const zoneOf = (card: Card): DeckZone => card.zone ?? DeckZone.MAIN;
 
   /**
-   * The maybeboard is a scratchpad and tokens are generated rather than played from the
-   * deck, so neither is validated at all. Beyond that the rules split: deck *size* counts
-   * the main deck only, while copy limits, rarity and ban lists cover the sideboard too.
+   * Deck *size* counts the main deck only; copy limits, rarity and ban lists cover the
+   * sideboard too. The maybeboard and tokens are not validated at all.
    */
   const mainDeck = cards.filter((card) => zoneOf(card) === DeckZone.MAIN);
   const playableCards = cards.filter((card) => zoneOf(card) === DeckZone.MAIN || zoneOf(card) === DeckZone.SIDEBOARD);
@@ -83,12 +80,9 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   playableCards.forEach((card) => {
     const { name } = card;
     /**
-     * Matched as two separate words rather than the literal "basic land": Scryfall puts
-     * the snow supertype between them ("Basic Snow Land — Forest"), so a substring check
-     * misses every snow-covered basic and reports 28 Snow-Covered Forests as a singleton
-     * violation. Going through the phrase lists also covers pt/es type lines, which the
-     * English substring never matched — those only worked because of the name list, and
-     * that list has no Spanish names at all.
+     * Two separate words, not the literal "basic land": Scryfall puts the snow supertype
+     * between them ("Basic Snow Land — Forest"). The phrase lists also cover pt/es type
+     * lines, which an English substring never matched.
      */
     const typeLine = card.type_line || '';
     const isBasic =

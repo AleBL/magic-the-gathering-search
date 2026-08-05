@@ -1,10 +1,8 @@
 import { test as base, expect, Page } from '@playwright/test';
 
 /**
- * Journeys run against stubbed Scryfall responses, never the live API. Real requests
- * would make the suite depend on someone else's uptime, rate limit and card data, so a
- * failure would not tell you whether *this* app broke. The stubs are shaped like real
- * Scryfall payloads; anything the UI does not read is left out on purpose.
+ * Stubbed Scryfall responses, never the live API: a red run must mean this app broke, not
+ * that someone else's service is down.
  */
 
 export interface StubCardOptions {
@@ -61,12 +59,8 @@ export function stubCard(options: StubCardOptions = {}) {
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
 export async function mockScryfall(page: Page, cards = [stubCard()]) {
-  // Registration order matters and is counter-intuitive: when several routes match a
-  // request Playwright uses the one registered *last*. The catch-all therefore goes
-  // first, so the specific handlers below take precedence over it.
-
-  // Anything not stubbed below is a gap in the fixture; 404 loudly rather than let a
-  // test quietly reach the real Scryfall API.
+  // Playwright uses the *last* matching route, so the catch-all goes first. It 404s rather
+  // than letting an unstubbed path reach the real API.
   await page.route('**/api.scryfall.com/**', (route) =>
     route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ object: 'error' }) })
   );
@@ -89,12 +83,9 @@ export async function mockScryfall(page: Page, cards = [stubCard()]) {
 }
 
 export const test = base.extend<{ appPage: Page }>({
-  // Playwright names this second argument `use` by convention, but it is positional, and
-  // that name makes the React Hooks lint rule read it as a hook called outside a
-  // component. `runTest` says what it actually does and keeps the rule honest.
+  // Named `runTest`, not `use`: the React Hooks lint rule reads `use` as a hook call.
   appPage: async ({ page }, runTest) => {
-    // The app defaults to Portuguese; pin English so selectors read as the assertions
-    // a reviewer would write, and do not shift when a translation is reworded.
+    // Pinned to English so selectors read as assertions rather than translations.
     await page.addInitScript(() => {
       window.localStorage.setItem('deckforge_language', 'en');
     });

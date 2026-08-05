@@ -42,9 +42,7 @@ function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...
         />
       </button>
       <div id="saved-decks-panel" className={`${isMobileOpen ? 'block' : 'hidden'} lg:block`}>
-        {/* Capped and scrollable: unbounded, 30 decks make this column ~9,500px tall in a
-            720px viewport, so the surrounding layout stops being usable long before the
-            list does. */}
+        {/* Capped: unbounded, 30 decks make this column ~9,500px tall. */}
         <div className="max-h-[calc(100vh-13rem)] overflow-y-auto pr-1">
           <DeckList {...deckListProps} />
         </div>

@@ -188,14 +188,11 @@ function CardDetailModal({
       setIsPreloading(false);
     };
 
-    // Handlers before `src`: a cached image can finish loading during the assignment, and
-    // a handler attached afterwards never runs — which left the previous art on screen.
-    // That is why switching printing worked sometimes and not others, and why it showed up
-    // on mobile first, where the art had usually been viewed already.
+    // Handlers before `src`: a cached image can finish loading during the assignment, and a
+    // handler attached afterwards never runs, leaving the previous art on screen.
     img.onload = show;
     img.onerror = show;
     img.src = displayImageUrl;
-    // Belt and braces for engines that complete before any event is dispatched at all.
     if (img.complete) show();
 
     return () => {
@@ -280,9 +277,7 @@ function CardDetailModal({
           <div className="sm:hidden -mt-6 -mx-6 flex justify-center pt-2.5 pb-1" aria-hidden="true">
             <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-slate-700" />
           </div>
-          {/* Close button, top right — desktop only. On phones the sheet already has a drag
-              handle and closes on a tap outside, so a third affordance just spends space
-              on the one screen with least to spare. */}
+          {/* Desktop only: the phone sheet has a drag handle and closes on a tap outside. */}
           <button
             type="button"
             onClick={requestClose}

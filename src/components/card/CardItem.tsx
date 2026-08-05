@@ -67,11 +67,7 @@ interface CardItemProps {
   isEditMode?: boolean;
   /** Shows the own/wishlist overlay controls (search results & collection view). */
   showCollectionControls?: boolean;
-  /**
-   * Shows which printing this is (set code, plus language when it is not English). The
-   * collection tracks one row per printing and prices them separately, so two rows of the
-   * same card are only distinguishable by their art — identical for a straight reprint.
-   */
+  /** Set code, plus language when not English — two printings differ only by art otherwise. */
   showPrintingBadge?: boolean;
   /** Lets a (non-deck) search result be dragged into the deck editor. Emits the
    *  full card as JSON under a custom MIME so it never collides with the

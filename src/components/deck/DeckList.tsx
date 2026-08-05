@@ -21,11 +21,7 @@ export interface DeckListProps {
   onNewFromDeck: (deck: Deck) => void;
   onDeleteDeck: (deck: Deck) => void;
   onChangeCover: (deck: Deck) => void;
-  /**
-   * `column` is the sidebar: one deck per row, in a 300px lane. `grid` is the
-   * all-decks modal, which has the width to show several per row — the sidebar's
-   * density problem is the lane, not the card.
-   */
+  /** `column` for the 300px sidebar lane; `grid` for the all-decks modal. */
   layout?: 'column' | 'grid';
   /** The modal supplies its own dialog title, so the list's heading would repeat it. */
   hideHeading?: boolean;

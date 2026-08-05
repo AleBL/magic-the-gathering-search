@@ -18,11 +18,9 @@ export interface CollectionOwnership {
 }
 
 /**
- * Answers "do I already have this card?" for arbitrary search results.
- *
- * Matching is by `oracle_id`, not print id: the collection stores one row per printing,
- * but a player who owns the M10 Lightning Bolt owns Lightning Bolt. Falling back to the
- * name covers cards whose oracle id is missing from a stored snapshot.
+ * Matches by `oracle_id`, not print id: the collection stores a row per printing, but
+ * owning the M10 Lightning Bolt means owning Lightning Bolt. Name is a fallback for
+ * stored snapshots with no oracle id.
  */
 export function useCollectionOwnership(): CollectionOwnership {
   const stored = useLiveQuery(() => db.collection.toArray(), []);

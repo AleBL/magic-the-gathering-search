@@ -16,12 +16,8 @@ interface CollectionSummaryBarProps {
 export function CollectionSummaryBar({ summary, currency, onCurrencyChange, view }: CollectionSummaryBarProps) {
   const { t } = useTranslation();
 
-  /**
-   * The two tabs measure different things and used to show the same number, which read as
-   * a bug because it was one: owned value multiplies by how many copies you have, while
-   * the wishlist counts each wanted printing once. The label says which is on screen so
-   * the two are never mistaken for each other.
-   */
+  // Owned value multiplies by copies; the wishlist counts each wanted printing once. The
+  // label names which is on screen, since the two figures are easily mistaken.
   const isWishlist = view === 'wishlist';
   const value = isWishlist ? summary.wishlistValue : summary.totalValue;
   const valueLabel = isWishlist ? t('collection.wishlistValue') : t('collection.ownedValue');

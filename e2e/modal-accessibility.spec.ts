@@ -1,10 +1,8 @@
 import { expect, test } from './fixtures';
 
 /**
- * Guards the modal convention: dialog semantics, focus moved in, focus trapped, Escape
- * to close, focus restored on the way out. Five modals were missing all of it and were
- * brought into line by hand — nothing but a test that drives a real keyboard notices
- * when the next new modal skips it again.
+ * Guards the modal convention: dialog semantics, focus trapped, Escape to close, focus
+ * restored. Only a test driving a real keyboard notices when a new modal skips it.
  */
 test.describe('modal accessibility', () => {
   test('the save dialog traps focus and restores it on Escape', async ({ appPage }) => {

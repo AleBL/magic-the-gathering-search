@@ -49,8 +49,7 @@ function CollectionManager() {
     const term = nameQuery.trim().toLowerCase();
     if (!term) return bySet;
 
-    // Matches the printed (localised) name too: a collection imported in Portuguese is
-    // searched with the words actually shown on the card.
+    // Printed name too, so a localised collection is searched by what is on the card.
     return bySet.filter((entry) => {
       const printed = entry.card.printed_name?.toLowerCase() ?? '';
       return entry.name.toLowerCase().includes(term) || printed.includes(term);
@@ -74,9 +73,7 @@ function CollectionManager() {
       type="button"
       onClick={() => setView(value)}
       aria-pressed={view === value}
-      // `relative` is load-bearing: .count-badge is absolutely positioned, so without a
-      // positioned ancestor it resolves against the initial containing block and lands
-      // past the right edge of the page instead of on this button's corner.
+      // `relative` is load-bearing: .count-badge is absolute and would escape to the page edge.
       className={`relative flex items-center gap-2 px-4 py-2 pr-5 rounded-xl text-sm font-bold transition-all ${
         view === value
           ? 'bg-primary text-white shadow-md shadow-blue-500/25'
@@ -195,8 +192,7 @@ function CollectionManager() {
             </div>
           </div>
 
-          {/* Skeletons while IndexedDB answers: showing the empty state here would tell
-              someone with a full collection that they own nothing. */}
+          {/* Skeletons while IndexedDB answers, or a full collection reads as empty. */}
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
               {Array.from({ length: 14 }).map((_, index) => (

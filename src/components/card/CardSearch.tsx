@@ -55,9 +55,7 @@ function CardSearch({
   const [ownership, setOwnership] = useState<OwnershipFilter>('all');
   const { apply: applyOwnership } = useCollectionOwnership();
 
-  // Filters the results already fetched. Scryfall has no "cards I own" query, so this is
-  // necessarily page-local: a page can legitimately yield nothing, which the empty state
-  // below says out loud rather than pretending the search found nothing.
+  // Page-local: Scryfall has no "cards I own" query, so a page can filter down to nothing.
   const visibleCards = applyOwnership(cards, ownership);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -244,9 +242,7 @@ function CardSearch({
                 onAddToDeck={onAddToDeck}
                 onAddTokenToDeck={onAddTokenToDeck}
                 activeFormat={activeFormat}
-                // Only on the larger sizes: at S/M the overlay swallows most of a card that
-                // is already too small to read. The collection tab, where these controls are
-                // the point rather than a shortcut, keeps them at every size.
+                // At S/M the overlay swallows most of an already-small card.
                 showCollectionControls={cardSize === 'large' || cardSize === 'xlarge'}
                 isAddDraggable={enableAddDrag}
               />
@@ -255,9 +251,7 @@ function CardSearch({
 
           {!isLoadingInitial && hasMore && (
             <div ref={sentinelRef} className="mt-8 mb-12">
-              {/* Under a collection filter most of an incoming page is discarded, so card
-                  skeletons promise results that may never appear — the strip then reads as
-                  "stuck" rather than "still looking". Say what is actually happening. */}
+              {/* Skeletons would promise results the filter may discard. */}
               {isLoadingMore && ownership !== 'all' ? (
                 <p className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400">
                   {t('search.loadingMoreFiltered')}

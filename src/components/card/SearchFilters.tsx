@@ -18,12 +18,7 @@ interface SearchFiltersProps {
    * quick filters, card size — are re-homed here to stay reachable.
    */
   mobileExtras?: ReactNode;
-  /**
-   * Extra filter controls rendered inside the advanced panel. Placed here rather than in
-   * the toolbar because they are narrowing tools, not view options like card size —
-   * and `filterFields` is shared by the desktop dropdown and the mobile sheet, so one
-   * slot covers both surfaces.
-   */
+  /** Extra controls for the advanced panel, shared by the desktop dropdown and the sheet. */
   extraFilters?: ReactNode;
 }
 

@@ -3,13 +3,9 @@ import { CSSProperties, useRef, useState } from 'react';
 const DISMISS_THRESHOLD_PX = 150;
 
 /**
- * Whether the touched element's nearest scrollable ancestor (if any) inside
- * the dialog is currently scrolled to the top. Walks up from the actual
- * touch target rather than trusting the element the handlers are attached
- * to, since that element isn't always the one that scrolls (e.g. a dialog
- * panel with `overflow-hidden` wrapping an inner `overflow-y-auto` body).
- * The walk stops at the dialog boundary (`role="dialog"`) so it never
- * wanders into the page behind the modal.
+ * Walks up from the touch target, not the element the handlers sit on: those are often
+ * different (an `overflow-hidden` panel wrapping an `overflow-y-auto` body). Stops at the
+ * dialog so it never reads the page behind the modal.
  */
 function isAtScrollTop(target: EventTarget | null): boolean {
   let el = target instanceof HTMLElement ? target : null;
@@ -24,29 +20,15 @@ function isAtScrollTop(target: EventTarget | null): boolean {
 }
 
 /**
- * Touch handlers for a bottom-sheet: dragging down anywhere on the sheet
- * follows the finger 1:1 and either dismisses it past the threshold or snaps
- * back with a short transition otherwise. Attach the returned handlers and
- * `panelStyle` to the sheet's outer dialog panel (the `role="dialog"`
- * element) so the whole sheet is draggable, matching how native bottom
- * sheets behave — not just a small dedicated handle.
+ * Drag-to-dismiss for a bottom sheet. Attach the handlers and `panelStyle` to the
+ * `role="dialog"` panel so the whole sheet is draggable. The gesture only engages when the
+ * touched content is already scrolled to the top, so scrolling and dismissing coexist.
  *
- * The gesture only engages when the drag starts with the touched content
- * already scrolled to the top: that's what lets a normal scroll-down gesture
- * coexist with drag-to-dismiss on the very same sheet, the same way
- * pull-to-refresh only kicks in at the top of a scrolled page.
- *
- * Two more non-obvious bits, both required for this to actually work on a phone:
- * - `panelStyle`'s `touch-action: pan-y` keeps native vertical scrolling
- *   working for panel content while still handing us the touch events needed
- *   to detect the down-drag; `none` would kill scrolling entirely, and the
- *   browser's default `auto` risks the page's own pull-to-refresh gesture
- *   racing our JS for the same touch.
- * - `panelStyle` moves the panel via the standalone `translate` property, not
- *   `transform` — the panel's own enter animation (`animate-fadeIn` /
- *   `animate-dialogEnter`) animates `transform`, and a CSS animation targeting
- *   a property wins over an inline style on that same property, which would
- *   make the drag look like it does nothing.
+ * Two settings in `panelStyle` are load-bearing:
+ * - `touch-action: pan-y` — `none` kills scrolling, `auto` lets the browser's own
+ *   pull-to-refresh race these handlers for the same touch.
+ * - `translate`, not `transform` — the panel's enter animation animates `transform`, and a
+ *   CSS animation beats an inline style on the same property, so the drag would do nothing.
  */
 export function useSwipeToClose<T extends HTMLElement>(onClose: () => void) {
   const startY = useRef<number | null>(null);

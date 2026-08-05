@@ -12,11 +12,7 @@ const OPTIONS: { value: OwnershipFilter; labelKey: string }[] = [
   { value: 'missing', labelKey: 'search.ownershipMissing' }
 ];
 
-/**
- * Narrows search results to cards the player already owns, or to the ones they still
- * need. A radiogroup rather than three buttons: the options are mutually exclusive, and
- * that is what a screen reader should hear.
- */
+/** Narrows search results by ownership. A radiogroup: the options are mutually exclusive. */
 function CollectionFilterSelector({ value, onChange }: CollectionFilterSelectorProps) {
   const { t } = useTranslation();
 

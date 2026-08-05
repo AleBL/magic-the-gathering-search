@@ -3,10 +3,7 @@ import type { Page } from '@playwright/test';
 
 const DECK_COUNT = 30;
 
-/**
- * Writes decks straight into IndexedDB. Creating thirty through the UI would take minutes
- * and would be testing the save flow, which other journeys already cover.
- */
+/** Straight into IndexedDB: thirty saves through the UI would test the save flow instead. */
 async function seedDecks(page: Page, count: number) {
   await page.evaluate(async (total) => {
     const database: IDBDatabase = await new Promise((resolve, reject) => {
@@ -43,8 +40,7 @@ test.describe('a collection of many decks', () => {
     await expect(appPage.getByRole('heading', { name: new RegExp(`Saved Decks \\(${DECK_COUNT}\\)`) })).toBeVisible();
   });
 
-  // Unbounded, thirty decks made this column ~9,500px tall in a 720px viewport: the deck
-  // card is ~300px and the sidebar shows one per row.
+  // Unbounded, thirty decks made this column ~9,500px tall in a 720px viewport.
   test('keeps the sidebar list within the viewport instead of growing with the deck count', async ({ appPage }) => {
     const height = await appPage
       .locator('#saved-decks-panel')

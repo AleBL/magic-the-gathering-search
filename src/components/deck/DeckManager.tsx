@@ -127,12 +127,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
 
   const activeFormat = editingDeckId ? editingDeckFormat : deckFormat;
 
-  /**
-   * The deck currently open in the editor, shaped as a `Deck`. It has no saved
-   * counterpart until it is saved, so both the saved-decks list and the export
-   * command have to synthesise one — building it in a single place keeps the two
-   * synthesised decks from drifting apart.
-   */
+  /** The in-editor deck as a `Deck` — it has no saved counterpart until saved. */
   const buildEditingDeckSnapshot = useCallback(
     (format: DeckFormat): Deck => ({
       id: editingDeckId ?? '',
@@ -275,9 +270,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
     );
   }, [showConfirm, t, onClearDeck, showToast]);
 
-  // Reachable from two places each — the on-screen toolbar and the pendingAction
-  // channel (shortcuts / command palette / mobile page menu). They were written out
-  // twice, so a change to one silently diverged from the other.
+  // Shared by the toolbar and the pendingAction channel, which used to duplicate them.
   const openSaveDialog = useCallback(() => {
     setDeckName('');
     setShowSaveDialog(true);
@@ -406,10 +399,7 @@ function DeckManager({ showToast }: DeckManagerProps) {
     [setSelectedDeck, onLoadDeckToEdit, showToast, t]
   );
 
-  // Commands dispatched through the store's pendingAction channel: keyboard
-  // shortcuts, the command palette, and the navbar's mobile page menu, which
-  // below `sm` replaces the on-screen toolbars entirely. Handlers shared with the
-  // toolbar are defined above so both entry points stay in step.
+  // Keyboard shortcuts, command palette and the mobile page menu all arrive here.
   usePendingAction({
     'save-deck': () => (editingDeckId ? handleSaveEditedDeck() : openSaveDialog()),
     'save-deck-as-new': openSaveAsNewDialog,

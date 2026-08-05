@@ -1,11 +1,7 @@
 /**
- * Every localStorage key the app owns, in one place.
- *
- * The string values are persisted in users' browsers, so a key is never simply renamed:
- * doing that silently discards the preference on the next visit. `darkMode` and
- * `visualEffects` predated the `deckforge_` prefix and were migrated by adding the new
- * key here and listing the old one in {@link LEGACY_STORAGE_KEYS}, which
- * {@link readStoredPreference} falls back to.
+ * Every localStorage key the app owns. These strings are persisted in users' browsers, so
+ * a rename discards the preference unless the old name is added to
+ * {@link LEGACY_STORAGE_KEYS} for {@link readStoredPreference} to fall back to.
  */
 export const STORAGE_KEYS = {
   darkMode: 'deckforge_dark_mode',
@@ -18,19 +14,15 @@ export const STORAGE_KEYS = {
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
-/**
- * Pre-prefix names still sitting in browsers that used an older build. Read-only: nothing
- * writes these any more, and {@link readStoredPreference} clears each one as it migrates.
- */
+/** Pre-prefix names still in older browsers. Read-only; migrated away on first read. */
 const LEGACY_STORAGE_KEYS: Partial<Record<StorageKey, string>> = {
   [STORAGE_KEYS.darkMode]: 'darkMode',
   [STORAGE_KEYS.visualEffects]: 'visualEffects'
 };
 
 /**
- * Reads a preference, falling back to its pre-prefix name and migrating the value across
- * on the way. Returns null when neither key is set, so callers can tell "never chosen"
- * from "chosen and off" — the distinction that decides whether to follow the OS setting.
+ * Returns null when neither key is set, so callers can tell "never chosen" from "chosen
+ * and off" — the distinction that decides whether dark mode follows the OS.
  */
 export function readStoredPreference(key: StorageKey): string | null {
   if (typeof window === 'undefined') return null;

@@ -40,8 +40,7 @@ test.describe('keyboard access', () => {
     }
   });
 
-  // The simulator hosts its own dialogs. A trap inside a trap is the thing that had to be
-  // verified before adding one at all — a keyboard deadlock here is worse than no trap.
+  // A trap inside a trap: a keyboard deadlock here would be worse than no trap at all.
   test('a dialog opened inside the simulator traps focus in turn, and returns it', async ({ appPage }) => {
     await withOneCardDeck(appPage);
     await appPage
@@ -65,7 +64,7 @@ test.describe('keyboard access', () => {
       expect(escaped, `focus left the shortcuts overlay after ${i + 1} Tab presses`).toBe(false);
     }
 
-    // Escape must dismiss it, and focus must return to the simulator rather than the page.
+    // Escape must dismiss it and hand focus back to the simulator, not the page.
     await appPage.keyboard.press('Escape');
     await expect(overlay).toBeHidden();
     const backInside = await simulator.evaluate((el) => el.contains(document.activeElement));

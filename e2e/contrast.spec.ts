@@ -2,10 +2,8 @@ import { expect, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * WCAG 2.2 SC 1.4.3 (Contrast, Minimum): 4.5:1 for body text, 3:1 for large text
- * (>=24px, or >=18.66px when bold). Computed from what the browser actually paints, so
- * it catches a token that reads fine in one theme and washes out in the other — the
- * failure mode a screenshot review misses because the reviewer only uses one theme.
+ * WCAG 2.2 SC 1.4.3: 4.5:1 for body text, 3:1 for large text (>=24px, or >=18.66px bold).
+ * Computed from what the browser paints, so a token that only fails in one theme is caught.
  */
 
 interface ContrastFailure {
@@ -18,9 +16,7 @@ interface ContrastFailure {
 
 async function findContrastFailures(page: Page): Promise<ContrastFailure[]> {
   return page.evaluate(() => {
-    // Tailwind v4 emits oklch(), so a regex over rgb() silently fails and every colour
-    // falls back to white — which reports the whole page as 1:1 contrast. Painting the
-    // value into a canvas makes the browser normalise any colour space to sRGB bytes.
+    // Tailwind v4 emits oklch(); a canvas makes the browser normalise any colour space.
     const canvas = document.createElement('canvas');
     canvas.width = 1;
     canvas.height = 1;
@@ -49,8 +45,7 @@ async function findContrastFailures(page: Page): Promise<ContrastFailure[]> {
       let node: Element | null = el;
       while (node) {
         const style = getComputedStyle(node);
-        // A gradient or image behind the text makes a flat ratio meaningless; skip it
-        // rather than report a number that is not the one the eye sees.
+        // A gradient behind the text makes a flat ratio meaningless.
         if (style.backgroundImage && style.backgroundImage !== 'none') return null;
         const rgb = parseRgb(style.backgroundColor);
         if (rgb && rgb[3] === 1) return [rgb[0], rgb[1], rgb[2]];
@@ -112,10 +107,8 @@ for (const theme of ['light', 'dark'] as const) {
     await appPage.addInitScript((mode) => {
       window.localStorage.setItem('deckforge_dark_mode', String(mode === 'dark'));
     }, theme);
-    // Colours transition over 300ms. Reading getComputedStyle mid-transition returns the
-    // interpolated value (it comes back as oklab()), so the numbers change run to run and
-    // mean nothing. Emulating reduced motion makes the app's own global rule collapse
-    // every transition to 0.01ms, so what is measured is the settled colour.
+    // getComputedStyle mid-transition returns interpolated values, which vary run to run.
+    // Reduced motion makes the app's global rule collapse transitions to 0.01ms.
     await appPage.emulateMedia({ reducedMotion: 'reduce' });
     await appPage.goto('/');
     await expect(appPage.getByRole('banner')).toBeVisible();
