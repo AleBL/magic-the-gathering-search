@@ -244,7 +244,10 @@ function CardSearch({
                 onAddToDeck={onAddToDeck}
                 onAddTokenToDeck={onAddTokenToDeck}
                 activeFormat={activeFormat}
-                showCollectionControls
+                // Only on the larger sizes: at S/M the overlay swallows most of a card that
+                // is already too small to read. The collection tab, where these controls are
+                // the point rather than a shortcut, keeps them at every size.
+                showCollectionControls={cardSize === 'large' || cardSize === 'xlarge'}
                 isAddDraggable={enableAddDrag}
               />
             </div>

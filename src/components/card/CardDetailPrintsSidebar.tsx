@@ -31,13 +31,13 @@ export function CardDetailPrintsSidebar({
   if (isLoading) {
     return (
       <div
-        className="flex flex-row md:flex-col gap-1.5 max-w-full max-h-20 md:max-h-[400px] py-1 shrink-0 animate-pulse select-none"
+        className="flex flex-row md:flex-col gap-1.5 max-w-full max-h-24 md:max-h-[400px] py-1 shrink-0 animate-pulse select-none"
         aria-label={t('cardDetails.loadingEditions')}
       >
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100/50 dark:bg-gray-800/40 w-[52px] h-[52px] flex items-center justify-center shrink-0"
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100/50 dark:bg-gray-800/40 w-[62px] h-[62px] flex items-center justify-center shrink-0"
           >
             <span className="w-6 h-2 bg-gray-300 dark:bg-gray-650 rounded-md" />
           </div>
@@ -50,7 +50,7 @@ export function CardDetailPrintsSidebar({
 
   return (
     <div
-      className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto max-w-full max-h-20 md:max-h-[400px] pr-1 pb-1 md:pb-0 select-none py-1 shrink-0 animate-fadeIn custom-scrollbar"
+      className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto max-w-full max-h-24 md:max-h-[400px] pr-1 pb-1 md:pb-0 select-none py-1 shrink-0 animate-fadeIn custom-scrollbar"
       aria-label={t('cardDetails.cardEditions')}
     >
       {prints.map((printCard) => {
@@ -67,17 +67,18 @@ export function CardDetailPrintsSidebar({
             onClick={() => onSelectPrint(printCard)}
             title={`${printCard.set_name} · ${printCard.set?.toUpperCase()} #${printCard.collector_number || ''}${printCard.lang ? ` · ${printCard.lang.toUpperCase()}` : ''}`}
             aria-pressed={isSelected}
-            className={`group relative shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 px-1.5 py-2 min-w-[52px] md:w-14 cursor-pointer ${isSelected
+            className={`group relative shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 px-2 py-2.5 min-w-[62px] md:w-16 cursor-pointer ${
+              isSelected
                 ? 'border-blue-500 bg-blue-500/15 text-primary dark:text-blue-400 ring-2 ring-blue-500/30 shadow-md brightness-110'
                 : `${rarityStyle} hover:border-blue-400/60 hover:bg-blue-500/5 hover:brightness-110 hover:shadow-xs`
-              }`}
+            }`}
           >
-            <span className="text-[10px] uppercase font-black tracking-tight leading-none">{printCard.set}</span>
-            <span className="text-[7px] font-semibold select-none mt-0.5 leading-none opacity-70">
+            <span className="text-[11px] uppercase font-black tracking-tight leading-none">{printCard.set}</span>
+            <span className="text-[9px] font-semibold select-none mt-0.5 leading-none opacity-80">
               #{printCard.collector_number || ''}
             </span>
             {printCard.lang ? (
-              <span className="mt-0.5 rounded bg-black/10 dark:bg-white/10 px-1 text-[7px] font-black uppercase leading-none tracking-wide">
+              <span className="mt-0.5 rounded bg-black/10 dark:bg-white/10 px-1 text-[8px] font-black uppercase leading-none tracking-wide">
                 {printCard.lang}
               </span>
             ) : null}

@@ -68,7 +68,10 @@ export function CardCollectionControls({ card, variant = 'overlay' }: CardCollec
     // adding to the collection felt undiscoverable. Below sm the overlay is
     // hidden entirely: on phones the card grid is dense and mis-taps were
     // constant, so collection actions live in the card detail panel instead.
-    <div className="absolute top-2 left-2 z-30 hidden sm:flex flex-col items-start gap-1.5">
+    // Bottom strip rather than top: the card's name sits along the top edge and these
+    // controls sat right on it. The artist/copyright line down here is the one band that
+    // carries nothing needed to recognise the card.
+    <div className="absolute bottom-2 left-2 z-30 hidden sm:flex flex-col items-start gap-1.5">
       {quantity > 0 ? (
         <div className="flex items-center gap-1 bg-black/65 backdrop-blur-md rounded-full shadow-md border border-white/20 p-1 pointer-events-auto">
           <button

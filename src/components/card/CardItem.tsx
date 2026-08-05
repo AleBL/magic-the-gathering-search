@@ -300,7 +300,7 @@ function CardItem({
       {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="overlay" />}
 
       {showPrintingBadge && card.set ? (
-        <span className="absolute bottom-2 left-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+        <span className="absolute bottom-2 right-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
           {card.set}
           {card.lang && card.lang !== 'en' ? ` · ${card.lang}` : ''}
         </span>
