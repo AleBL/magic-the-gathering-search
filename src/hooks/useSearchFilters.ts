@@ -94,6 +94,14 @@ export function useSearchFilters(
     [setFilters]
   );
 
+  /** One setter for the seven text/select fields, so each does not need its own callback. */
+  const setField = useCallback(
+    <K extends keyof SearchFiltersType>(field: K, value: SearchFiltersType[K]) => {
+      setFilters((prev) => ({ ...prev, [field]: value }));
+    },
+    [setFilters]
+  );
+
   return {
     colors,
     types,
@@ -102,6 +110,7 @@ export function useSearchFilters(
     toggleType,
     clearFilters,
     setRarity,
-    setCmc
+    setCmc,
+    setField
   };
 }

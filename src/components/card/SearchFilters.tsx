@@ -1,7 +1,9 @@
 import { useState, Dispatch, SetStateAction, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaFilter, FaTimes, FaUndo } from 'react-icons/fa';
+import { FaChevronDown, FaFilter, FaTimes, FaUndo } from 'react-icons/fa';
 import { SearchFilters as SearchFiltersType } from '../../types';
+import { KEYWORD_OPTIONS, ORACLE_TAG_OPTIONS, toLabelKey } from '../../constants/searchOptions';
+import { hasActiveFilters as hasAnyFilter } from '../../utils/searchQuery';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -25,11 +27,15 @@ interface SearchFiltersProps {
 // Pairs with Tailwind's `sm` breakpoint used by the dropdown markup below.
 const MOBILE_QUERY = '(max-width: 639px)';
 
+const FIELD_CLASS =
+  'w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700/80 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:font-normal placeholder:text-gray-400 shadow-inner dark:shadow-none hover:bg-gray-100 dark:hover:bg-slate-800';
+
 function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: SearchFiltersProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showTextFields, setShowTextFields] = useState(true);
   const isMobile = useMediaQuery(MOBILE_QUERY);
-  const { rarities, clearFilters, setRarity, setCmc } = useSearchFilters(filters, setFilters);
+  const { rarities, clearFilters, setRarity, setCmc, setField } = useSearchFilters(filters, setFilters);
   useEscapeKey(() => setIsExpanded(false), isExpanded && !isMobile);
 
   // The navbar's mobile page menu asks us to open via the shared pendingAction
@@ -38,13 +44,117 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
     'open-search-filters': () => setIsExpanded(true)
   });
 
-  const hasActiveFilters =
-    filters.rarity !== '' || filters.cmc !== '' || filters.colors.length > 0 || filters.types.length > 0;
+  // Derived from the query builder, so a field added there cannot be forgotten here.
+  const hasActiveFilters = hasAnyFilter(filters);
 
-  const filterFields = (
+  const fieldLabel = (htmlFor: string, label: string) => (
+    <label
+      htmlFor={htmlFor}
+      className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5"
+    >
+      {label}
+    </label>
+  );
+
+  // Two columns only in the desktop dropdown, which is wide enough for them; the mobile
+  // sheet stays a single column.
+  const renderTextFields = (wide: boolean) => (
+    <div className={wide ? 'grid grid-cols-2 gap-x-5 gap-y-4 items-start' : 'space-y-4'}>
+      <div>
+        {fieldLabel('filter-text', t('search.containsText'))}
+        <input
+          id="filter-text"
+          type="text"
+          value={filters.text}
+          onChange={(e) => setField('text', e.target.value)}
+          placeholder={t('search.containsTextPlaceholder')}
+          className={FIELD_CLASS}
+        />
+        <p className="mt-1 text-[10px] leading-snug text-gray-400 dark:text-slate-500">
+          {t('search.textLanguageHint')}
+        </p>
+      </div>
+
+      <div>
+        {fieldLabel('filter-exclude-text', t('search.excludesText'))}
+        <input
+          id="filter-exclude-text"
+          type="text"
+          value={filters.excludeText}
+          onChange={(e) => setField('excludeText', e.target.value)}
+          placeholder={t('search.excludesTextPlaceholder')}
+          className={FIELD_CLASS}
+        />
+      </div>
+
+      <div>
+        {fieldLabel('filter-keyword', t('search.keyword'))}
+        <select
+          id="filter-keyword"
+          value={filters.keyword}
+          onChange={(e) => setField('keyword', e.target.value)}
+          className={FIELD_CLASS}
+        >
+          <option value="">{t('search.any')}</option>
+          {KEYWORD_OPTIONS.map((keyword) => (
+            <option key={keyword} value={keyword}>
+              {t(`search.keywords.${toLabelKey(keyword)}`)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        {fieldLabel('filter-oracle-tag', t('search.oracleTag'))}
+        <select
+          id="filter-oracle-tag"
+          value={filters.oracleTag}
+          onChange={(e) => setField('oracleTag', e.target.value)}
+          className={FIELD_CLASS}
+        >
+          <option value="">{t('search.any')}</option>
+          {ORACLE_TAG_OPTIONS.map((tag) => (
+            <option key={tag} value={tag}>
+              {t(`search.oracleTags.${toLabelKey(tag)}`)}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[10px] leading-snug text-gray-400 dark:text-slate-500">{t('search.oracleTagHint')}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          {fieldLabel('filter-power', t('search.power'))}
+          <input
+            id="filter-power"
+            type="text"
+            inputMode="text"
+            value={filters.power}
+            onChange={(e) => setField('power', e.target.value)}
+            placeholder={t('search.statPlaceholder')}
+            className={FIELD_CLASS}
+          />
+        </div>
+        <div>
+          {fieldLabel('filter-toughness', t('search.toughness'))}
+          <input
+            id="filter-toughness"
+            type="text"
+            inputMode="text"
+            value={filters.toughness}
+            onChange={(e) => setField('toughness', e.target.value)}
+            placeholder={t('search.statPlaceholder')}
+            className={FIELD_CLASS}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFilterFields = (wide: boolean) => (
     <>
       {extraFilters ? <div className="pb-4 border-b border-gray-100 dark:border-slate-800">{extraFilters}</div> : null}
-      <div className="space-y-4">
+      <div className={wide ? 'grid grid-cols-2 gap-x-5 gap-y-4 items-start' : 'space-y-4'}>
         <div>
           <label
             htmlFor="filter-rarity"
@@ -83,6 +193,21 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
             className="w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700/80 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:font-normal placeholder:text-gray-400 shadow-inner dark:shadow-none hover:bg-gray-100 dark:hover:bg-slate-800"
           />
         </div>
+      </div>
+
+      {/* Behind a disclosure: seven more controls open in a sheet that is already dense on
+          a phone, and most searches never need them. */}
+      <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={() => setShowTextFields((prev) => !prev)}
+          aria-expanded={showTextFields}
+          className="w-full flex items-center justify-between gap-2 text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider py-1 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+        >
+          <span>{t('search.textAndStats')}</span>
+          <FaChevronDown className={`text-[9px] transition-transform ${showTextFields ? 'rotate-180' : ''}`} />
+        </button>
+        {showTextFields ? <div className="pt-3">{renderTextFields(wide)}</div> : null}
       </div>
 
       <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
@@ -126,7 +251,10 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
         <>
           {/* Backdrop click is a mouse-only convenience; Escape provides the keyboard-equivalent action. */}
           <div className="fixed inset-0 z-30" onClick={() => setIsExpanded(false)} aria-hidden="true" />
-          <div className="absolute left-0 mt-2 w-72 rounded-2xl shadow-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-slate-700/80 p-5 z-40 space-y-5 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+          {/* Bounded by the space left below the trigger, not by a fixed height: a flat cap
+              made tall screens scroll for no reason, and `100dvh` alone ignored that the
+              panel starts ~20rem down the page and would run off the bottom. */}
+          <div className="absolute left-0 mt-2 w-[34rem] max-h-[max(18rem,calc(100dvh-20rem))] overflow-y-auto overscroll-contain rounded-2xl shadow-2xl bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-gray-200/80 dark:border-slate-700/80 p-5 z-40 space-y-5 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider block">
                 {t('search.advancedFilters')}
@@ -139,7 +267,7 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
                 <FaTimes />
               </button>
             </div>
-            {filterFields}
+            {renderFilterFields(true)}
           </div>
         </>
       ) : null}
@@ -161,14 +289,17 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
           </span>
           <button
             onClick={() => setIsExpanded(false)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer p-2 -m-2"
+            // `-mr-2` is deliberately absent: it pushed the button 8px past the sheet's right
+            // edge, which is the horizontal scroll. The other three keep the 44px tap target
+            // from changing the row's layout.
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer p-2 -my-2 -ml-2"
             aria-label={t('common.close')}
           >
             <FaTimes />
           </button>
         </div>
         {mobileExtras}
-        {filterFields}
+        {renderFilterFields(false)}
       </BottomSheet>
     </div>
   );

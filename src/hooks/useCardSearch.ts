@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Scry from 'scryfall-sdk';
 import MagicEmitter from 'scryfall-sdk/out/util/MagicEmitter';
 import { Card } from '../types/Card';
+import { buildFilterTerms } from '../utils/searchQuery';
 import { SearchFilters } from '../types';
 import { EMPTY_SEARCH_FILTERS } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -54,34 +55,14 @@ export function useCardSearch(language: string) {
 
   const buildQuery = useCallback(
     (raw: string) => {
-      const hasFilters = filters.colors.length > 0 || filters.types.length > 0 || filters.rarity || filters.cmc;
+      const terms = buildFilterTerms(filters);
       const trimmed = raw.trim();
-      let query = '';
 
-      if (trimmed) {
-        query = trimmed;
-      } else if (!hasFilters) {
-        query = DEFAULT_QUERY;
-      }
+      // An empty box with no filters would search for nothing at all; with filters, the
+      // filters *are* the search.
+      const head = trimmed || (terms.length > 0 ? '' : DEFAULT_QUERY);
 
-      if (filters.colors.length > 0) {
-        // 'C' (colorless) is Scryfall's dedicated colorless keyword, not a
-        // color letter to combine with WUBRG — useSearchFilters keeps the two
-        // mutually exclusive, so seeing 'C' here means it's the only entry.
-        const colorQuery = filters.colors.includes('C') ? 'c:c' : `c:${filters.colors.join('')}`;
-        query += `${query ? ' ' : ''}${colorQuery}`;
-      }
-      if (filters.types.length > 0) {
-        query += `${query ? ' ' : ''}t:${filters.types.join(' ')}`;
-      }
-      if (filters.rarity) {
-        query += `${query ? ' ' : ''}r:${filters.rarity}`;
-      }
-      if (filters.cmc) {
-        query += `${query ? ' ' : ''}cmc=${filters.cmc}`;
-      }
-
-      return query;
+      return [head, ...terms].filter(Boolean).join(' ');
     },
     [filters]
   );

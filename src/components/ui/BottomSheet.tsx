@@ -36,12 +36,15 @@ export default function BottomSheet({ isOpen, onClose, labelledBy, className = '
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* The panel itself never scrolls: its body does. That keeps the grab handle in place
+          as the affordance saying the sheet can be dragged shut, and `overscroll-contain`
+          stops a scroll that reaches the end from carrying on into the page behind. */}
       <div
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`modal-container modal-sheet-panel sm:max-w-md overflow-y-auto animate-fadeIn ${className}`}
+        className="modal-container modal-sheet-panel sm:max-w-md flex flex-col overflow-hidden animate-fadeIn"
         style={panelStyle}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -49,10 +52,10 @@ export default function BottomSheet({ isOpen, onClose, labelledBy, className = '
       >
         {/* Grab handle: purely a visual affordance now — drag-to-close works
             from anywhere on the sheet (see useSwipeToClose), not just here. */}
-        <div className="sm:hidden -mt-6 -mx-6 mb-3 flex justify-center pt-2.5 pb-1" aria-hidden="true">
+        <div className="sm:hidden -mt-6 -mx-6 mb-3 flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden="true">
           <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
         </div>
-        {children}
+        <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${className}`}>{children}</div>
       </div>
     </div>,
     document.body
