@@ -215,10 +215,12 @@ function CardDetailModal({
   };
 
   const handleConfirmArtChange = () => {
-    // Keep the original card id so parent can find and update the right card in the deck
-    // but apply the new print's image_uris and metadata
+    // The entry becomes the printing that was chosen: `id` is the new print, while
+    // `instanceId` (carried over from initialCard) keeps this one copy addressable. Holding
+    // the old id here is what used to make every copy change art together.
     const confirmedCard: Card = {
-      ...initialCard, // keep original id (used to find in deck)
+      ...initialCard,
+      id: card.id,
       image_uris: card.image_uris, // new print art
       card_faces: card.card_faces, // new print faces if any
       set: card.set,

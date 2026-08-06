@@ -87,6 +87,15 @@ export interface Card {
   color_identity?: string[];
   isCommander?: boolean;
   zone?: DeckZone;
+  /**
+   * Identifies one copy inside a deck. `id` is the printing, which every copy of the same
+   * edition shares — so without this there is no way to address the second of four copies,
+   * and changing one copy's art changed all of them.
+   *
+   * Absent on cards from search and on decks saved before this existed; those are back
+   * filled when the deck is loaded.
+   */
+  instanceId?: string;
   selectedPrintId?: string;
   selectedPrintImageUri?: string;
   collector_number?: string;

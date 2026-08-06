@@ -88,17 +88,41 @@ describe('groupCards', () => {
 });
 
 describe('groupCardsByUnique', () => {
-  it('collapses duplicate names into counts', () => {
+  it('collapses copies of the same printing into counts', () => {
     const cards = [
-      makeCard({ name: 'Lightning Bolt' }),
-      makeCard({ name: 'Lightning Bolt' }),
-      makeCard({ name: 'Counterspell' })
+      makeCard({ id: 'bolt-m10', name: 'Lightning Bolt' }),
+      makeCard({ id: 'bolt-m10', name: 'Lightning Bolt' }),
+      makeCard({ id: 'counterspell-7ed', name: 'Counterspell' })
     ];
     const grouped = groupCardsByUnique(cards);
     expect(grouped).toHaveLength(2);
-    const bolt = grouped.find((g) => g.name === 'Lightning Bolt');
-    expect(bolt?.count).toBe(2);
+    expect(grouped.find((g) => g.name === 'Lightning Bolt')?.count).toBe(2);
     expect(grouped.find((g) => g.name === 'Counterspell')?.count).toBe(1);
+  });
+
+  // The reported bug: changing one Island's art and adding another Island produced a
+  // single pile wearing the changed art.
+  it('keeps two printings of one card apart', () => {
+    const grouped = groupCardsByUnique([
+      makeCard({ id: 'island-unf', name: 'Island', set: 'unf' }),
+      makeCard({ id: 'island-unf', name: 'Island', set: 'unf' }),
+      makeCard({ id: 'island-unf', name: 'Island', set: 'unf' }),
+      makeCard({ id: 'island-znr', name: 'Island', set: 'znr' })
+    ]);
+
+    expect(grouped).toHaveLength(2);
+    expect(grouped.map((group) => group.count)).toEqual([3, 1]);
+    // Four copies in the deck either way — only the pile count changed.
+    expect(grouped.reduce((total, group) => total + group.count, 0)).toBe(4);
+  });
+
+  it('gives each printing a distinct key, since the name no longer separates them', () => {
+    const grouped = groupCardsByUnique([
+      makeCard({ id: 'island-unf', name: 'Island' }),
+      makeCard({ id: 'island-znr', name: 'Island' })
+    ]);
+
+    expect(new Set(grouped.map((group) => group.key)).size).toBe(2);
   });
 
   it('returns an empty list for an empty deck', () => {
