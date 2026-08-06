@@ -1,6 +1,7 @@
 import { Card } from '../types/Card';
 import { DeckZone } from '../types/enums';
 import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
+import { translateCards } from '../utils/translationHelper';
 
 const MAX_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
@@ -43,6 +44,38 @@ export interface ParseResult {
   isCommander?: boolean;
 }
 
+/**
+ * Section labels emitted by MTG Arena / MTGO exports (any UI language). They
+ * carry no quantity, so without this list they would be parsed as card names.
+ * Entries must already be lowercase and accent-stripped — they are compared
+ * against `normalizeHeader` output (e.g. "Compañero" arrives as "companero").
+ */
+const SECTION_HEADERS = new Set([
+  'deck',
+  'commander',
+  'comandante',
+  'mazo',
+  'sideboard',
+  'reserva',
+  'banquillo',
+  'companion',
+  'companheiro',
+  'companero',
+  'maybeboard',
+  'tokens',
+  'fichas',
+  'about'
+]);
+
+/** Lowercases and strips accents/trailing colon so headers match across languages. */
+const normalizeHeader = (value: string): string =>
+  value
+    .replace(/:$/, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
 export const parseDeckText = (text: string): ParseResult[] => {
   const lines = text.split('\n');
   const parsedCards: ParseResult[] = [];
@@ -54,6 +87,9 @@ export const parseDeckText = (text: string): ParseResult[] => {
     const match = line.match(/^(\d+)[xX]?\s+(.+)$/) || line.match(/^([xX]\d+)\s+(.+)$/);
     let qty = 1;
     let cardName = line;
+
+    // A line with no quantity that is a known section label is structure, not a card.
+    if (!match && SECTION_HEADERS.has(normalizeHeader(line))) continue;
 
     if (match) {
       qty = parseInt(match[1].replace(/[xX]/g, ''), 10) || 1;
@@ -96,6 +132,30 @@ export interface ImportProgressData {
   total: number;
   message: string;
 }
+
+/** Cap on extra per-name lookups so a malformed list can't fan out unbounded. */
+const LOCALIZED_LOOKUP_LIMIT = 40;
+
+/**
+ * Scryfall's /cards/collection `name` identifier only matches English names, so
+ * a deck exported in another language (e.g. Arena in pt) never resolves there.
+ * The search endpoint does match localized printed names, so retry stragglers.
+ */
+const resolveLocalizedName = async (name: string, lang: string): Promise<Card | null> => {
+  const queries = lang && lang !== 'en' ? [`!"${name}" lang:${lang}`, `"${name}" lang:${lang}`] : [`!"${name}"`];
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`);
+      if (!res.ok) continue;
+      const json = (await res.json()) as { data?: Card[] };
+      if (json.data && json.data.length > 0) return json.data[0];
+    } catch {
+      // Fall through to the next, less strict query.
+    }
+  }
+  return null;
+};
 
 export const fetchCardsFromParsedList = async (
   parsed: ParseResult[],
@@ -209,6 +269,23 @@ export const fetchCardsFromParsedList = async (
     }
   }
 
+  // Whatever /cards/collection still could not resolve is usually a localized
+  // name. Retry those through search before giving up on them.
+  const resolvedNames = new Set<string>();
+  for (const card of allResolvedCards) {
+    if (card.name) resolvedNames.add(card.name.toLowerCase());
+    if (card.printed_name) resolvedNames.add(card.printed_name.toLowerCase());
+  }
+
+  const unresolved = uniqueParsed.filter((item) => !resolvedNames.has(item.name.toLowerCase()));
+  if (unresolved.length > 0) {
+    const lang = (currentLang || 'en').split('-')[0].toLowerCase();
+    for (const item of unresolved.slice(0, LOCALIZED_LOOKUP_LIMIT)) {
+      const localized = await resolveLocalizedName(item.name, lang);
+      if (localized) allResolvedCards.push(localized);
+    }
+  }
+
   if (allResolvedCards.length === 0) {
     throw new Error('No cards found');
   }
@@ -223,7 +300,6 @@ export const fetchCardsFromParsedList = async (
         message: t ? t('deck.translatingCards') : 'Traduzindo cartas...'
       });
     }
-    const { translateCards } = await import('../utils/translationHelper');
     translatedCardsList = await translateCards(allResolvedCards, currentLang);
   }
 

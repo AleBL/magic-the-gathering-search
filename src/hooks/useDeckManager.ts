@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useState, useEffect } from 'react';
 import { Card } from '../types/Card';
 import { Deck, DeckFormat, DeckRelatedToken } from '../types/Deck';
@@ -9,6 +10,7 @@ import { db } from '../db/database';
 import { useTranslation } from 'react-i18next';
 import { dispatchToast } from '../utils/toastHelper';
 import { parseDeckText, fetchCardsFromParsedList, ImportProgressData } from '../services/deckImportService';
+import { saveDeckSnapshotIfChanged, saveDeckSnapshot } from '../services/deckVersionService';
 import { DecodedShareDeck, decodeShareString, parseDeckFileContent } from '../services/deckShare';
 
 export default function useDeckManager(
@@ -44,6 +46,15 @@ export default function useDeckManager(
     setDeckValidation(validateDeck(currentDeck, activeFormat));
   }, [currentDeck, deckFormat, editingDeckFormat, editingDeckId]);
 
+  /** Snapshots a deck after a successful save; never fails the save itself. */
+  const snapshotQuietly = async (deck: Deck): Promise<void> => {
+    try {
+      await saveDeckSnapshotIfChanged(deck);
+    } catch (error) {
+      logger.error('Failed to snapshot deck version:', error);
+    }
+  };
+
   const saveDeck = async (
     name: string,
     format: DeckFormat,
@@ -72,9 +83,10 @@ export default function useDeckManager(
     try {
       await db.decks.put(newDeck);
     } catch (error) {
-      console.error('Failed to save deck:', error);
+      logger.error('Failed to save deck:', error);
       return { success: false, errorKey: 'deck.saveError' };
     }
+    await snapshotQuietly(newDeck);
     setDeckName('');
     setShowSaveDialog(false);
     return { success: true, createdDeck: newDeck };
@@ -91,18 +103,20 @@ export default function useDeckManager(
     try {
       const existing = await db.decks.get(id);
       if (existing) {
-        await db.decks.put({
+        const updated: Deck = {
           ...existing,
           name: name.trim(),
           format,
           cards,
           notes,
           relatedTokens: relatedTokens || existing.relatedTokens
-        });
+        };
+        await db.decks.put(updated);
+        await snapshotQuietly(updated);
       }
       return { success: true };
     } catch (error) {
-      console.error('Failed to save edited deck:', error);
+      logger.error('Failed to save edited deck:', error);
       return { success: false, errorKey: 'deck.saveError' };
     }
   };
@@ -123,7 +137,7 @@ export default function useDeckManager(
 
       return deckToDelete;
     } catch (error) {
-      console.error('Failed to delete deck:', error);
+      logger.error('Failed to delete deck:', error);
       dispatchToast(t('deck.deleteError'), 'danger');
       return undefined;
     }
@@ -135,7 +149,7 @@ export default function useDeckManager(
       if (existing) return;
       await db.decks.put(deck);
     } catch (error) {
-      console.error('Failed to restore deck:', error);
+      logger.error('Failed to restore deck:', error);
       dispatchToast(t('deck.restoreError'), 'danger');
     }
   };
@@ -173,7 +187,7 @@ export default function useDeckManager(
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Failed to export deck as .dec:', error);
+      logger.error('Failed to export deck as .dec:', error);
       dispatchToast(t('common.unexpectedError'), 'danger');
     }
   };
@@ -189,7 +203,18 @@ export default function useDeckManager(
         await db.decks.put({ ...existing, relatedTokens: tokens });
       }
     } catch (error) {
-      console.error('Failed to save tokens to deck:', error);
+      logger.error('Failed to save tokens to deck:', error);
+      dispatchToast(t('deck.saveError'), 'danger');
+    }
+  };
+
+  // Sets which card's art represents the deck on its deck box. The live query
+  // over db.decks re-renders the list automatically after the update.
+  const setDeckCover = async (deckId: string, coverCardId: string) => {
+    try {
+      await db.decks.update(deckId, { coverCardId });
+    } catch (error) {
+      logger.error('Failed to set deck cover:', error);
       dispatchToast(t('deck.saveError'), 'danger');
     }
   };
@@ -232,7 +257,7 @@ export default function useDeckManager(
       setImportProgress((prev) => ({ ...prev, isImporting: false, current: prev.total }));
       dispatchToast(t('deck.deckImported'));
     } catch (error) {
-      console.error('Failed to import shared deck:', error);
+      logger.error('Failed to import shared deck:', error);
       if (error instanceof Error && error.message === 'ScryfallOffline') {
         setFileImportError(t('search.scryfallOffline'));
       } else if (error instanceof Error && error.message === 'ScryfallRateLimited') {
@@ -267,9 +292,11 @@ export default function useDeckManager(
         createdAt: new Date().toISOString()
       };
       await db.decks.put(copy);
+      // Seed the copy's version history with its initial state.
+      await saveDeckSnapshot(copy).catch(() => undefined);
       return copy;
     } catch (error) {
-      console.error('Failed to duplicate deck:', error);
+      logger.error('Failed to duplicate deck:', error);
       dispatchToast(t('deck.saveError'), 'danger');
       return undefined;
     }
@@ -348,7 +375,7 @@ export default function useDeckManager(
               dispatchToast(t('deck.deckImported'));
               resolve();
             } catch (error) {
-              console.error('Failed to import deck file (text list):', error);
+              logger.error('Failed to import deck file (text list):', error);
               if (error instanceof Error && error.message === 'ScryfallOffline') {
                 setFileImportError(t('search.scryfallOffline'));
               } else if (error instanceof Error && error.message === 'ScryfallRateLimited') {
@@ -365,14 +392,14 @@ export default function useDeckManager(
             resolve();
           }
         } catch (error) {
-          console.error('Failed to import deck file:', error);
+          logger.error('Failed to import deck file:', error);
           setFileImportError(t('deck.invalidFile'));
           setImportProgress((prev) => ({ ...prev, isImporting: false }));
           resolve();
         }
       };
       reader.onerror = () => {
-        console.error('Failed to read deck file:', reader.error);
+        logger.error('Failed to read deck file:', reader.error);
         setFileImportError(t('deck.invalidFile'));
         setImportProgress((prev) => ({ ...prev, isImporting: false }));
         resolve();
@@ -407,6 +434,7 @@ export default function useDeckManager(
     importSharedDeckString,
     duplicateDeck,
     saveTokensToDeck,
+    setDeckCover,
     restoreDeck,
     fileMissingCards,
     fileImportError,

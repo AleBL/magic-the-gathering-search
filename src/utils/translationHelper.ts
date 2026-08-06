@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { Card } from '../types/Card';
 import i18n from '../plugins/i18n';
 import { dispatchToast } from './toastHelper';
@@ -8,6 +9,10 @@ import { dispatchToast } from './toastHelper';
  * Keeps cards in their original order, falling back to the original card object
  * if the translation query fails or if a translation is not available for a specific card.
  */
+/** True when a printing carries at least one usable price value. */
+const hasPriceData = (prices?: Card['prices']): boolean =>
+  !!prices && [prices.usd, prices.usd_foil, prices.eur, prices.eur_foil].some((v) => v != null && v !== '');
+
 export async function translateCards(cards: Card[], targetLang: string): Promise<Card[]> {
   if (cards.length === 0) return [];
 
@@ -35,7 +40,10 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
     // so without them `lang:` would only constrain the LAST oracle_id term and
     // every other card would come back in its default (English) printing.
     const oracleQuery = batch.map((id) => `oracle_id:${id}`).join(' OR ');
-    const query = `(${oracleQuery}) lang:${lang}`;
+    // `include:extras` is required so tokens/emblems (Scryfall "extras", hidden
+    // from default search) resolve to their localized printing — otherwise a
+    // Food/Comida token always falls back to its English name.
+    const query = `(${oracleQuery}) lang:${lang} include:extras`;
     const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`;
 
     try {
@@ -68,35 +76,43 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
         }
       }
     } catch (error) {
-      console.error('Failed to translate card batch:', error);
+      logger.error('Failed to translate card batch:', error);
       dispatchToast(i18n.t('common.errorTranslatingBatch') as string, 'danger');
     }
   }
 
   // Map the original cards to their translated counterpart or fallback to the original
   return cards.map((card) => {
-    if (card.oracle_id && translatedMap.has(card.oracle_id)) {
-      const translated = translatedMap.get(card.oracle_id)!;
-      const hasImage = translated.image_uris?.normal || translated.card_faces?.[0]?.image_uris?.normal;
-      const originalHasImage = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+    if (!card.oracle_id || !translatedMap.has(card.oracle_id)) return card;
 
-      if (!hasImage && originalHasImage) {
-        const gatherer = translated.image_uris?.gatherer;
-        return {
-          ...translated,
-          image_uris: card.image_uris
-            ? {
-                ...card.image_uris,
-                gatherer: gatherer || card.image_uris.gatherer
-              }
-            : gatherer
-              ? { small: '', normal: '', large: '', png: '', gatherer }
-              : undefined,
-          card_faces: card.card_faces
-        };
-      }
-      return translated;
+    const translated = translatedMap.get(card.oracle_id)!;
+    const hasImage = translated.image_uris?.normal || translated.card_faces?.[0]?.image_uris?.normal;
+    const originalHasImage = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+
+    let result: Card = translated;
+
+    if (!hasImage && originalHasImage) {
+      const gatherer = translated.image_uris?.gatherer;
+      result = {
+        ...translated,
+        image_uris: card.image_uris
+          ? {
+              ...card.image_uris,
+              gatherer: gatherer || card.image_uris.gatherer
+            }
+          : gatherer
+            ? { small: '', normal: '', large: '', png: '', gatherer }
+            : undefined,
+        card_faces: card.card_faces
+      };
     }
-    return card;
+
+    // Localized printings very often ship without price data. Keep the original
+    // (English) printing's prices so imported decks still show USD/EUR values.
+    if (!hasPriceData(result.prices) && hasPriceData(card.prices)) {
+      result = { ...result, prices: card.prices };
+    }
+
+    return result;
   });
 }

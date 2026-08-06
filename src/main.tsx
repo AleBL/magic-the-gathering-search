@@ -3,7 +3,7 @@ import './index.css';
 import './plugins/i18n';
 import { useEffect } from 'react';
 import App from './App';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 function AppWithCallbackAfterRender() {
   useEffect(() => {

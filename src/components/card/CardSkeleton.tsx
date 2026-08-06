@@ -1,6 +1,4 @@
-import React from 'react';
-
-const CardSkeleton: React.FC = () => {
+function CardSkeleton() {
   return (
     <div
       className="relative rounded-[4.5%] bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border-[6px] border-white/60 dark:border-slate-700/60 overflow-hidden shadow-lg transition-shadow duration-300 w-full"
@@ -31,6 +29,6 @@ const CardSkeleton: React.FC = () => {
       <div className="absolute bottom-[4%] right-[5%] w-[20%] h-[6%] bg-slate-300 dark:bg-slate-700/80 rounded-md" />
     </div>
   );
-};
+}
 
 export default CardSkeleton;

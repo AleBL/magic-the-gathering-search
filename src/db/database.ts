@@ -1,10 +1,11 @@
 import Dexie, { type Table } from 'dexie';
-import { Deck } from '../types/Deck';
+import { Deck, DeckVersion } from '../types/Deck';
 import { CollectionEntry } from '../types/Collection';
 
 class MagicDatabase extends Dexie {
   decks!: Table<Deck, string>;
   collection!: Table<CollectionEntry, string>;
+  deckVersions!: Table<DeckVersion, string>;
 
   constructor() {
     super('MagicDecksDB');
@@ -16,6 +17,12 @@ class MagicDatabase extends Dexie {
     this.version(2).stores({
       decks: 'id, name, format, createdAt',
       collection: 'id, oracleId, name, set, rarity, updatedAt'
+    });
+    // v3 adds per-deck version snapshots (deck history).
+    this.version(3).stores({
+      decks: 'id, name, format, createdAt',
+      collection: 'id, oracleId, name, set, rarity, updatedAt',
+      deckVersions: 'id, deckId, createdAt'
     });
   }
 }

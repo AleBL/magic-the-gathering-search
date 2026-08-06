@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FaPalette, FaTimes, FaSearch, FaSpinner, FaPlus } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { getCardImageUrl } from '../../utils/deckGrouping';
-import { TokenPreset } from '../PlaytestTokenModal';
+import { TokenPreset } from '../playtest/PlaytestTokenModal';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useSwipeToClose } from '../../hooks/useSwipeToClose';
@@ -128,7 +128,7 @@ export function TokenSearchModal({
                       <img src={preset.imageUrl} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
-                  <span>{t(preset.localeKey)}</span>
+                  <span>{t(`tokens.${preset.localeKey}`)}</span>
                   {preset.power && preset.toughness && (
                     <span className="text-[10px] text-gray-400 dark:text-slate-500 font-bold">
                       {preset.power}/{preset.toughness}

@@ -1,10 +1,10 @@
+import { logger } from '../utils/logger';
 import { useState, useEffect } from 'react';
-import * as Scry from 'scryfall-sdk';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../types/Card';
 import { DeckRelatedToken } from '../types/Deck';
 import { RelatedToken } from './useCardRelatedTokens';
-import { tokenPresets, TokenPreset } from '../components/PlaytestTokenModal';
+import { tokenPresets, TokenPreset } from '../components/playtest/PlaytestTokenModal';
 import { translateCards } from '../utils/translationHelper';
 import { getCardImageUrl } from '../utils/deckGrouping';
 import { CardWithScryfallMetadata, ScryfallCardPart, ScryfallSearchResponse } from '../types/Scryfall';
@@ -47,7 +47,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
         }
       } catch (error) {
         // Keep default preset images when dynamic fetch fails.
-        console.error('Failed to fetch preset token images:', error);
+        logger.error('Failed to fetch preset token images:', error);
       }
     };
     fetchPresetImages();
@@ -174,7 +174,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
         setSearchResults([]);
       }
     } catch (err: unknown) {
-      console.error('Failed to search tokens:', err);
+      logger.error('Failed to search tokens:', err);
       if (err instanceof Error && err.message === 'ScryfallOffline') {
         setSearchError(t('search.scryfallOffline'));
       } else {
@@ -221,7 +221,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
       setSelectedTokenForDetail(null);
       setIsSearchModalOpen(false);
     } catch (error) {
-      console.error('Failed to add token:', error);
+      logger.error('Failed to add token:', error);
       dispatchToast(t('tokens.addTokenError'), 'danger');
     } finally {
       setIsSearching(false);
@@ -260,60 +260,77 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
       return;
     }
 
-    const newTokensToAdd: RelatedToken[] = [];
-
     try {
+      // 1) Resolve each generator's related parts (fetching all_parts only when
+      //    missing), collecting unique token printing ids and their generator.
+      const partIdToGenerator = new Map<string, string>();
       await Promise.all(
         generators.map(async (c) => {
           let allParts = (c as CardWithScryfallMetadata).all_parts;
           if (!allParts) {
             try {
-              const fullCard = (await Scry.Cards.byName(c.name)) as CardWithScryfallMetadata;
-              allParts = fullCard.all_parts || [];
+              const resp = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(c.name)}`);
+              allParts = resp.ok ? ((await resp.json()).all_parts as ScryfallCardPart[]) || [] : [];
             } catch (fetchAllPartsError) {
-              console.error('Failed to fetch full card during deck analysis:', fetchAllPartsError);
+              logger.error('Failed to fetch full card during deck analysis:', fetchAllPartsError);
               allParts = [];
             }
           }
 
-          const tokenParts = allParts.filter((part) => part.id !== c.id && part.name !== c.name);
-
-          if (tokenParts.length === 0) return;
-
-          await Promise.all(
-            tokenParts.map(async (part: ScryfallCardPart) => {
-              try {
-                const fetchedCard = await Scry.Cards.byId(part.id);
-                if (fetchedCard) {
-                  const currentLang = i18n.language || 'en';
-                  const translated = await translateCards([fetchedCard as unknown as Card], currentLang);
-                  const finalCard = translated[0] || fetchedCard;
-
-                  // Garantir fallback de imagens na análise também
-                  const imgNormal = finalCard.image_uris?.normal || finalCard.card_faces?.[0]?.image_uris?.normal;
-                  const origNormal = fetchedCard.image_uris?.normal || fetchedCard.card_faces?.[0]?.image_uris?.normal;
-                  if (!imgNormal && origNormal) {
-                    finalCard.image_uris = {
-                      ...finalCard.image_uris,
-                      normal: origNormal,
-                      small: fetchedCard.image_uris?.small || origNormal,
-                      large: fetchedCard.image_uris?.large || origNormal,
-                      png: fetchedCard.image_uris?.png || origNormal
-                    };
-                  }
-
-                  newTokensToAdd.push({
-                    tokenCard: finalCard,
-                    generatorCardName: c.printed_name || c.name
-                  });
-                }
-              } catch (tokenFetchError) {
-                console.error('Failed to fetch token during deck analysis:', tokenFetchError);
+          (allParts || [])
+            .filter((part) => part.component === 'token' && part.id !== c.id && part.name !== c.name)
+            .forEach((part) => {
+              if (!partIdToGenerator.has(part.id)) {
+                partIdToGenerator.set(part.id, c.printed_name || c.name);
               }
-            })
-          );
+            });
         })
       );
+
+      const partIds = Array.from(partIdToGenerator.keys());
+      if (partIds.length === 0) {
+        onTokensLoaded?.(localTokens);
+        return;
+      }
+
+      // 2) Batch-fetch every token printing in one/few requests via the
+      //    collection endpoint (75 ids max) instead of one call per token.
+      const fetchedCards: Card[] = [];
+      for (let i = 0; i < partIds.length; i += 75) {
+        const identifiers = partIds.slice(i, i + 75).map((id) => ({ id }));
+        const resp = await fetch('https://api.scryfall.com/cards/collection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifiers })
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (Array.isArray(json.data)) fetchedCards.push(...(json.data as Card[]));
+        }
+      }
+
+      // 3) Translate the whole batch once, keeping an English image fallback.
+      const currentLang = i18n.language || 'en';
+      const translated = await translateCards(fetchedCards, currentLang);
+      const newTokensToAdd: RelatedToken[] = translated.map((finalCard, index) => {
+        const original = fetchedCards[index];
+        const imgNormal = finalCard.image_uris?.normal || finalCard.card_faces?.[0]?.image_uris?.normal;
+        const origNormal = original.image_uris?.normal || original.card_faces?.[0]?.image_uris?.normal;
+        const tokenCard: Card =
+          !imgNormal && origNormal
+            ? {
+                ...finalCard,
+                image_uris: {
+                  ...finalCard.image_uris,
+                  normal: origNormal,
+                  small: original.image_uris?.small || origNormal,
+                  large: original.image_uris?.large || origNormal,
+                  png: original.image_uris?.png || origNormal
+                }
+              }
+            : finalCard;
+        return { tokenCard, generatorCardName: partIdToGenerator.get(original.id) || t('common.manualAddition') };
+      });
 
       // Merge results avoiding duplicate tokenCard IDs
       const existingIds = new Set(localTokens.map((token) => token.tokenCard.id));
@@ -323,7 +340,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
       setLocalTokens(updated);
       onTokensLoaded?.(updated);
     } catch (error) {
-      console.error('Failed to analyze deck for tokens:', error);
+      logger.error('Failed to analyze deck for tokens:', error);
       dispatchToast(t('tokens.analysisError'), 'danger');
     } finally {
       setIsLoading(false);

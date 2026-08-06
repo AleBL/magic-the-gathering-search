@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt } from 'react-icons/fa';
-import { CardSize, SearchFilters } from '../../types';
-import { EMPTY_SEARCH_FILTERS, CARD_SIZES } from '../../constants';
+import { SearchFilters } from '../../types';
+import { EMPTY_SEARCH_FILTERS } from '../../constants';
+import { useCardSizePreference } from '../../hooks/useCardSizePreference';
 import { useCollection, CollectionView } from '../../hooks/useCollection';
 import { useCollectionImportExport } from '../../hooks/useCollectionImportExport';
 import { useCollectionSettings } from '../../store/useCollectionSettings';
@@ -12,6 +13,7 @@ import CardFilterBar from '../card/CardFilterBar';
 import CardGrid from '../card/CardGrid';
 import CardSizeSelector from '../card/CardSizeSelector';
 import EmptyState from '../ui/EmptyState';
+import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
 import useDialog from '../../hooks/useDialog';
 import { CollectionSummaryBar } from './CollectionSummaryBar';
@@ -21,12 +23,10 @@ function CollectionManager() {
   const [view, setView] = useState<CollectionView>('owned');
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_SEARCH_FILTERS);
   const [setFilter, setSetFilter] = useState('');
-  const [cardSize, setCardSize] = useState<CardSize>(() => {
-    const saved = localStorage.getItem('deckforge_card_size');
-    return saved && (CARD_SIZES as readonly string[]).includes(saved) ? (saved as CardSize) : 'small';
-  });
+  const [nameQuery, setNameQuery] = useState('');
+  const [cardSize, setCardSize] = useCardSizePreference();
 
-  const { entries, visibleEntries, summary } = useCollection(view, filters);
+  const { entries, visibleEntries, summary, isLoading } = useCollection(view, filters);
   const currency = useCollectionSettings((state) => state.currency);
   const setCurrency = useCollectionSettings((state) => state.setCurrency);
   const { rarities } = useSearchFilters(filters, setFilters);
@@ -44,10 +44,17 @@ function CollectionManager() {
     return Array.from(seen, ([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [entries]);
 
-  const displayedEntries = useMemo(
-    () => (setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries),
-    [visibleEntries, setFilter]
-  );
+  const displayedEntries = useMemo(() => {
+    const bySet = setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries;
+    const term = nameQuery.trim().toLowerCase();
+    if (!term) return bySet;
+
+    // Printed name too, so a localised collection is searched by what is on the card.
+    return bySet.filter((entry) => {
+      const printed = entry.card.printed_name?.toLowerCase() ?? '';
+      return entry.name.toLowerCase().includes(term) || printed.includes(term);
+    });
+  }, [visibleEntries, setFilter, nameQuery]);
 
   const cards = useMemo(() => displayedEntries.map((entry) => entry.card), [displayedEntries]);
 
@@ -66,7 +73,8 @@ function CollectionManager() {
       type="button"
       onClick={() => setView(value)}
       aria-pressed={view === value}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+      // `relative` is load-bearing: .count-badge is absolute and would escape to the page edge.
+      className={`relative flex items-center gap-2 px-4 py-2 pr-5 rounded-xl text-sm font-bold transition-all ${
         view === value
           ? 'bg-primary text-white shadow-md shadow-blue-500/25'
           : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
@@ -128,7 +136,7 @@ function CollectionManager() {
             aria-hidden="true"
           />
 
-          <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} />
+          <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
 
           <div className="flex flex-wrap items-center gap-2">
             {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
@@ -139,6 +147,16 @@ function CollectionManager() {
             <CardFilterBar filters={filters} setFilters={setFilters} />
             {/* Below sm the selects stack full-width for comfortable tapping. */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px]">
+                <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
+                <input
+                  type="search"
+                  value={nameQuery}
+                  onChange={(event) => setNameQuery(event.target.value)}
+                  placeholder={t('collection.searchPlaceholder')}
+                  className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </label>
               <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
                 {t('search.rarity')}
                 <select
@@ -174,8 +192,15 @@ function CollectionManager() {
             </div>
           </div>
 
-          {cards.length > 0 ? (
-            <CardGrid cards={cards} size={cardSize} showCollectionControls />
+          {/* Skeletons while IndexedDB answers, or a full collection reads as empty. */}
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+              {Array.from({ length: 14 }).map((_, index) => (
+                <CardSkeleton key={index} />
+              ))}
+            </div>
+          ) : cards.length > 0 ? (
+            <CardGrid cards={cards} size={cardSize} showCollectionControls showPrintingBadge />
           ) : (
             <EmptyState
               icon={view === 'wishlist' ? <FaHeart /> : <FaBoxOpen />}

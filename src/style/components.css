@@ -4,25 +4,25 @@
    component markup clean and styles centrally manageable.
    ============================================================ */
 
-
 /* ── Deck Preview: Note/Content Tabs ────────────────────────
    Used in DeckPreview.tsx for Cards / Strategy / Stats tabs
    ─────────────────────────────────────────────────────────── */
 
 .deck-content-tab-bar {
-  @apply flex border-b border-gray-200 dark:border-gray-700 mb-4 text-xs font-bold gap-3 select-none;
+  @apply flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-4 text-xs font-bold gap-1 select-none;
 }
 
+/* Reads as a real tab: padded hit area, rounded top, and a hover background so
+   it is obviously interactive rather than plain muted text. */
 .deck-content-tab {
-  @apply pb-2 transition-all border-b-2 flex items-center gap-1.5 cursor-pointer;
+  @apply relative px-3 py-2 min-h-11 sm:min-h-0 rounded-t-lg whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer;
   border-color: transparent;
-  @apply text-gray-400 hover:text-gray-500;
+  @apply text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/70;
 }
 
 .deck-content-tab-active {
-  @apply border-blue-500 text-primary dark:text-blue-400 font-extrabold;
+  @apply border-blue-500 text-primary dark:text-blue-400 font-extrabold bg-blue-500/5 dark:bg-blue-400/10;
 }
-
 
 /* ── Option Toggle Button (View Mode / Group By / Sort By) ──
    Used in DeckPreview.tsx renderDisplayOptionsDropdown
@@ -45,7 +45,6 @@
   @apply bg-blue-500 border-primary text-white shadow-md scale-[1.02];
 }
 
-
 /* ── Display Settings Trigger Button ────────────────────────
    The "View Mode" button that opens the display options panel
    ─────────────────────────────────────────────────────────── */
@@ -56,6 +55,16 @@
 
 .display-settings-btn-active {
   @apply bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800;
+}
+
+/* Deck manager toolbar buttons — share the display-settings surface so the
+   whole toolbar reads as one system instead of washed-out chips. */
+.deck-toolbar-btn {
+  @apply inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 shadow-sm active:scale-95 cursor-pointer border bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600;
+}
+
+.deck-toolbar-btn-accent {
+  @apply inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 shadow-sm active:scale-95 cursor-pointer border border-transparent bg-primary text-white hover:bg-blue-500 hover:shadow-md;
 }
 
 .display-settings-dropdown {
@@ -76,27 +85,9 @@ html.dark .display-settings-dropdown {
   @apply text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider block;
 }
 
-
 /* ── Empty Deck State ───────────────────────────────────────
    Shown in DeckPreview when currentDeck is empty
    ─────────────────────────────────────────────────────────── */
-
-.empty-deck-state {
-  @apply flex flex-col items-center justify-center py-16 px-4 text-center mt-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-dashed border-gray-300 dark:border-slate-700 shadow-sm relative overflow-hidden;
-}
-
-.empty-deck-state-bg {
-  @apply absolute inset-0 bg-gradient-to-b from-transparent to-blue-500/5 dark:to-blue-500/10 pointer-events-none;
-}
-
-.empty-deck-state-icon-wrapper {
-  @apply w-16 h-16 bg-blue-50/80 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform duration-300;
-}
-
-.empty-deck-state-cta {
-  @apply flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0;
-}
-
 
 /* ── Deck Manager: Info Tooltip ─────────────────────────────
    The lightbulb tooltip next to the "Deck Manager" title
@@ -116,7 +107,6 @@ html.dark .display-settings-dropdown {
   @apply absolute left-1/2 md:left-0 top-full mt-2 w-72 p-3 bg-slate-900 dark:bg-slate-950 text-white text-xs rounded-lg shadow-xl border border-slate-700 dark:border-slate-800 opacity-0 pointer-events-none group-hover/tooltip:opacity-100 transition-all duration-300 transform translate-y-1 group-hover/tooltip:translate-y-0 -translate-x-1/2 md:translate-x-0;
   z-index: var(--z-dropdown);
 }
-
 
 /* ── Deck Manager: Import/Export Dropdown ───────────────────
    The floating menu for import/export actions
@@ -148,7 +138,6 @@ html.dark .import-export-dropdown {
   @apply w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 cursor-pointer;
 }
 
-
 /* ── Deck Preview: Zone tabs row ────────────────────────────
    The row containing DeckZoneTabs + display settings
    ─────────────────────────────────────────────────────────── */
@@ -157,7 +146,6 @@ html.dark .import-export-dropdown {
   @apply flex flex-wrap items-center justify-between mb-4 pb-2 border-b border-gray-200/50 dark:border-slate-700/50 gap-2;
 }
 
-
 /* ── Unsaved Deck Warning Chip ──────────────────────────────
    The "Temporary (Unsaved)" badge in DeckPreview edit mode
    ─────────────────────────────────────────────────────────── */
@@ -165,7 +153,6 @@ html.dark .import-export-dropdown {
 .unsaved-deck-chip {
   @apply bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1.5 inline-flex items-center gap-1 shadow-sm;
 }
-
 
 /* ── Active Editing Mode Badge ──────────────────────────────
    The pulsing "Active Editing Mode" indicator
@@ -179,30 +166,6 @@ html.dark .import-export-dropdown {
 
 .deck-list-item {
   @apply relative transition-all duration-300 border p-3 rounded-lg;
-}
-
-.deck-list-item-inactive {
-  @apply bg-white/80 dark:bg-slate-800/80 hover:bg-gray-100 dark:hover:bg-slate-700/80 border-gray-200 dark:border-slate-700 shadow-sm;
-}
-
-.deck-list-item-glow {
-  @apply absolute inset-0 bg-white/10 dark:bg-white/5 pointer-events-none;
-}
-
-.deck-list-item-content {
-  @apply flex flex-col justify-between gap-3 relative z-10 w-full;
-}
-
-.deck-list-item-title {
-  @apply font-bold truncate text-sm sm:text-base;
-}
-
-.deck-list-item-title-selected {
-  @apply text-blue-950 dark:text-white;
-}
-
-.deck-list-item-title-default {
-  @apply text-slate-800 dark:text-slate-200;
 }
 
 .deck-list-item-editing-badge {
@@ -230,15 +193,107 @@ html.dark .import-export-dropdown {
 }
 
 .deck-list-action-btn {
-  @apply flex-1 sm:flex-none flex justify-center gap-1 items-center py-1.5 px-2.5 rounded-lg font-bold text-xs shadow-sm transition-all;
+  /* min 44px tap height below sm (reverts on desktop); already flex-centered. */
+  @apply flex-1 sm:flex-none flex justify-center gap-1 items-center min-h-[44px] sm:min-h-0 py-1.5 px-2.5 rounded-lg font-bold text-xs shadow-sm transition-all;
 }
 
-.deck-list-action-btn-group-left {
-  @apply flex-1 sm:flex-none flex justify-center gap-1 items-center py-1.5 px-2.5 font-bold text-xs transition-all rounded-l-lg border-r border-green-700;
+/* ─── Export dialog option rows ────────────────────────────────── */
+
+.export-option {
+  @apply flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/50 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-500/50 dark:hover:bg-slate-700;
 }
 
-.deck-list-action-btn-group-right {
-  @apply flex-1 sm:flex-none flex justify-center gap-1 items-center py-1.5 px-2.5 font-bold text-xs transition-all rounded-r-lg;
+.export-option-icon {
+  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base;
+}
+
+/* ─── Deck Box (Arena-style deck card) ─────────────────────────── */
+
+.deck-box {
+  /* No `overflow-hidden` here: it would clip the more-actions dropdown. The art
+     child clips its own image and rounds the top corners instead. */
+  @apply relative flex flex-col rounded-xl border transition-all duration-300;
+}
+
+.deck-box-inactive {
+  @apply bg-white/80 dark:bg-slate-800/80 border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:-translate-y-0.5;
+}
+
+.deck-box-active {
+  @apply bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border-blue-400 dark:border-blue-500/50 ring-2 ring-blue-500 shadow-md;
+}
+
+.deck-box-art {
+  @apply relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
+}
+
+.deck-box-art-image {
+  @apply absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500;
+}
+
+.deck-box:hover .deck-box-art-image {
+  @apply scale-105;
+}
+
+.deck-box-art-placeholder {
+  @apply flex h-full w-full items-center justify-center text-3xl text-slate-400 dark:text-slate-600;
+}
+
+.deck-box-art-scrim {
+  @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent;
+}
+
+.deck-box-title-row {
+  @apply absolute inset-x-0 bottom-0 flex items-center gap-2 px-3 pb-2;
+}
+
+.deck-box-title {
+  @apply truncate text-sm font-bold text-white drop-shadow;
+}
+
+.deck-box-footer {
+  @apply flex flex-col gap-2 px-3 pb-3 pt-2;
+}
+
+/* ─── Deck Edit Workspace (Arena two-pane editor) ──────────────── */
+
+.deck-edit-workspace {
+  @apply flex h-full min-h-0 flex-col gap-3 p-4;
+}
+
+.deck-edit-mobile-tabs {
+  /* md:hidden lives inside the rule (not just on the JSX) so its media block
+     wins over this class's own `display:grid` at >=md regardless of CSS order. */
+  @apply grid grid-cols-2 gap-2 md:hidden;
+}
+
+.deck-edit-mobile-tab {
+  @apply flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-600 transition-all dark:border-slate-700 dark:bg-slate-800/80 dark:text-gray-300;
+}
+
+.deck-edit-mobile-tab-active {
+  @apply border-blue-400 bg-primary text-white shadow-sm dark:border-blue-500/50;
+}
+
+.deck-edit-panes {
+  /* Right (deck) column grows on larger screens so the current deck is easier
+     to read, while search keeps the flexible remainder. */
+  @apply grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] lg:grid-cols-[minmax(0,1fr)_minmax(400px,520px)] xl:grid-cols-[minmax(0,1fr)_minmax(440px,600px)];
+}
+
+/* Holds the (h-full) card search: clip its sticky header to the rounded pane. */
+.deck-edit-pane-search {
+  @apply min-h-0 min-w-0 overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-slate-700;
+}
+
+/* Holds the deck preview/editor; scrolls independently of the search results. */
+.deck-edit-pane-deck {
+  @apply min-h-0 min-w-0 overflow-auto rounded-xl transition-all duration-200;
+}
+
+/* Highlight while a searched card is being dragged over the deck side. */
+.deck-edit-pane-deck-drop {
+  @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent;
 }
 
 /* ─── Empty Deck List State ─────────────────────────────────────── */
@@ -271,7 +326,9 @@ html.dark .import-export-dropdown {
 }
 
 .modal-close-btn {
-  @apply text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition-all;
+  /* min 44px tap area below sm (reverts to auto on desktop so the header row is
+     unchanged); inline-flex keeps the icon centered inside the enlarged target. */
+  @apply inline-flex items-center justify-center min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition-all;
 }
 
 .modal-body {
@@ -309,10 +366,16 @@ html.dark .import-export-dropdown {
   @apply border rounded-xl p-3 flex flex-col justify-between items-center text-center cursor-pointer transition-all duration-300 hover:scale-102 hover:shadow-lg;
 }
 
-.token-card-image-container {
-  @apply w-20 h-28 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 mb-3 shadow-md flex items-center justify-center relative shrink-0;
-}
-
 .token-card-add-btn {
   @apply mt-3 w-full justify-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white rounded-lg py-1 text-[10px] font-bold transition-all flex items-center gap-1 shadow-sm;
+}
+
+/* Stat panels (budget / deck doctor / mana base) share one tile + label treatment.
+   Repeated verbatim across all three before this. */
+.stat-tile {
+  @apply bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm;
+}
+
+.stat-tile-label {
+  @apply text-[9px] uppercase tracking-wider text-gray-400 block font-bold;
 }

@@ -35,6 +35,21 @@ export function isDoubleFaced(card: Card): boolean {
 }
 
 /**
+ * The card's display name in the printing's language. Multi-face cards (split,
+ * DFC…) often lack a top-level `printed_name`, so their localized name is
+ * composed from the faces' `printed_name` (e.g. "Expansão // Explosão").
+ */
+export function localizedCardName(card: Card): string {
+  if (card.printed_name) return card.printed_name;
+  const faces = card.card_faces;
+  if (faces && faces.length > 1) {
+    const names = faces.map((face) => face.printed_name || face.name);
+    if (names.every(Boolean)) return names.join(' // ');
+  }
+  return card.name;
+}
+
+/**
  * Returns a Card representing exactly one face of a double-faced card:
  * name, types, cost, P/T, text and image all come from that face, while
  * ids/set/prices stay from the physical card. Used by the playtest so the

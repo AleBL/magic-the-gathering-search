@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollectionEntry } from '../types/Collection';
@@ -41,7 +42,7 @@ export function useCollectionImportExport(entries: CollectionEntry[]) {
           dispatchToast(t('collection.imported', { count: resolved.length }), 'success');
         }
       } catch (error) {
-        console.error('Failed to import collection:', error);
+        logger.error('Failed to import collection:', error);
         if (error instanceof Error && error.message === 'ScryfallOffline') {
           dispatchToast(t('search.scryfallOffline'), 'danger');
         } else if (error instanceof Error && error.message === 'ScryfallRateLimited') {

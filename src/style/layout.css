@@ -4,14 +4,6 @@
    Subtle glassmorphism material — translucent fill + hairline
    border + backdrop blur — driven by the --glass-* / --shadow-*
    tokens. Reused by modals, menus, and floating panels. */
-.surface-glass {
-  background-color: var(--glass-fill-light);
-  border: 1px solid var(--glass-border-light);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  box-shadow: var(--shadow-lg);
-}
-
 html.dark .surface-glass {
   background-color: var(--glass-fill-dark);
   border-color: var(--glass-border-dark);
@@ -38,14 +30,6 @@ html.dark .header-container {
   @apply flex-1 overflow-hidden;
 }
 
-.page-section {
-  @apply bg-gray-100 dark:bg-gray-800 rounded-lg p-4 transition-colors duration-300;
-}
-
-.card-container {
-  @apply w-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-gray-200 dark:bg-gray-800 border border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500;
-}
-
 /* Modals (canonical .modal-overlay lives in components.css) */
 .modal-container {
   @apply rounded-lg p-6 transition-colors duration-300 mx-4;
@@ -61,33 +45,11 @@ html.dark .modal-container {
   border-color: var(--glass-border-dark);
 }
 
+/* The heading row inside a modal. The previous definition (serif, text-heading) had no
+   users at all — every modal hand-rolled this exact utility string instead — so the class
+   now carries what the app actually renders rather than a look nothing adopted. */
 .modal-title {
-  @apply text-gray-900 dark:text-white text-heading text-balance font-bold font-serif mb-4 transition-colors duration-300;
-}
-
-.modal-actions {
-  @apply flex flex-col sm:flex-row gap-2 mt-4;
-}
-
-/* Tables (reusable and future-proof) */
-.table-container {
-  @apply overflow-x-auto w-full border border-gray-200 dark:border-gray-700 rounded-lg;
-}
-
-.data-table {
-  @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
-}
-
-.table-header {
-  @apply bg-gray-50 dark:bg-gray-800 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3;
-}
-
-.table-row {
-  @apply bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150;
-}
-
-.table-cell {
-  @apply px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap;
+  @apply text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2;
 }
 
 /* Card Grid Layouts */
@@ -202,15 +164,6 @@ html.dark .deck-preview-section {
   @apply p-3 rounded-lg transition-all duration-300 border bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-300 border-transparent hover:bg-gray-300 dark:hover:bg-gray-600;
 }
 
-.deck-list-item-active {
-  @apply p-3 rounded-lg text-blue-900 dark:text-blue-100 ring-2 ring-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 shadow-md transform scale-[1.01] z-10 border-blue-400 dark:border-blue-500/50;
-  border-left-width: 4px;
-}
-
-.deck-list-item-button {
-  @apply flex-1 min-w-0 pr-2 text-left rounded cursor-pointer;
-}
-
 /* Card layout details */
 .card-item-wrapper {
   @apply relative;
@@ -237,18 +190,6 @@ html.dark .deck-preview-section {
   @apply w-full h-full object-contain;
 }
 
-.card-action-overlay {
-  @apply absolute bottom-0 left-0 right-0 bg-black/90 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-lg z-10;
-}
-
-.card-action-title {
-  @apply text-white text-xs truncate font-medium;
-}
-
-.card-action-buttons {
-  @apply flex gap-1 mt-1;
-}
-
 .card-detail-image-wrapper {
   @apply flex-shrink-0 flex justify-center w-full md:w-[320px] lg:w-[384px] max-w-[300px] mx-auto md:max-w-full;
 }
@@ -261,17 +202,13 @@ html.dark .deck-preview-section {
   @apply flex-1 text-gray-900 dark:text-white space-y-3 transition-colors duration-300 text-left;
 }
 
-/* Toolbar controls */
-.toolbar-row {
-  @apply flex flex-wrap gap-2;
-}
-
 .manager-title-row {
   @apply flex flex-col md:flex-row md:items-center justify-between gap-4;
 }
 
-.manager-subheader {
-  @apply flex flex-col sm:flex-row sm:items-center gap-4 justify-between pt-2 border-t border-gray-300 dark:border-gray-700;
+/* Deck actions sit beside the title on md+. */
+.manager-title-actions {
+  @apply flex flex-wrap items-center gap-2 md:ml-auto;
 }
 
 /* Card holographic and hover effects */
@@ -325,26 +262,6 @@ html.dark .deck-preview-section {
   box-shadow: var(--shadow-md);
 }
 
-.mana-bar-group {
-  @apply flex flex-col items-center relative;
-}
-
-.mana-bar-column {
-  @apply w-full max-w-[2rem] mx-auto bg-gradient-to-t from-blue-500 to-indigo-500 dark:from-primary dark:to-indigo-600 rounded-t transition-all duration-500 ease-out origin-bottom hover:from-blue-400 hover:to-indigo-400;
-}
-
-.mana-bar-tooltip {
-  @apply absolute bottom-full mb-2 bg-slate-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md z-20;
-}
-
-.color-progress-bar {
-  @apply h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
-}
-
-.color-progress-fill {
-  @apply h-full rounded-full transition-all duration-500 ease-out;
-}
-
 /* Compact Deck List View Styles */
 .deck-list-compact {
   @apply flex flex-col gap-1.5 mt-2;
@@ -359,20 +276,12 @@ html.dark .deck-preview-section {
   @apply border-blue-400/50 dark:border-blue-500/30 shadow-md;
 }
 
-.deck-list-row-active {
-  @apply border-blue-500 dark:border-blue-400 bg-blue-50/30 dark:bg-blue-950/20 shadow-md;
-}
-
 .quantity-badge {
   @apply font-mono bg-primary/10 text-primary dark:bg-blue-400/10 dark:text-blue-400 border border-primary/20 dark:border-blue-400/20 px-2 py-0.5 rounded text-xs font-bold mr-2.5 inline-block shrink-0 shadow-sm;
 }
 
-.deck-list-details {
-  @apply border-l-2 border-blue-500 dark:border-blue-400 bg-slate-50 dark:bg-slate-900/40 rounded-r-lg p-4 mt-1 mb-2.5 space-y-3 transition-all duration-300 shadow-inner;
-}
-
 .floating-card-preview {
-  @apply fixed pointer-events-none z-[9999] rounded-2xl overflow-hidden border border-white/20 dark:border-white/10 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md transition-all duration-150 ease-out;
+  @apply fixed pointer-events-none z-[var(--z-preview)] rounded-2xl overflow-hidden border border-white/20 dark:border-white/10 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md transition-all duration-150 ease-out;
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
   width: 260px;
   height: auto;
@@ -384,10 +293,6 @@ html.dark .deck-preview-section {
   .floating-card-preview {
     display: none;
   }
-}
-
-.floating-card-loader {
-  @apply absolute inset-0 flex flex-col items-center justify-center text-white bg-slate-900/80;
 }
 
 .floating-card-image {
@@ -460,51 +365,19 @@ html.dark .deck-preview-section {
 }
 
 .app-brand-logo-image {
-  @apply relative w-7 h-7 object-contain drop-shadow-[0_0_6px_#3b82f699];
+  @apply relative w-8 h-8 object-contain transition-transform duration-300 ease-out hover:scale-110;
+  filter: drop-shadow(0 0 10px rgb(59 130 246 / 0.7)) drop-shadow(0 0 3px rgb(99 102 241 / 0.55));
 }
 
+/* Brighter, higher-contrast gradient plus a soft glow — the previous ramp sat
+   too close to the header background and read as washed out. */
 .app-brand-title {
-  @apply text-xl font-serif font-extrabold tracking-[0.18em] leading-none transition-colors duration-300 hidden md:block select-none bg-gradient-to-r from-primary via-indigo-500 to-indigo-600 dark:from-blue-400 dark:via-indigo-300 dark:to-blue-500 bg-clip-text text-transparent uppercase;
+  @apply text-xl font-serif font-extrabold tracking-[0.18em] leading-none transition-all duration-300 hidden md:block select-none uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-blue-500 to-violet-600 dark:from-blue-300 dark:via-sky-200 dark:to-indigo-300;
+  filter: drop-shadow(0 1px 6px rgb(59 130 246 / 0.4));
 }
 
 .tab-button-icon {
   @apply text-xs shrink-0;
-}
-
-.shortcut-hint {
-  @apply hidden xl:flex items-center text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-slate-800/70 border border-gray-300 dark:border-slate-700 rounded-md px-2 py-1 font-medium;
-}
-
-.manager-toolbar {
-  @apply flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-gray-50/50 dark:bg-gray-800/20 p-3 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300 overflow-visible;
-}
-
-.toolbar-group {
-  @apply flex flex-wrap items-center gap-2;
-}
-
-.toolbar-group-responsive {
-  @apply flex flex-wrap items-center gap-2 w-full sm:w-auto;
-}
-
-.toolbar-actions {
-  @apply flex items-center gap-2 border-t sm:border-t-0 border-gray-200 dark:border-gray-700 pt-2 sm:pt-0;
-}
-
-.manager-subheader-toolbar {
-  @apply flex flex-col md:flex-row gap-4 items-start md:items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-3 transition-colors duration-300;
-}
-
-.subheader-group {
-  @apply flex flex-wrap gap-4 items-center w-full md:w-auto;
-}
-
-.subheader-item {
-  @apply flex items-center gap-2;
-}
-
-.subheader-actions {
-  @apply flex flex-wrap items-center gap-3 w-full md:w-auto md:justify-end;
 }
 
 .modal-header-container {
@@ -616,10 +489,6 @@ html.dark .profile-menu-panel {
 
 .proxy-preview-scroll {
   @apply flex-1 overflow-auto p-6 bg-gray-100 dark:bg-gray-950/50;
-}
-
-.proxy-card-grid {
-  display: grid;
 }
 
 .proxy-card-cell {

@@ -1,6 +1,6 @@
 import { Card } from '../types/Card';
 import { DeckFormat } from '../types/Deck';
-import { DeckFormatType } from '../types/enums';
+import { DeckFormatType, DeckZone } from '../types/enums';
 import i18n from '../plugins/i18n';
 import { BASIC_LAND_NAMES, MIN_DECK_SIZE, COMMANDER_DECK_SIZE } from '../constants';
 
@@ -14,32 +14,56 @@ export interface ValidationResult {
   errors: ValidationError[];
 }
 
-const checkOracleText = (oracleText: string, key: string): boolean => {
-  const lowerText = oracleText.toLowerCase();
-  const ptVal = (i18n.getResource('pt', 'translations', key) as string) || '';
-  const enVal = (i18n.getResource('en', 'translations', key) as string) || '';
-  const esVal = (i18n.getResource('es', 'translations', key) as string) || '';
+/**
+ * Full resource paths. `getResource` returns `undefined` for a miss without warning, so a
+ * wrong path here turns every check below into `false` — i.e. "no card is a legal
+ * commander". A test asserts each one resolves.
+ */
+export const CHECK_LIST_KEYS = {
+  partner: 'validation.partnerCheckList',
+  friends: 'validation.friendsCheckList',
+  doctor: 'validation.doctorCheckList',
+  backgroundCreature: 'validation.backgroundCreatureCheckList',
+  background: 'validation.backgroundCheckList',
+  legendary: 'validation.legendaryCheckList',
+  canBeCommander: 'validation.canBeCommanderCheckList',
+  creature: 'search.creature',
+  planeswalker: 'search.planeswalker',
+  basicLand: 'validation.basicLandCheckList',
+  land: 'search.land'
+} as const;
 
-  const allPhrases = [ptVal, enVal, esVal].filter(Boolean).flatMap((s) => s.toLowerCase().split(','));
+type CheckListKey = (typeof CHECK_LIST_KEYS)[keyof typeof CHECK_LIST_KEYS];
 
-  return allPhrases.some((phrase) => lowerText.includes(phrase.trim()));
-};
+/**
+ * True when `text` contains any phrase from the given list, in any of the three shipped
+ * languages. Cards can be displayed translated, so matching only the active language would
+ * miss a card whose oracle text arrived in another one.
+ */
+const matchesPhraseList = (text: string, key: CheckListKey): boolean => {
+  const lowerText = text.toLowerCase();
+  const phrases = (['pt', 'en', 'es'] as const)
+    .map((lng) => (i18n.getResource(lng, 'translations', key) as string) || '')
+    .filter(Boolean)
+    .flatMap((value) => value.toLowerCase().split(','));
 
-const checkTypeLine = (typeLine: string, key: string): boolean => {
-  const lowerText = typeLine.toLowerCase();
-  const ptVal = (i18n.getResource('pt', 'translations', key) as string) || '';
-  const enVal = (i18n.getResource('en', 'translations', key) as string) || '';
-  const esVal = (i18n.getResource('es', 'translations', key) as string) || '';
-
-  const allPhrases = [ptVal, enVal, esVal].filter(Boolean).flatMap((s) => s.toLowerCase().split(','));
-
-  return allPhrases.some((phrase) => lowerText.includes(phrase.trim()));
+  return phrases.some((phrase) => lowerText.includes(phrase.trim()));
 };
 
 export function validateDeck(cards: Card[], format: DeckFormat): ValidationResult {
   const errors: ValidationError[] = [];
 
-  if (cards.length === 0) {
+  // A card carries no zone until one is assigned, so an unset zone is the main deck.
+  const zoneOf = (card: Card): DeckZone => card.zone ?? DeckZone.MAIN;
+
+  /**
+   * Deck *size* counts the main deck only; copy limits, rarity and ban lists cover the
+   * sideboard too. The maybeboard and tokens are not validated at all.
+   */
+  const mainDeck = cards.filter((card) => zoneOf(card) === DeckZone.MAIN);
+  const playableCards = cards.filter((card) => zoneOf(card) === DeckZone.MAIN || zoneOf(card) === DeckZone.SIDEBOARD);
+
+  if (mainDeck.length === 0) {
     return {
       isValid: false,
       errors: [{ key: 'validationEmptyDeck' }]
@@ -53,9 +77,17 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   // Count copies of each card (excluding basic lands)
   const cardCounts: { [name: string]: number } = {};
 
-  cards.forEach((card) => {
+  playableCards.forEach((card) => {
     const { name } = card;
-    const isBasic = card.type_line?.toLowerCase().includes('basic land') || BASIC_LAND_NAMES.includes(name);
+    /**
+     * Two separate words, not the literal "basic land": Scryfall puts the snow supertype
+     * between them ("Basic Snow Land — Forest"). The phrase lists also cover pt/es type
+     * lines, which an English substring never matched.
+     */
+    const typeLine = card.type_line || '';
+    const isBasic =
+      (matchesPhraseList(typeLine, CHECK_LIST_KEYS.basicLand) && matchesPhraseList(typeLine, CHECK_LIST_KEYS.land)) ||
+      BASIC_LAND_NAMES.includes(name);
     if (!isBasic) {
       cardCounts[name] = (cardCounts[name] || 0) + 1;
     }
@@ -69,10 +101,10 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     DeckFormatType.PAUPER
   ];
   if (limitedCopyFormats.includes(format)) {
-    if (cards.length < MIN_DECK_SIZE) {
+    if (mainDeck.length < MIN_DECK_SIZE) {
       errors.push({
         key: 'validationMinCards',
-        params: { count: cards.length }
+        params: { count: mainDeck.length }
       });
     }
 
@@ -88,10 +120,10 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
 
   // Commander Format Rules
   if (format === DeckFormatType.COMMANDER) {
-    if (cards.length !== COMMANDER_DECK_SIZE) {
+    if (mainDeck.length !== COMMANDER_DECK_SIZE) {
       errors.push({
         key: 'validationCommanderExactCards',
-        params: { count: cards.length }
+        params: { count: mainDeck.length }
       });
     }
 
@@ -106,7 +138,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     });
 
     // 1. Check if there is at least one designated Commander in the deck
-    const commanders = cards.filter((card) => card.isCommander);
+    const commanders = mainDeck.filter((card) => card.isCommander);
     if (commanders.length === 0) {
       errors.push({
         key: 'validationCommanderNoCommander'
@@ -125,22 +157,22 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
         const o2 = (c2.oracle_text || '').toLowerCase();
 
         // Check Partner, Friends Forever, Doctor's Companion, and Choose a Background rules using i18n
-        const isPartner1 = checkOracleText(o1, 'partnerCheckList');
-        const isPartner2 = checkOracleText(o2, 'partnerCheckList');
+        const isPartner1 = matchesPhraseList(o1, CHECK_LIST_KEYS.partner);
+        const isPartner2 = matchesPhraseList(o2, CHECK_LIST_KEYS.partner);
 
-        const isFriends1 = checkOracleText(o1, 'friendsCheckList');
-        const isFriends2 = checkOracleText(o2, 'friendsCheckList');
+        const isFriends1 = matchesPhraseList(o1, CHECK_LIST_KEYS.friends);
+        const isFriends2 = matchesPhraseList(o2, CHECK_LIST_KEYS.friends);
 
-        const isDoctor1 = checkOracleText(o1, 'doctorCheckList');
-        const isDoctor2 = checkOracleText(o2, 'doctorCheckList');
+        const isDoctor1 = matchesPhraseList(o1, CHECK_LIST_KEYS.doctor);
+        const isDoctor2 = matchesPhraseList(o2, CHECK_LIST_KEYS.doctor);
 
         // Check Choose a Background + Background
         const isBackgroundCreature1 =
-          checkTypeLine(t1, 'creature') && checkOracleText(o1, 'backgroundCreatureCheckList');
-        const isBackground1 = checkTypeLine(t1, 'backgroundCheckList');
+          matchesPhraseList(t1, CHECK_LIST_KEYS.creature) && matchesPhraseList(o1, CHECK_LIST_KEYS.backgroundCreature);
+        const isBackground1 = matchesPhraseList(t1, CHECK_LIST_KEYS.background);
         const isBackgroundCreature2 =
-          checkTypeLine(t2, 'creature') && checkOracleText(o2, 'backgroundCreatureCheckList');
-        const isBackground2 = checkTypeLine(t2, 'backgroundCheckList');
+          matchesPhraseList(t2, CHECK_LIST_KEYS.creature) && matchesPhraseList(o2, CHECK_LIST_KEYS.backgroundCreature);
+        const isBackground2 = matchesPhraseList(t2, CHECK_LIST_KEYS.background);
 
         const isValidPartnership =
           (isPartner1 && isPartner2) ||
@@ -160,10 +192,10 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
         const typeLine = (commander.type_line || '').toLowerCase();
         const oracleText = (commander.oracle_text || '').toLowerCase();
 
-        const isLegendary = checkTypeLine(typeLine, 'legendaryCheckList');
-        const isCreature = checkTypeLine(typeLine, 'creature');
-        const isPlaneswalker = checkTypeLine(typeLine, 'planeswalker');
-        const canBeCommander = checkOracleText(oracleText, 'canBeCommanderCheckList');
+        const isLegendary = matchesPhraseList(typeLine, CHECK_LIST_KEYS.legendary);
+        const isCreature = matchesPhraseList(typeLine, CHECK_LIST_KEYS.creature);
+        const isPlaneswalker = matchesPhraseList(typeLine, CHECK_LIST_KEYS.planeswalker);
+        const canBeCommander = matchesPhraseList(oracleText, CHECK_LIST_KEYS.canBeCommander);
 
         const isValidCmd = (isLegendary && isCreature) || (isLegendary && isPlaneswalker && canBeCommander);
 
@@ -184,7 +216,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       });
 
       const invalidCards: { name: string; colors: string[] }[] = [];
-      cards.forEach((card) => {
+      playableCards.forEach((card) => {
         if (card.isCommander) return;
 
         if (card.color_identity) {
@@ -217,7 +249,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
 
   // Pauper Format Rules
   if (format === DeckFormatType.PAUPER) {
-    const nonCommonCards = cards.filter((card) => card.rarity !== 'common');
+    const nonCommonCards = playableCards.filter((card) => card.rarity !== 'common');
     if (nonCommonCards.length > 0) {
       const uniqueNonCommons = Array.from(new Set(nonCommonCards.map((c) => c.name)));
       const list = uniqueNonCommons.slice(0, 5).join(', ') + (uniqueNonCommons.length > 5 ? '...' : '');
@@ -232,7 +264,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   const bannedMatches: string[] = [];
   const restrictedMatches: string[] = [];
 
-  cards.forEach((card) => {
+  playableCards.forEach((card) => {
     const cardName = card.name;
 
     // Check if card is banned in the selected format

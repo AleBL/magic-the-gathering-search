@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Scry from 'scryfall-sdk';
@@ -37,7 +38,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
             const fullCard = (await Scry.Cards.byName(card.name)) as CardWithScryfallMetadata;
             allParts = fullCard.all_parts || [];
           } catch (fetchAllPartsError) {
-            console.error('Failed to fetch full card for related tokens:', fetchAllPartsError);
+            logger.error('Failed to fetch full card for related tokens:', fetchAllPartsError);
             allParts = [];
           }
         }
@@ -60,7 +61,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
                 fetched.push(fetchedCard as unknown as Card);
               }
             } catch (tokenFetchError) {
-              console.error('Failed to fetch related token:', tokenFetchError);
+              logger.error('Failed to fetch related token:', tokenFetchError);
             }
           })
         );
@@ -70,7 +71,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
         const translated = await translateCards(fetched, currentLang);
         setTokens(translated);
       } catch (error) {
-        console.error('Failed to fetch related tokens:', error);
+        logger.error('Failed to fetch related tokens:', error);
         const message = error instanceof Error ? error.message : 'Failed to fetch related tokens';
         setError(message);
         dispatchToast(t('common.relatedTokensLoadError'), 'danger');
@@ -80,7 +81,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
     };
 
     fetchTokens();
-  }, [card, i18n.language]);
+  }, [card, i18n.language, t]);
 
   return { tokens, isLoading, error };
 }

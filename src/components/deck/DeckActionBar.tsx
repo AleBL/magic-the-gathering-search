@@ -247,8 +247,9 @@ function DeckActionBar({
             </div>
           )}
 
-          {/* Playtest button */}
-          <div className="relative group/tooltip inline-flex items-center">
+          {/* Playtest button — hidden below sm: the multi-zone simulator isn't
+              usable on phone-width screens, so we don't expose an entry point there. */}
+          <div className="hidden sm:inline-flex relative group/tooltip items-center">
             <button
               id="playtest-btn"
               type="button"

@@ -61,7 +61,7 @@ function DeckZoneTabs({
   };
 
   return (
-    <div className="flex overflow-x-auto border-b border-gray-200 dark:border-slate-800 mb-4 text-xs font-semibold gap-2 select-none flex-nowrap whitespace-nowrap scrollbar-none">
+    <div className="flex flex-wrap border-b border-gray-200 dark:border-slate-800 mb-4 text-xs font-semibold gap-1.5 select-none">
       <button
         type="button"
         onClick={() => onZoneChange('main')}

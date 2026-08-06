@@ -29,6 +29,7 @@ export function useSearchFilters(
       { code: 'Enchantment', name: t('search.enchantment') },
       { code: 'Artifact', name: t('search.artifact') },
       { code: 'Planeswalker', name: t('search.planeswalker') },
+      { code: 'Battle', name: t('search.battle') },
       { code: 'Land', name: t('search.land') }
     ],
     [t]

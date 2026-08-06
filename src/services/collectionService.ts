@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { db } from '../db/database';
 import { Card } from '../types/Card';
 import { CollectionEntry } from '../types/Collection';
@@ -50,7 +51,7 @@ const enrichPriceFallback = async (cardId: string): Promise<void> => {
       fallbackPrices: prices ? { usd: prices.usd ?? null, eur: prices.eur ?? null } : null
     });
   } catch (error) {
-    console.error('Failed to fetch English price fallback:', error);
+    logger.error('Failed to fetch English price fallback:', error);
   }
 };
 

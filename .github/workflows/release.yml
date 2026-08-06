@@ -212,6 +212,6 @@ jobs:
       # already bypasses the required-checks gate — nothing to wait on.
       - name: Merge version bump PR
         if: steps.version-bump-pr.outputs.pull-request-number
-        run: gh pr merge --squash "${{ steps.version-bump-pr.outputs.pull-request-number }}" --repo "${{ github.repository }}"
+        run: gh pr merge --squash --admin "${{ steps.version-bump-pr.outputs.pull-request-number }}" --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}

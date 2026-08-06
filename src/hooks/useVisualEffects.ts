@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
+import { STORAGE_KEYS, readStoredPreference } from '../constants/storage';
 
-const STORAGE_KEY = 'visualEffects';
+const STORAGE_KEY = STORAGE_KEYS.visualEffects;
 const CHANGE_EVENT = 'visual-effects-change';
 
 function readStored(): boolean {
   if (typeof window === 'undefined') return true;
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = readStoredPreference(STORAGE_KEY);
   return saved !== null ? saved === 'true' : true;
 }
 

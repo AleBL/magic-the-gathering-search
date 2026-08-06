@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaFilter } from 'react-icons/fa';
 import CardGrid from './CardGrid';
 import CardSizeSelector from './CardSizeSelector';
-import SearchFilters from '../SearchFilters';
+import CollectionFilterSelector from './CollectionFilterSelector';
+import SearchFilters from './SearchFilters';
 import CardFilterBar from './CardFilterBar';
 import CardSkeleton from './CardSkeleton';
 import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
 import { useCardSearch } from '../../hooks/useCardSearch';
-import { useDeckStore } from '../../store/useDeckStore';
+import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingAction';
+import { useCollectionOwnership, OwnershipFilter } from '../../hooks/useCollectionOwnership';
 import ErrorState from '../ui/ErrorState';
 import EmptyState from '../ui/EmptyState';
 
@@ -18,11 +20,22 @@ interface CardSearchProps {
   onAddToDeck?: (card: Card) => void;
   onAddTokenToDeck?: (token: Card) => void;
   activeFormat?: DeckFormat;
+  /** Makes results draggable into the deck editor's drop zone (two-pane mode). */
+  enableAddDrag?: boolean;
+  /** Initial card size — the editor embeds this in a narrow pane, so it opts
+   *  into a denser default. */
+  defaultCardSize?: CardSize;
 }
 
-function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchProps) {
+function CardSearch({
+  onAddToDeck,
+  onAddTokenToDeck,
+  activeFormat,
+  enableAddDrag = false,
+  defaultCardSize = 'medium'
+}: CardSearchProps) {
   const { i18n, t } = useTranslation();
-  const [cardSize, setCardSize] = useState<CardSize>('medium');
+  const [cardSize, setCardSize] = useState<CardSize>(defaultCardSize);
 
   const {
     searchQuery,
@@ -39,19 +52,21 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
     buildQuery
   } = useCardSearch(i18n.language || 'en');
 
+  const [ownership, setOwnership] = useState<OwnershipFilter>('all');
+  const { apply: applyOwnership } = useCollectionOwnership();
+
+  // Page-local: Scryfall has no "cards I own" query, so a page can filter down to nothing.
+  const visibleCards = applyOwnership(cards, ownership);
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const pendingAction = useDeckStore((state) => state.pendingAction);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
-
-  useEffect(() => {
-    if (pendingAction === 'focus-search') {
+  usePendingAction({
+    'focus-search': () => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
-      setPendingAction(null);
     }
-  }, [pendingAction, setPendingAction]);
+  });
 
   useEffect(() => {
     const handleEscape = () => {
@@ -109,6 +124,18 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
             >
               {t('search.searchButton')}
             </button>
+            {/* Below sm the filter row is hidden; this opens the same filters
+                sheet — needed inside the deck editor, where the navbar shows the
+                page menu instead of the search filter button. */}
+            <button
+              type="button"
+              onClick={() => dispatchPendingAction('open-search-filters')}
+              className="sm:hidden shrink-0 w-14 flex items-center justify-center rounded-2xl bg-gray-100 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
+              aria-label={t('search.advancedFilters')}
+              title={t('search.advancedFilters')}
+            >
+              <FaFilter />
+            </button>
           </div>
 
           {/* Secondary Controls: Filters & View Options. Hidden below `sm` —
@@ -118,14 +145,24 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
               (not conditionally rendered) so its pendingAction listener keeps
               working; its BottomSheet portals to <body>, escaping this
               hidden container. */}
-          <div className="hidden sm:flex flex-col xl:flex-row xl:items-center justify-between gap-2 xl:gap-4">
-            <div className="flex-1 overflow-hidden">
+          {/* Stacked (not lg:flex-row) so it stays usable inside the narrow deck
+              editor pane, where the container is far smaller than the viewport. */}
+          <div className="hidden sm:flex flex-col gap-3">
+            <div className="w-full">
               <CardFilterBar filters={filters} setFilters={setFilters} />
             </div>
-            <div className="flex flex-row flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0 pb-1 sm:pb-3 xl:pb-0 w-full xl:w-auto">
+            <div className="flex flex-row flex-wrap items-center justify-start gap-2 sm:gap-3 w-full">
               <SearchFilters
                 filters={filters}
                 setFilters={setFilters}
+                extraFilters={
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                      {t('search.ownership')}
+                    </span>
+                    <CollectionFilterSelector value={ownership} onChange={setOwnership} />
+                  </div>
+                }
                 mobileExtras={
                   <div className="space-y-3">
                     <CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />
@@ -163,7 +200,7 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
             />
           )}
 
-          {!isLoadingInitial && !error && cards.length === 0 && (
+          {!isLoadingInitial && !error && visibleCards.length === 0 && (
             <EmptyState
               icon={<FaSearch />}
               title={t('search.noResults')}
@@ -197,28 +234,36 @@ function CardSearch({ onAddToDeck, onAddTokenToDeck, activeFormat }: CardSearchP
             />
           )}
 
-          {!isLoadingInitial && !error && cards.length > 0 && (
+          {!isLoadingInitial && !error && visibleCards.length > 0 && (
             <div className="animate-in fade-in duration-500">
               <CardGrid
-                cards={cards}
+                cards={visibleCards}
                 size={cardSize}
                 onAddToDeck={onAddToDeck}
                 onAddTokenToDeck={onAddTokenToDeck}
                 activeFormat={activeFormat}
-                showCollectionControls
+                // At S/M the overlay swallows most of an already-small card.
+                showCollectionControls={cardSize === 'large' || cardSize === 'xlarge'}
+                isAddDraggable={enableAddDrag}
               />
             </div>
           )}
 
           {!isLoadingInitial && hasMore && (
             <div ref={sentinelRef} className="mt-8 mb-12">
-              {isLoadingMore && (
+              {/* Skeletons would promise results the filter may discard. */}
+              {isLoadingMore && ownership !== 'all' ? (
+                <p className="text-center text-xs font-semibold text-gray-500 dark:text-slate-400">
+                  {t('search.loadingMoreFiltered')}
+                </p>
+              ) : null}
+              {isLoadingMore && ownership === 'all' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4 opacity-50">
                   {Array.from({ length: 7 }).map((_, i) => (
                     <CardSkeleton key={i} />
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>

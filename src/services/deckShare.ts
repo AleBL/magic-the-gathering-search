@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Card } from '../types/Card';
 import { Deck, DeckFormat } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
@@ -148,7 +149,7 @@ export function decodeShareString(encoded: string): DecodedShareDeck | null {
       entries: shareEntriesToParseResults(entries)
     };
   } catch (error) {
-    console.error('Failed to decode deck share string:', error);
+    logger.error('Failed to decode deck share string:', error);
     return null;
   }
 }

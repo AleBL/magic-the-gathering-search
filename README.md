@@ -89,11 +89,25 @@ npm run build:linux    # Linux target
 Distributable files are generated in `dist-vite/` and `dist-electron/`.
 See [Electron Builder CLI docs](https://www.electron.build/cli.html) for additional options.
 
+### Tests
+
+```bash
+npm run test           # unit + component tests (Vitest)
+npm run test:coverage  # same, enforcing the coverage thresholds in vitest.config.ts
+npm run test:e2e       # end-to-end journeys (Playwright)
+npm run test:e2e:ui    # the same journeys in Playwright's interactive runner
+```
+
+The E2E suite starts its own dev server on port 5199 and stubs every Scryfall request, so
+it needs no network and will not collide with a dev server you already have running. It
+drives Chrome locally; CI installs Playwright's own chromium.
+
 ### Other scripts
 
 ```bash
 npm run lint           # ESLint + Prettier auto-fix
 npm run type-check     # TypeScript type check only
+npm run i18n:check     # verify en/es/pt share the same key set
 npm run deps:update    # interactive major dependency updates (taze)
 npm run clean          # remove build output folders
 ```

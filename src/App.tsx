@@ -1,19 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import CardSearch from './components/card/CardSearch';
-import DeckManager from './components/DeckManager';
-import CollectionManager from './components/collection/CollectionManager';
 import { AppTab } from './types';
 import { fetchSymbols } from './utils/symbolHelper';
 import useToast from './hooks/useToast';
 import { useShortcuts } from './hooks/useShortcuts';
 import RootLayout from './components/layout/RootLayout';
 import { useDeckStore } from './store/useDeckStore';
+import { dispatchPendingAction } from './hooks/usePendingAction';
 import { extractShareParam, SHARE_PARAM } from './services/deckShare';
 import { useDeckActions } from './hooks/useDeckActions';
 import { useGlobalRipple } from './hooks/useGlobalRipple';
 import { useVisualEffects } from './hooks/useVisualEffects';
 import useOnlineStatus from './hooks/useOnlineStatus';
+import ErrorBoundary from './components/ui/ErrorBoundary';
+
+// 'search' is the landing tab and stays in the entry chunk so first paint costs no
+// extra round trip. The other two are split out and then warmed on idle below, so
+// switching tabs still feels instant without their cost landing on startup.
+const DeckManager = lazy(() => import('./components/deck/DeckManager'));
+const CollectionManager = lazy(() => import('./components/collection/CollectionManager'));
+
+/** Pull the deferred tab chunks into cache once the app is done booting. */
+const prefetchTabs = () => {
+  void import('./components/deck/DeckManager');
+  void import('./components/collection/CollectionManager');
+};
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -24,30 +36,29 @@ function App() {
   const isOnline = useOnlineStatus();
 
   const editingDeck = useDeckStore((state) => state.editingDeck);
-  const setPendingAction = useDeckStore((state) => state.setPendingAction);
   const setPendingSharedDeck = useDeckStore((state) => state.setPendingSharedDeck);
 
   const { handleAddToDeck, handleAddTokenToDeck } = useDeckActions(showToast);
 
   const handleSearchFocus = useCallback(() => {
     setActiveTab('search');
-    setPendingAction('focus-search');
-  }, [setPendingAction]);
+    dispatchPendingAction('focus-search');
+  }, []);
 
   const handleSaveDeck = useCallback(() => {
     setActiveTab('deck');
-    setPendingAction('save-deck');
-  }, [setPendingAction]);
+    dispatchPendingAction('save-deck');
+  }, []);
 
   const handlePlaytest = useCallback(() => {
     setActiveTab('deck');
-    setPendingAction('playtest-deck');
-  }, [setPendingAction]);
+    dispatchPendingAction('playtest-deck');
+  }, []);
 
   const handleClearDeck = useCallback(() => {
     setActiveTab('deck');
-    setPendingAction('clear-deck');
-  }, [setPendingAction]);
+    dispatchPendingAction('clear-deck');
+  }, []);
 
   const handleEscape = useCallback(() => {
     window.dispatchEvent(new CustomEvent('mtg-escape'));
@@ -91,16 +102,27 @@ function App() {
       const tab = (e as CustomEvent).detail as AppTab;
       if (tab === 'search' || tab === 'deck' || tab === 'collection') {
         setActiveTab(tab);
-        if (tab === 'search') setPendingAction('focus-search');
+        if (tab === 'search') dispatchPendingAction('focus-search');
       }
     };
     window.addEventListener('mtg-navigate-tab', handleNavigateTab);
     return () => window.removeEventListener('mtg-navigate-tab', handleNavigateTab);
-  }, [setPendingAction]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = i18n.language || 'en';
   }, [i18n.language]);
+
+  useEffect(() => {
+    const idle = window.requestIdleCallback;
+    if (idle) {
+      const handle = idle(prefetchTabs);
+      return () => window.cancelIdleCallback?.(handle);
+    }
+    // Safari (< 17) has no requestIdleCallback; a short timeout is close enough.
+    const timer = window.setTimeout(prefetchTabs, 2000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const wasOfflineRef = useRef(false);
   useEffect(() => {
@@ -118,7 +140,6 @@ function App() {
     const safeWindow = window as unknown as {
       electronAPI?: {
         on: (channel: string, listener: () => void) => () => void;
-        off: (channel: string, listener: () => void) => void;
       };
     };
 
@@ -151,10 +172,19 @@ function App() {
             onAddTokenToDeck={handleAddTokenToDeck}
             activeFormat={editingDeck.deckFormat}
           />
-        ) : activeTab === 'collection' ? (
-          <CollectionManager />
         ) : (
-          <DeckManager showToast={showToast} />
+          // Scoped so a failed IndexedDB read inside one tab degrades that tab instead of
+          // the whole app: Dexie's useLiveQuery throws during render, and the only other
+          // boundary is the root one in main.tsx.
+          <ErrorBoundary variant="section">
+            <Suspense
+              fallback={
+                <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>
+              }
+            >
+              {activeTab === 'collection' ? <CollectionManager /> : <DeckManager showToast={showToast} />}
+            </Suspense>
+          </ErrorBoundary>
         )}
       </div>
     </RootLayout>

@@ -16,7 +16,7 @@ interface EmptyStateProps {
   }[];
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, compact, description, action, suggestions }) => {
+function EmptyState({ icon, title, compact, description, action, suggestions }: EmptyStateProps) {
   const { t } = useTranslation();
 
   return (
@@ -91,6 +91,6 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, compact, descripti
       )}
     </div>
   );
-};
+}
 
 export default EmptyState;

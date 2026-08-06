@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { logger } from '../../utils/logger';
+import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCopy, FaLink, FaFileCode } from 'react-icons/fa';
+import { FaCopy, FaLink, FaFileCode, FaImage, FaFileDownload } from 'react-icons/fa';
 import { Deck } from '../../types/Deck';
 import { ShowToastFn } from '../../types/Toast';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -8,7 +9,8 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { buildDeckFileContent, buildShareUrl } from '../../services/deckShare';
 import { deckToArenaText } from '../../utils/deckText';
-import { downloadAsText } from '../../services/fileDownload';
+import { downloadAsText, downloadBlob } from '../../services/fileDownload';
+import { renderDeckImage } from '../../utils/deckImage';
 
 interface DeckExportDialogProps {
   deck: Deck;
@@ -16,6 +18,27 @@ interface DeckExportDialogProps {
   onExportDec: (deck: Deck) => void;
   onCancel: () => void;
   showToast: ShowToastFn;
+}
+
+interface ExportOptionProps {
+  icon: ReactNode;
+  accent: string;
+  title: string;
+  description: string;
+  onClick: () => void;
+}
+
+/** One consistent export/share choice: accent icon chip + title + description. */
+function ExportOption({ icon, accent, title, description, onClick }: ExportOptionProps) {
+  return (
+    <button type="button" onClick={onClick} className="export-option">
+      <span className={`export-option-icon ${accent}`}>{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-gray-900 dark:text-white">{title}</span>
+        {description ? <span className="block text-xs text-gray-500 dark:text-gray-400">{description}</span> : null}
+      </span>
+    </button>
+  );
 }
 
 /** Prompt offering every way to export/share a deck: link, text, files. */
@@ -32,7 +55,7 @@ export function DeckExportDialog({ deck, onExportJson, onExportDec, onCancel, sh
       await navigator.clipboard.writeText(text);
       showToast(t(successKey), 'success');
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      logger.error('Failed to copy to clipboard:', error);
       showToast(t('common.unexpectedError'), 'error');
     }
   };
@@ -41,6 +64,16 @@ export function DeckExportDialog({ deck, onExportJson, onExportDec, onCancel, sh
   const handleCopyText = () => copyToClipboard(deckToArenaText(deck.cards), 'strategy.exportArenaCopied');
   const handleDownloadDeckFile = () =>
     downloadAsText(buildDeckFileContent(deck), `${deck.name.replace(/\s+/g, '_')}.deck`);
+
+  const handleExportImage = async () => {
+    try {
+      const blob = await renderDeckImage(deck);
+      downloadBlob(blob, `${deck.name.replace(/\s+/g, '_')}.png`);
+    } catch (error) {
+      logger.error('Failed to export deck image:', error);
+      showToast(t('common.unexpectedError'), 'error');
+    }
+  };
 
   return (
     // Backdrop click is a mouse-only convenience; Escape and the cancel button provide the keyboard-equivalent action.
@@ -72,74 +105,74 @@ export function DeckExportDialog({ deck, onExportJson, onExportDec, onCancel, sh
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{t('export.exportFormatPrompt')}</p>
 
-        {/* Share section: link + QR to move the deck to another device, no backend. */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 mb-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+        {/* Share section: link to move the deck to another device, no backend. */}
+        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-900/40 p-3 mb-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
             {t('export.shareTitle')}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('export.shareLinkDesc')}</p>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
               value={shareUrl}
               aria-label={t('export.shareLink')}
               onFocus={(e) => e.currentTarget.select()}
-              className="flex-1 min-w-0 rounded-lg bg-slate-100 dark:bg-slate-900/60 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 font-mono"
+              className="flex-1 min-w-0 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 font-mono"
             />
             <button
               type="button"
               onClick={handleCopyLink}
-              className="button-small deck-list-action-btn bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 px-3 py-2 shrink-0"
+              className="primary-button text-xs py-2 px-3 flex items-center gap-1.5 shrink-0"
               title={t('export.copyLink')}
             >
               <FaLink className="text-xs" />
-              <span className="text-xs font-bold">{t('common.copy')}</span>
+              <span className="font-bold">{t('common.copy')}</span>
             </button>
           </div>
-          <button
-            type="button"
-            onClick={handleDownloadDeckFile}
-            className="w-full secondary-button py-2 flex items-center justify-center gap-2 text-sm"
+        </div>
+
+        {/* Export / download options — one consistent visual language. */}
+        <div className="grid grid-cols-1 gap-2">
+          <ExportOption
+            icon={<FaCopy />}
+            accent="bg-slate-500/10 text-slate-600 dark:text-slate-300"
+            title={t('export.copyText')}
+            description=""
+            onClick={handleCopyText}
+          />
+          <ExportOption
+            icon={<FaFileDownload />}
+            accent="bg-sky-500/10 text-sky-600 dark:text-sky-400"
             title={t('export.downloadDeckFile')}
-          >
-            <FaFileCode className="text-xs" />
-            {t('export.downloadDeckFile')}
-          </button>
-        </div>
-
-        {/* Copy as plain decklist text (MTG Arena / MTGO). */}
-        <button
-          type="button"
-          className="w-full mb-3 secondary-button py-2.5 flex items-center justify-center gap-2"
-          onClick={handleCopyText}
-        >
-          <FaCopy className="text-sm" />
-          <span className="font-bold text-sm">{t('export.copyText')}</span>
-        </button>
-
-        {/* File downloads. */}
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            className="w-full primary-button bg-indigo-600 hover:bg-indigo-700 py-3"
+            description=".deck"
+            onClick={handleDownloadDeckFile}
+          />
+          <ExportOption
+            icon={<FaFileCode />}
+            accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            title="JSON"
+            description={t('export.exportJsonDesc')}
             onClick={() => onExportJson(deck)}
-          >
-            <div className="font-bold text-lg">JSON</div>
-            <div className="text-xs font-normal opacity-80">{t('export.exportJsonDesc')}</div>
-          </button>
-          <button
-            type="button"
-            className="w-full primary-button bg-emerald-600 hover:bg-emerald-700 py-3"
+          />
+          <ExportOption
+            icon={<FaFileCode />}
+            accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            title="DEC (MTGO)"
+            description={t('export.exportDecDesc')}
             onClick={() => onExportDec(deck)}
-          >
-            <div className="font-bold text-lg">DEC (MTGO)</div>
-            <div className="text-xs font-normal opacity-80">{t('export.exportDecDesc')}</div>
-          </button>
-          <button type="button" className="w-full mt-1 secondary-button py-2" onClick={onCancel}>
-            {t('common.cancel')}
-          </button>
+          />
+          <ExportOption
+            icon={<FaImage />}
+            accent="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+            title={t('export.exportImage')}
+            description={t('export.exportImageDesc')}
+            onClick={handleExportImage}
+          />
         </div>
+
+        <button type="button" className="w-full mt-4 secondary-button py-2.5" onClick={onCancel}>
+          {t('common.cancel')}
+        </button>
       </div>
     </div>
   );

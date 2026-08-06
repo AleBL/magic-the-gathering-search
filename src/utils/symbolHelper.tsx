@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { ReactNode } from 'react';
 import i18n from '../plugins/i18n';
 import { dispatchToast } from './toastHelper';
@@ -25,7 +26,7 @@ export async function fetchSymbols() {
       symbolMap = map;
     }
   } catch (error) {
-    console.error('Failed to fetch Scryfall symbology:', error);
+    logger.error('Failed to fetch Scryfall symbology:', error);
     dispatchToast(i18n.t('common.errorFetchingSymbology') as string, 'danger');
   } finally {
     isFetching = false;
@@ -40,6 +41,35 @@ export function getSymbolUrl(symbol: string): string {
   return `https://svgs.scryfall.io/card-symbols/${clean}.svg`;
 }
 
+/**
+ * Human-readable, localized label for a mana/tap symbol, used as image `alt`
+ * text so screen readers announce "Green mana" instead of the raw "{G}".
+ */
+export function getSymbolLabel(symbol: string): string {
+  const clean = symbol.replace(/[{}]/g, '');
+  const t = (key: string, opts?: Record<string, unknown>): string => i18n.t(key, opts) as string;
+
+  const colors: Record<string, string> = {
+    W: 'mana.white',
+    U: 'mana.blue',
+    B: 'mana.black',
+    R: 'mana.red',
+    G: 'mana.green',
+    C: 'mana.colorless'
+  };
+
+  if (colors[clean]) return t(colors[clean]);
+  if (/^\d+$/.test(clean)) return t('mana.generic', { amount: clean });
+  if (clean === 'X' || clean === 'Y' || clean === 'Z') return t('mana.variable');
+  if (clean === 'T') return t('mana.tap');
+  if (clean === 'Q') return t('mana.untap');
+  if (clean === 'S') return t('mana.snow');
+  if (clean === 'E') return t('mana.energy');
+  if (clean === 'P' || clean.includes('/P')) return t('mana.phyrexian');
+  if (clean.includes('/')) return t('mana.hybrid');
+  return clean;
+}
+
 export function parseTextWithSymbols(text: string | undefined, isLarge = false): ReactNode[] {
   if (!text) return [];
   const symbolRegex = /(\{[^}]+\})/g;
@@ -52,7 +82,7 @@ export function parseTextWithSymbols(text: string | undefined, isLarge = false):
         <img
           key={index}
           src={url}
-          alt={part}
+          alt={getSymbolLabel(part)}
           className={`inline-block ${sizeClass} align-middle select-none`}
           style={{ verticalAlign: '-0.12em' }}
         />

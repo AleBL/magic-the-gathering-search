@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { TOAST_DURATION_MS } from '../constants';
 import { ToastState, ToastVariant, ToastAction } from '../types/Toast';
@@ -39,7 +40,7 @@ export default function useToast() {
         }
       }
     } catch (error) {
-      console.error('OS notification failed:', error);
+      logger.error('OS notification failed:', error);
     }
   }, []);
 

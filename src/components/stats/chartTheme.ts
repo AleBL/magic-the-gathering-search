@@ -48,9 +48,6 @@ export const CHART_STATUS = {
 
 export const CHART_SURFACE = 'var(--chart-surface)';
 export const CHART_GRID = 'var(--chart-grid)';
-export const CHART_AXIS = 'var(--chart-axis)';
-export const CHART_TEXT_PRIMARY = 'var(--chart-text-primary)';
-export const CHART_TEXT_SECONDARY = 'var(--chart-text-secondary)';
 export const CHART_TEXT_MUTED = 'var(--chart-text-muted)';
 
 /** Shared tick label style for XAxis/YAxis. */

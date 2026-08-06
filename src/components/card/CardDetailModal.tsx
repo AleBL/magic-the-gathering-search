@@ -1,7 +1,7 @@
 import { ReactNode, useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { FaTimes, FaSync } from 'react-icons/fa';
+import { FaTimes, FaSync, FaRedo } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { useCardPrints } from '../../hooks/useCardPrints';
 import { useCardRelatedTokensForCard } from '../../hooks/useCardRelatedTokens';
@@ -43,6 +43,9 @@ import { CardDetailPrintsSidebar } from './CardDetailPrintsSidebar';
 import { CardDetailRelatedTokens } from './CardDetailRelatedTokens';
 import { CardCollectionControls } from './CardCollectionControls';
 
+/** Scryfall layouts whose faces are printed on one physical side (never flip). */
+const SAME_SIDE_LAYOUTS = new Set(['split', 'aftermath', 'flip', 'adventure']);
+
 function CardDetailModal({
   card: initialCard,
   imageUrl,
@@ -66,16 +69,22 @@ function CardDetailModal({
   const { motionEnabled } = useVisualEffects();
   const [card, setCard] = useState<Card>(initialCard);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
+  const [isRotated, setIsRotated] = useState(false);
   const { prints, isLoading: isPrintsLoading } = useCardPrints(card, undefined, isToken);
   const [hoveredImageUrl, setHoveredImageUrl] = useState<string | null>(null);
   const [showPrintsSidebar, setShowPrintsSidebar] = useState(
     defaultShowPrints !== undefined ? defaultShowPrints : !isDeckCard && !hidePrintsSidebar
   );
 
-  // Sync card state when initialCard or imageUrl changes from parent
+  // Sync card state when the parent hands us a *different* card. Keyed on the id and
+  // not on `initialCard` itself on purpose: parents rebuild that object on every
+  // render, and depending on it would discard the locally selected printing
+  // (`card`) mid-interaction.
   useEffect(() => {
     setCard(initialCard);
     setCurrentImageUrl(imageUrl);
+    setIsRotated(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCard.id, imageUrl]);
 
   const copiesCount = useMemo(() => {
@@ -84,11 +93,14 @@ function CardDetailModal({
   }, [deckCards, initialCard.name, isDeckCard]);
 
   const hasArtChanged = useMemo(() => {
-    // Art changed if the internal card state has a selectedPrintId that differs from any pre-existing one
-    const currentPrintId = card.id; // handleSelectPrint sets card to the print's full data
-    const originalPrintId = initialCard.selectedPrintId || initialCard.id;
-    return currentPrintId !== originalPrintId;
-  }, [card.id, initialCard.id, initialCard.selectedPrintId]);
+    // Compare the *selected* printing on both sides. Using card.id alone left the
+    // button visible after applying (the committed card keeps the original id but
+    // carries the new print in selectedPrintId), so it looked like a second click
+    // was needed.
+    const currentPrintId = card.selectedPrintId || card.id;
+    const appliedPrintId = initialCard.selectedPrintId || initialCard.id;
+    return currentPrintId !== appliedPrintId;
+  }, [card.selectedPrintId, card.id, initialCard.id, initialCard.selectedPrintId]);
 
   // Token lightbox
   const [selectedToken, setSelectedToken] = useState<Card | null>(null);
@@ -96,8 +108,17 @@ function CardDetailModal({
   const { tokens: relatedTokens } = useCardRelatedTokensForCard(isToken ? null : card);
 
   const hasMultipleFaces = !!card.card_faces && card.card_faces.length > 1;
-  const faceImages = useMemo(() => getCardFaceImages(card), [card]);
+  // Layouts whose faces share a single physical image — they must never flip,
+  // regardless of whether a given printing happens to ship per-face images.
+  // Driven by `layout` (not image presence) so switching art can't misclassify
+  // a split card as double-faced.
+  const isSameSideLayout = !!card.layout && SAME_SIDE_LAYOUTS.has(card.layout);
+  const faceImages = useMemo(() => (isSameSideLayout ? null : getCardFaceImages(card)), [card, isSameSideLayout]);
   const [showBackFace, setShowBackFace] = useState(false);
+  // Split / aftermath / flip cards have several faces but a single physical
+  // image — they must not flip, and their text lives only in the faces.
+  const isSameSideMultiFace = hasMultipleFaces && (isSameSideLayout || !faceImages);
+  const canRotate = isSameSideMultiFace && (card.layout === 'split' || card.layout === 'aftermath');
 
   // Holographic foil sheen that tracks the cursor on rare & mythic cards.
   // CSS custom props are written straight to the DOM node so the pointer move
@@ -119,7 +140,8 @@ function CardDetailModal({
     foilRef.current?.style.setProperty('--holo-opacity', '0');
   };
 
-  const currentFace = hasMultipleFaces ? card.card_faces?.[showBackFace ? 1 : 0] : null;
+  // Only genuine double-faced cards adopt a single face; split cards show all.
+  const currentFace = faceImages && hasMultipleFaces ? card.card_faces?.[showBackFace ? 1 : 0] : null;
 
   const recursiveCard = useMemo(() => {
     if (!selectedToken) return null;
@@ -159,19 +181,20 @@ function CardDetailModal({
     setIsPreloading(true);
     let isMounted = true;
     const img = new Image();
+
+    const show = () => {
+      if (!isMounted) return;
+      setVisibleImageUrl(displayImageUrl);
+      setIsPreloading(false);
+    };
+
+    // Handlers before `src`: a cached image can finish loading during the assignment, and a
+    // handler attached afterwards never runs, leaving the previous art on screen.
+    img.onload = show;
+    img.onerror = show;
     img.src = displayImageUrl;
-    img.onload = () => {
-      if (isMounted) {
-        setVisibleImageUrl(displayImageUrl);
-        setIsPreloading(false);
-      }
-    };
-    img.onerror = () => {
-      if (isMounted) {
-        setVisibleImageUrl(displayImageUrl);
-        setIsPreloading(false);
-      }
-    };
+    if (img.complete) show();
+
     return () => {
       isMounted = false;
     };
@@ -181,6 +204,9 @@ function CardDetailModal({
     const imgUrl = getCardImageUrl(printCard);
     const updatedCard: Card = {
       ...printCard,
+      // `layout` is intrinsic to the card, not the printing — keep the current
+      // one if a print omits it, so split cards stay split after an art swap.
+      layout: printCard.layout ?? card.layout,
       selectedPrintId: printCard.id,
       selectedPrintImageUri: imgUrl
     };
@@ -198,6 +224,12 @@ function CardDetailModal({
       set: card.set,
       set_name: card.set_name,
       collector_number: card.collector_number,
+      // Carry the printing's language so the deck shows the chosen localized
+      // name/type/text (not just the new art).
+      printed_name: card.printed_name,
+      printed_type_line: card.printed_type_line,
+      printed_text: card.printed_text,
+      lang: card.lang,
       selectedPrintId: card.id, // the new print id
       selectedPrintImageUri: currentImageUrl // the resolved image URL
     };
@@ -245,11 +277,11 @@ function CardDetailModal({
           <div className="sm:hidden -mt-6 -mx-6 flex justify-center pt-2.5 pb-1" aria-hidden="true">
             <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-slate-700" />
           </div>
-          {/* × Close button — top right corner */}
+          {/* Desktop only: the phone sheet has a drag handle and closes on a tap outside. */}
           <button
             type="button"
             onClick={requestClose}
-            className="absolute top-3 right-3 z-10 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60"
+            className="absolute top-3 right-3 z-10 hidden sm:block text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60"
             aria-label={t('common.close')}
           >
             <FaTimes className="text-base" />
@@ -290,18 +322,19 @@ function CardDetailModal({
                     <img
                       src={visibleImageUrl}
                       alt={currentFace ? currentFace.name : card.name}
-                      className={`card-detail-image transition-all duration-200 ${
+                      style={isRotated ? { transform: 'rotate(90deg)' } : undefined}
+                      className={`card-detail-image transition-all duration-300 ${
                         isPreloading ? 'opacity-70 scale-[0.98] brightness-90' : 'opacity-100 scale-100'
                       }`}
                     />
                   )}
                   {foilEnabled && <div className="holo-foil" aria-hidden="true" />}
                 </div>
-                {hasMultipleFaces && (
+                {faceImages && hasMultipleFaces && (
                   <button
                     type="button"
                     onClick={() => setShowBackFace((prev) => !prev)}
-                    className="absolute top-4 left-4 z-20 p-3 rounded-full 
+                    className="absolute top-4 left-4 z-20 p-3 rounded-full
                       bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
                       text-white shadow-xl
                       transition-all duration-300 transform hover:scale-110 active:scale-95
@@ -311,6 +344,21 @@ function CardDetailModal({
                     <FaSync
                       className={`text-xl transition-transform duration-500 ${showBackFace ? '-rotate-180' : 'rotate-0'}`}
                     />
+                  </button>
+                )}
+                {canRotate && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRotated((prev) => !prev)}
+                    className="absolute top-4 left-4 z-20 p-3 rounded-full
+                      bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
+                      text-white shadow-xl
+                      transition-all duration-300 transform hover:scale-110 active:scale-95
+                      flex items-center justify-center opacity-80 hover:opacity-100"
+                    title={t('cardDetails.rotateAction')}
+                    aria-pressed={isRotated}
+                  >
+                    <FaRedo className="text-xl" />
                   </button>
                 )}
               </div>
@@ -323,6 +371,7 @@ function CardDetailModal({
                 currentFace={currentFace}
                 hidePriceAndLegality={hidePriceAndLegality}
                 isToken={isToken}
+                allFaces={isSameSideMultiFace ? card.card_faces : null}
               />
 
               {/* Related tokens section */}

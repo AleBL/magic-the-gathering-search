@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Scry from 'scryfall-sdk';
@@ -66,7 +67,7 @@ export function useDeckActions(showToast: ShowToastFn) {
                     });
                   }
                 } catch (tokenFetchError) {
-                  console.error('Failed to fetch related token for deck card:', tokenFetchError);
+                  logger.error('Failed to fetch related token for deck card:', tokenFetchError);
                 }
               })
             );
@@ -81,7 +82,7 @@ export function useDeckActions(showToast: ShowToastFn) {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch related tokens for added card:', error);
+        logger.error('Failed to fetch related tokens for added card:', error);
         showToast(t('common.relatedTokensLoadError'), 'error');
       }
     },
@@ -113,7 +114,7 @@ export function useDeckActions(showToast: ShowToastFn) {
     (cardToRemove: Card) => {
       const removedCard = removeCard(cardToRemove.id);
       if (removedCard) {
-        showToast(`${cardToRemove.name}: Removido`, 'info', {
+        showToast(`${cardToRemove.name}: ${t('cardDetails.cardRemoved')}`, 'info', {
           label: t('common.undo'),
           onClick: () => {
             handleAddToDeck(cardToRemove);

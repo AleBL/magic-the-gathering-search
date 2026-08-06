@@ -1,4 +1,4 @@
-import React from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaKeyboard, FaTimes } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
@@ -20,12 +20,34 @@ const SHORTCUTS: ShortcutRow[] = [
 ];
 
 /** Modal listing the playtest keyboard shortcuts, toggled with the "?" key. */
-export const PlaytestShortcutsOverlay: React.FC = () => {
+export function PlaytestShortcutsOverlay() {
   const { t } = useTranslation();
   const { isShortcutsOpen, setIsShortcutsOpen } = usePlaytestContext();
-  const closeOverlay = () => setIsShortcutsOpen(false);
+  const closeOverlay = useCallback(() => setIsShortcutsOpen(false), [setIsShortcutsOpen]);
   const dialogRef = useFocusTrap<HTMLDivElement>(isShortcutsOpen);
   useEscapeKey(closeOverlay, isShortcutsOpen);
+
+  /**
+   * Escape is also handled on the dialog node itself. `useEscapeKey` listens on window,
+   * and while the simulator is open something on the document path swallows a real
+   * Escape before it takes effect — a synthetic window keydown closes this overlay, a
+   * real keypress does not. Owning the key here makes dismissal independent of that.
+   * Attached through the ref rather than an onKeyDown prop so the dialog does not look
+   * like a non-interactive element with a keyboard handler.
+   */
+  useEffect(() => {
+    const node = dialogRef.current;
+    if (!node || !isShortcutsOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      closeOverlay();
+    };
+
+    node.addEventListener('keydown', handleKeyDown);
+    return () => node.removeEventListener('keydown', handleKeyDown);
+  }, [isShortcutsOpen, closeOverlay, dialogRef]);
 
   if (!isShortcutsOpen) return null;
 
@@ -85,4 +107,4 @@ export const PlaytestShortcutsOverlay: React.FC = () => {
       </div>
     </div>
   );
-};
+}

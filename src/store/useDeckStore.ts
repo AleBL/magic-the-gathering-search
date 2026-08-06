@@ -89,7 +89,9 @@ export type PendingAction =
   | 'import-deck-text'
   | 'import-deck-file'
   | 'edit-selected-deck'
-  | 'show-saved-decks';
+  | 'show-saved-decks'
+  | 'open-history'
+  | 'toggle-deck-list';
 
 const INITIAL_EDITING_STATE: EditingDeckState = {
   deckId: null,

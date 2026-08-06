@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FaMinus,
@@ -14,7 +13,7 @@ import {
 } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
 
-export const PlaytestControlBarTop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export function PlaytestControlBarTop({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const {
     handleUntapAll,
@@ -193,4 +192,4 @@ export const PlaytestControlBarTop: React.FC<{ onClose: () => void }> = ({ onClo
       </button>
     </div>
   );
-};
+}

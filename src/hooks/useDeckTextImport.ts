@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
@@ -65,7 +66,7 @@ export function useDeckTextImport(
         setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false }));
       }
     } catch (err: unknown) {
-      console.error('Failed to import deck from text:', err);
+      logger.error('Failed to import deck from text:', err);
       if (err instanceof Error && err.message === 'ScryfallOffline') {
         setErrorMsg(t('search.scryfallOffline'));
       } else if (err instanceof Error && err.message === 'ScryfallRateLimited') {

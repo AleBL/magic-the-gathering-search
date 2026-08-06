@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaFileAlt, FaTimes, FaCopy } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
@@ -6,7 +6,7 @@ import { dispatchToast } from '../../utils/toastHelper';
 import { useMountTransition } from '../../hooks/useMountTransition';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-export const PlaytestLog: React.FC = () => {
+export function PlaytestLog() {
   const { t } = useTranslation();
   const { isLogOpen, gameLog, setGameLog, setIsLogOpen } = usePlaytestContext();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -95,4 +95,4 @@ export const PlaytestLog: React.FC = () => {
       </div>
     </>
   );
-};
+}

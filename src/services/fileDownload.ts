@@ -1,8 +1,9 @@
+import { logger } from '../utils/logger';
 import { dispatchToast } from '../utils/toastHelper';
 import i18n from '../plugins/i18n';
 
 /** Triggers a browser download for the given Blob under `filename`. */
-function downloadBlob(blob: Blob, filename: string): void {
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -19,7 +20,7 @@ export function downloadAsJson(data: unknown, filename: string): void {
     const jsonString = JSON.stringify(data, null, 2);
     downloadBlob(new Blob([jsonString], { type: 'application/json' }), filename);
   } catch (error) {
-    console.error('Failed to download file:', error);
+    logger.error('Failed to download file:', error);
     dispatchToast(i18n.t('common.unexpectedError') as string, 'danger');
   }
 }
@@ -31,7 +32,7 @@ export function downloadAsText(text: string, filename: string, mimeType = 'text/
   try {
     downloadBlob(new Blob([text], { type: mimeType }), filename);
   } catch (error) {
-    console.error('Failed to download file:', error);
+    logger.error('Failed to download file:', error);
     dispatchToast(i18n.t('common.unexpectedError') as string, 'danger');
   }
 }

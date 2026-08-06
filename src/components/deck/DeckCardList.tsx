@@ -17,7 +17,6 @@ interface AnimatedDeckCardGroupProps {
   isRemovable: boolean;
   isTokenZone: boolean;
   onToggleCommander: (card: Card) => void;
-  onUpdateCardZone?: (cardId: string, zone: DeckZone) => void;
   onUpdateCard: (card: Card) => void;
   onAddToDeck: (card: Card) => void;
   onRemoveFromDeck: (card: Card) => void;
@@ -237,7 +236,6 @@ const DeckCardList = memo(function DeckCardList({
                 isRemovable={isRemovable}
                 isTokenZone={isTokenZone}
                 onToggleCommander={onToggleCommander}
-                onUpdateCardZone={onUpdateCardZone}
                 onUpdateCard={handleUpdateCardPrint}
                 onAddToDeck={onAddToDeck}
                 onRemoveFromDeck={onRemoveFromDeck}

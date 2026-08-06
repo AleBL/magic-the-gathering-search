@@ -1,10 +1,9 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSkull, FaBan } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
-import PileExplorerModal from '../PileExplorerModal';
-import ScrySurveilModal from '../ScrySurveilModal';
-import { PlaytestTokenModal } from '../PlaytestTokenModal';
+import PileExplorerModal from './PileExplorerModal';
+import ScrySurveilModal from './ScrySurveilModal';
+import { PlaytestTokenModal } from './PlaytestTokenModal';
 import CardDetailModal from '../card/CardDetailModal';
 import { PlaytestCard } from '../../types/Playtest';
 import { DeckRelatedToken } from '../../types/Deck';
@@ -13,7 +12,7 @@ import { PLAYTEST_CARD_DETAIL_Z_INDEX } from '../../constants';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-export const PlaytestModals: React.FC<{ deckRelatedTokens: DeckRelatedToken[] }> = ({ deckRelatedTokens }) => {
+export function PlaytestModals({ deckRelatedTokens }: { deckRelatedTokens: DeckRelatedToken[] }) {
   const { t } = useTranslation();
   const {
     contextMenu,
@@ -428,4 +427,4 @@ export const PlaytestModals: React.FC<{ deckRelatedTokens: DeckRelatedToken[] }>
       )}
     </>
   );
-};
+}
