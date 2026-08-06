@@ -1,5 +1,6 @@
 import { Card } from '../types/Card';
-import { DeckZone } from '../types/enums';
+import { Deck } from '../types/Deck';
+import { DeckFormatType, DeckZone } from '../types/enums';
 import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
 
@@ -31,6 +32,38 @@ const fetchCollectionWithRetry = async (
 
   // Unreachable: the loop always returns within MAX_RATE_LIMIT_RETRIES + 1 iterations.
   throw new Error('ScryfallRateLimited');
+};
+
+/**
+ * Reads an exported `.json` deck file. Accepts both shapes the app writes: a single deck,
+ * and the array produced by "export all decks" — which was previously rejected on import,
+ * so those files could be written but never read back.
+ *
+ * Ids are reissued so importing never overwrites a deck already in the profile. Returns
+ * null if any entry is malformed: a file that half-imports is worse than one that refuses.
+ */
+export const parseDeckJson = (content: string): Deck[] | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+
+  const candidates = Array.isArray(parsed) ? parsed : [parsed];
+  if (candidates.length === 0) return null;
+
+  // Every deck in one file would otherwise share a millisecond, and `put` would leave only
+  // the last one standing. The offset keeps ids unique without changing their shape.
+  const baseId = Date.now();
+
+  return candidates.reduce<Deck[] | null>((decks, candidate, index) => {
+    if (!decks) return null;
+    const deck = candidate as Deck | null;
+    if (!deck || typeof deck.name !== 'string' || !deck.name || !Array.isArray(deck.cards)) return null;
+    decks.push({ ...deck, id: String(baseId + index), format: deck.format || DeckFormatType.FREEFORM });
+    return decks;
+  }, []);
 };
 
 export interface ParseResult {

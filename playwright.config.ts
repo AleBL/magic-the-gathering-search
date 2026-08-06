@@ -9,6 +9,10 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
+  // `*.bench.ts` files measure rather than assert: slow by design, and a number that moved
+  // is not a failure. They fall outside Playwright's default `*.spec.ts` match, so only
+  // `yarn test:e2e:bench` (which sets BENCH) picks them up.
+  testMatch: process.env.BENCH ? '**/*.bench.ts' : '**/*.spec.ts',
   // Journeys drive real UI; a single slow step should not fail the whole run.
   timeout: 30_000,
   expect: { timeout: 10_000 },
@@ -50,7 +54,11 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `yarn dev:web --port ${PORT} --strictPort`,
+    // Benchmarks against the dev server measure React's development build, which carries
+    // checks production strips. BENCH_PROD serves the real bundle instead.
+    command: process.env.BENCH_PROD
+      ? `yarn build:web && npx vite preview --config vite.config.web.ts --port ${PORT} --strictPort`
+      : `yarn dev:web --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 180_000

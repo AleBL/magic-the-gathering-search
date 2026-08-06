@@ -163,6 +163,7 @@ const pt = {
       deckCleared: 'Deck limpo.',
       deckExported: 'Deck exportado com sucesso!',
       deckImported: 'Deck importado com sucesso!',
+      decksImported: '{{count}} decks importados com sucesso!',
       deckDuplicated: 'Deck duplicado!',
       duplicateDeck: 'Duplicar deck',
       newDeckFromThis: 'Novo deck a partir deste',

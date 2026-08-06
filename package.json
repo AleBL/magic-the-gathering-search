@@ -42,10 +42,12 @@
     "i18n:check": "node scripts/i18n-check.mjs --ci",
     "deps:update": "taze major -I",
     "test:e2e": "playwright test",
+    "test:e2e:bench": "BENCH=1 playwright test --workers=1 --reporter=list bench",
     "test:e2e:ui": "playwright test --ui",
     "deadcode": "knip"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.9",
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
     "i18next": "^24.2.3",

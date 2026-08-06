@@ -164,6 +164,7 @@ const es = {
       deckCleared: 'Mazo limpiado.',
       deckExported: '¡Mazo exportado con éxito!',
       deckImported: '¡Mazo importado con éxito!',
+      decksImported: '¡{{count}} mazos importados con éxito!',
       deckDuplicated: '¡Mazo duplicado!',
       duplicateDeck: 'Duplicar mazo',
       newDeckFromThis: 'Nuevo mazo a partir de este',

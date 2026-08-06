@@ -10,7 +10,7 @@ import { useCollectionSettings } from '../../store/useCollectionSettings';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import { clearCollection } from '../../services/collectionService';
 import CardFilterBar from '../card/CardFilterBar';
-import CardGrid from '../card/CardGrid';
+import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
 import CardSizeSelector from '../card/CardSizeSelector';
 import EmptyState from '../ui/EmptyState';
 import CardSkeleton from '../card/CardSkeleton';
@@ -34,6 +34,7 @@ function CollectionManager() {
   const { dialogState, showConfirm, closeDialog } = useDialog();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Sets present in the current view, for the set dropdown.
   const availableSets = useMemo(() => {
@@ -88,7 +89,7 @@ function CollectionManager() {
 
   return (
     <div className="workspace-container">
-      <div className="workspace-body">
+      <div ref={scrollRef} className="workspace-body">
         <div className="flex flex-col gap-4 p-4">
           <div className="panel-header relative z-10 flex-col items-start gap-3 md:flex-row md:items-center">
             <h2 className="text-gray-900 dark:text-white text-xl font-serif font-semibold flex items-center gap-2">
@@ -200,7 +201,13 @@ function CollectionManager() {
               ))}
             </div>
           ) : cards.length > 0 ? (
-            <CardGrid cards={cards} size={cardSize} showCollectionControls showPrintingBadge />
+            <VirtualizedCardGrid
+              cards={cards}
+              size={cardSize}
+              scrollRef={scrollRef}
+              showCollectionControls
+              showPrintingBadge
+            />
           ) : (
             <EmptyState
               icon={view === 'wishlist' ? <FaHeart /> : <FaBoxOpen />}

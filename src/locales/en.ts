@@ -163,6 +163,7 @@ const en = {
       deckCleared: 'Deck cleared.',
       deckExported: 'Deck exported successfully!',
       deckImported: 'Deck imported successfully!',
+      decksImported: '{{count}} decks imported successfully!',
       deckDuplicated: 'Deck duplicated!',
       duplicateDeck: 'Duplicate deck',
       newDeckFromThis: 'New deck from this',
