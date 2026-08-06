@@ -16,6 +16,7 @@ import {
   ImportProgressData
 } from '../services/deckImportService';
 import { saveDeckSnapshotIfChanged, saveDeckSnapshot } from '../services/deckVersionService';
+import { requestPersistenceOnce } from '../services/storagePersistence';
 import { DecodedShareDeck, decodeShareString, parseDeckFileContent } from '../services/deckShare';
 
 export default function useDeckManager(
@@ -92,6 +93,9 @@ export default function useDeckManager(
       return { success: false, errorKey: 'deck.saveError' };
     }
     await snapshotQuietly(newDeck);
+    // Asked here rather than on boot: the browser only grants persistent storage to an
+    // origin the user has engaged with, and there is nothing to protect until now.
+    void requestPersistenceOnce();
     setDeckName('');
     setShowSaveDialog(false);
     return { success: true, createdDeck: newDeck };

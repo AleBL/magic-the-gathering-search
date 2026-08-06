@@ -668,6 +668,34 @@ const es = {
       viewGraveyard: 'Ver Cementerio',
       viewLibrary: 'Ver Biblioteca'
     },
+    backup: {
+      title: 'Copia de seguridad',
+      description:
+        'Tus mazos, colección, historial de versiones y ajustes existen solo en este navegador. La copia es un único archivo que puedes guardar en otro sitio.',
+      storageUsed: 'Espacio usado',
+      persistence: 'Almacenamiento protegido',
+      persistenceOn: 'Activo',
+      persistenceOff: 'Inactivo',
+      persistenceHint: 'Sin él, el navegador puede borrar estos datos por su cuenta cuando falte espacio en disco.',
+      enablePersistence: 'Pedir al navegador que los conserve',
+      persistenceGranted: 'El navegador conservará tus datos',
+      persistenceDenied: 'El navegador lo rechazó. Exporta una copia en su lugar.',
+      persistenceUnsupported: 'Este navegador no admite almacenamiento protegido',
+      unavailable: 'No disponible',
+      export: 'Exportar copia',
+      exported: 'Copia guardada',
+      exportFailed: 'No se pudo crear la copia',
+      chooseFile: 'Restaurar desde un archivo',
+      invalidFile: 'Este no es un archivo de copia de Deck Forge',
+      fileSummary: 'Copia del {{date}} — {{decks}} mazos, {{cards}} entradas de colección.',
+      merge: 'Añadir a lo que tengo',
+      mergeHint: 'No se borra ni se sobrescribe nada. Las copias que ya tienes conservan la cantidad mayor.',
+      replace: 'Reemplazar todo',
+      replaceHint: 'Borra antes tus mazos, colección e historial actuales.',
+      replaceConfirm: 'Sí, borrar y reemplazar',
+      restored: '{{decks}} mazos y {{cards}} entradas de colección restaurados',
+      restoreFailed: 'No se restauró nada — tus datos siguen igual'
+    },
     strategy: {
       aboutApp: 'Acerca de',
       appDescription:

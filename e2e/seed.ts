@@ -61,5 +61,31 @@ export async function seedCollection(page: Page, count: number) {
   }, count);
 }
 
+export async function seedDecks(page: Page, names: string[]) {
+  await page.evaluate(async (deckNames) => {
+    const database: IDBDatabase = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('MagicDecksDB');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction('decks', 'readwrite');
+      const store = transaction.objectStore('decks');
+      deckNames.forEach((name, index) => {
+        store.put({
+          id: `seed-deck-${index}`,
+          name,
+          format: 'freeform',
+          cards: [],
+          createdAt: new Date(2026, 0, index + 1).toISOString()
+        });
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }, names);
+}
+
 /** CardGrid and VirtualizedCardGrid both render one wrapper per card under a `card-grid-*`. */
 export const CARD_SELECTOR = '[class*="card-grid-"] > div.animate-fadeIn';

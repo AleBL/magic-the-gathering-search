@@ -664,6 +664,34 @@ const pt = {
       viewGraveyard: 'Ver Cemitério',
       viewLibrary: 'Ver Grimório'
     },
+    backup: {
+      title: 'Backup',
+      description:
+        'Seus decks, coleção, histórico de versões e configurações existem somente neste navegador. O backup é um arquivo único que você pode guardar em outro lugar.',
+      storageUsed: 'Espaço usado',
+      persistence: 'Armazenamento protegido',
+      persistenceOn: 'Ativo',
+      persistenceOff: 'Inativo',
+      persistenceHint: 'Sem ele, o navegador pode apagar esses dados sozinho quando faltar espaço em disco.',
+      enablePersistence: 'Pedir ao navegador para preservar',
+      persistenceGranted: 'O navegador vai preservar seus dados',
+      persistenceDenied: 'O navegador recusou. Exporte um backup no lugar.',
+      persistenceUnsupported: 'Este navegador não suporta armazenamento protegido',
+      unavailable: 'Indisponível',
+      export: 'Exportar backup',
+      exported: 'Backup salvo',
+      exportFailed: 'Não foi possível criar o backup',
+      chooseFile: 'Restaurar de um arquivo',
+      invalidFile: 'Este não é um arquivo de backup do Deck Forge',
+      fileSummary: 'Backup de {{date}} — {{decks}} decks, {{cards}} itens da coleção.',
+      merge: 'Adicionar ao que eu tenho',
+      mergeHint: 'Nada é apagado nem sobrescrito. Cópias que você já tem ficam com a maior quantidade.',
+      replace: 'Substituir tudo',
+      replaceHint: 'Apaga antes seus decks, coleção e histórico atuais.',
+      replaceConfirm: 'Sim, apagar e substituir',
+      restored: '{{decks}} decks e {{cards}} itens da coleção restaurados',
+      restoreFailed: 'Nada foi restaurado — seus dados continuam como estavam'
+    },
     strategy: {
       aboutApp: 'Sobre',
       appDescription:

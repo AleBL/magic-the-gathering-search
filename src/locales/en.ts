@@ -662,6 +662,34 @@ const en = {
       viewGraveyard: 'View Graveyard',
       viewLibrary: 'View Library'
     },
+    backup: {
+      title: 'Backup',
+      description:
+        'Your decks, collection, version history and settings live only in this browser. A backup is a single file you can keep somewhere else.',
+      storageUsed: 'Storage used',
+      persistence: 'Protected storage',
+      persistenceOn: 'On',
+      persistenceOff: 'Off',
+      persistenceHint: 'Without it, the browser may delete this data on its own when disk space runs low.',
+      enablePersistence: 'Ask the browser to keep it',
+      persistenceGranted: 'The browser will keep your data',
+      persistenceDenied: 'The browser declined. Export a backup instead.',
+      persistenceUnsupported: 'This browser does not support protected storage',
+      unavailable: 'Unavailable',
+      export: 'Export backup',
+      exported: 'Backup saved',
+      exportFailed: 'Could not create the backup',
+      chooseFile: 'Restore from a file',
+      invalidFile: 'That is not a Deck Forge backup file',
+      fileSummary: 'Backup from {{date}} — {{decks}} decks, {{cards}} collection entries.',
+      merge: 'Add to what I have',
+      mergeHint: 'Nothing is deleted or overwritten. Copies you own are kept at the higher count.',
+      replace: 'Replace everything',
+      replaceHint: 'Deletes your current decks, collection and history first.',
+      replaceConfirm: 'Yes, delete and replace',
+      restored: 'Restored {{decks}} decks and {{cards}} collection entries',
+      restoreFailed: 'Nothing was restored — your data is unchanged'
+    },
     strategy: {
       aboutApp: 'About',
       appDescription:
