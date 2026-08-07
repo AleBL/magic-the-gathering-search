@@ -15,10 +15,16 @@ async function capturedQuery(page: Page, act: () => Promise<void>) {
   return url.searchParams.get('q') ?? '';
 }
 
-const openAdvanced = async (page: Page) => {
-  await page.getByRole('button', { name: 'Advanced Filters' }).click();
+/**
+ * Waiting for `aria-expanded` is what makes the fields safe to type into: it only flips once
+ * React has rendered the open panel, so a `fill` cannot land on an input whose onChange is not
+ * attached yet. A controlled input swallows that keystroke silently and the search then goes
+ * out with no filter at all — which is exactly how this used to fail under load.
+ */
+const openAdvanced = async (page: Page, labels = { panel: 'Advanced Filters', section: 'Text & stats' }) => {
+  await page.getByRole('button', { name: labels.panel }).click();
   // The section opens expanded, so clicking unconditionally would close it.
-  const disclosure = page.getByRole('button', { name: 'Text & stats' });
+  const disclosure = page.getByRole('button', { name: labels.section });
   await expect(disclosure).toBeVisible();
   if ((await disclosure.getAttribute('aria-expanded')) !== 'true') await disclosure.click();
   await expect(disclosure).toHaveAttribute('aria-expanded', 'true');
@@ -144,10 +150,13 @@ test.describe('search language', () => {
   test('sends the browsing language alongside the text filter', async ({ appPage }) => {
     await appPage.addInitScript(() => window.localStorage.setItem('deckforge_language', 'pt'));
     await appPage.goto('/');
-    await appPage.getByRole('button', { name: 'Filtros Avançados' }).click();
+    await openAdvanced(appPage, { panel: 'Filtros Avançados', section: 'Texto e atributos' });
 
     const query = await capturedQuery(appPage, async () => {
-      await appPage.getByLabel('Contém o texto').fill('voar');
+      const field = appPage.getByLabel('Contém o texto');
+      await field.fill('voar');
+      // The field is controlled: if React reverts it, the search would go out unfiltered.
+      await expect(field).toHaveValue('voar');
       await appPage.keyboard.press('Escape');
       await appPage.getByRole('button', { name: 'Buscar', exact: true }).click();
     });

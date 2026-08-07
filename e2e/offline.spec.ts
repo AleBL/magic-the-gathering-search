@@ -15,6 +15,15 @@ import { seedCollection, CARD_SELECTOR } from './seed';
  * to the app; `setOffline` is what `navigator.onLine` and the indicator read.
  */
 async function goOffline(page: Page) {
+  // Let the module graph finish arriving first. Under `vite dev` a lazy tab is served as many
+  // separate requests, and one still in flight when the connection drops rejects for good —
+  // `React.lazy` caches the rejection, so the whole section renders its error boundary and the
+  // journey fails looking for a control that no longer exists. Waiting for an element to be
+  // visible is not enough: it appears while the rest of the graph is still loading. This is the
+  // one place `networkidle` is the right tool, because the network settling is literally the
+  // precondition. In production the chunk is one precached file and none of this applies.
+  await page.waitForLoadState('networkidle');
+
   await page.route('**/api.scryfall.com/**', (route) => route.abort('internetdisconnected'));
   await page.context().setOffline(true);
   // Wait for the app to have *noticed*: several of these paths branch on `navigator.onLine`,
@@ -51,7 +60,10 @@ test.describe('offline', () => {
     await appPage.getByRole('button', { name: 'Add copy' }).first().click();
     await appPage.getByRole('button', { name: 'My Decks' }).click();
 
-    const deckRow = appPage.locator('.deck-list-compact > *').first();
+    // The row's own interactive element, not the wrapper around it. `.deck-list-compact > *`
+    // resolves to the div carrying the list's enter/leave animation, which is replaced as the
+    // animation settles — Playwright kept losing it mid-click and retrying until the timeout.
+    const deckRow = appPage.getByRole('button', { name: 'Lightning Bolt' }).first();
     await expect(deckRow).toBeVisible();
 
     await goOffline(appPage);
