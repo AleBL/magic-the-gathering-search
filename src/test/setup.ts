@@ -11,11 +11,16 @@ afterEach(() => {
   cleanup();
 });
 
-// TODO(test-coverage): the coverage gate in vitest.config.ts now spans the whole
-// logic layer (utils/services/store/hooks), so the gaps below show up as real
-// numbers rather than being excluded from the denominator. Highest value first:
-//   - hooks: useDeckManager, useDeckActions, useDeckTextImport, useCardSearch,
-//     useSearchFilters, useShortcuts, and playtest undo/redo + mulligan flows
+// TODO(test-coverage): the coverage gate in vitest.config.ts spans the whole logic
+// layer (utils/services/store/hooks), so the gaps below show up as real numbers
+// rather than being excluded from the denominator.
+//
+// Covered 2026-08-06: useSearchFilters, useShortcuts, useDeckTextImport,
+// useCardPrints, useAnimatedList, useEscapeKey — hooks went 31% → 42% statements.
+// Still open, highest value first:
+//   - hooks: useDeckManager, useDeckActions, useCardSearch, useDeckTokens,
+//     useProxyPrint, and playtest undo/redo + mulligan flows
 //   - services: deckImportService, fileDownload
-//   - utils: cardTypePredicates, formatLabel, contextMenuPosition, rippleEffect
+//   - utils: cardTypePredicates, formatLabel, contextMenuPosition, rippleEffect,
+//     deckImage (24%, the largest single gap left)
 //   - deckValidator's commander partnership / color-identity branches

@@ -25,11 +25,13 @@ export default defineConfig({
       // Ratchet, set just under the measured value at the time of writing. These read
       // lower than the old numbers only because the denominator is now ~4x larger.
       // Raise them as tests land; never widen the gap to make a red run pass.
+      // Raised 2026-08-06 (was 50/44/48/50) after covering the hook layer: 59.47/53.22/59.65/
+      // 59.99 measured, each floor set just under it.
       thresholds: {
-        statements: 50,
-        branches: 44,
-        functions: 48,
-        lines: 50
+        statements: 59,
+        branches: 53,
+        functions: 59,
+        lines: 59
       }
     }
   }
