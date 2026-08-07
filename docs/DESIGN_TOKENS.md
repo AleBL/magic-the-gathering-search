@@ -175,7 +175,7 @@ Named stacking layers — always reference a token, never a raw number.
 | `--z-overlay` | `250` | Modal overlays (dim background) |
 | `--z-dialog` | `300` | Alert/confirm dialogs |
 | `--z-toast` | `400` | Toast notifications |
-| `--z-header` | `2000` | Sticky app header |
+| `--z-header` | `150` | Sticky app header — above page content and dropdowns, but **below** `--z-overlay` so modal backdrops dim it. Its own dropdowns stack inside the header's context |
 | `--z-preview` | `9999` | Floating card preview |
 | `--z-playtest` | `99999` | Fullscreen playtest overlay (own stacking context) |
 | `--z-playtest-dialog` | `3000` | Prompts / pile explorer inside playtest |

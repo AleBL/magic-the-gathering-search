@@ -111,6 +111,17 @@ DeckStats Component
 | PileExplorerModal | Click pile stat in DeckStats | Deep-dive card grouping by type |
 | AppShortcutsOverlay | Press Cmd+? | Display keyboard shortcuts |
 | CommandPalette | Press Cmd+K | Quick actions (save, playtest, export) |
+| DeckCoverModal | Deck box → cover picker | Choose which card's art represents the deck |
+| DeckVersionHistoryModal | Deck actions → history | Restore or compare past snapshots |
+| DeckSuggestionsModal | Deck actions → suggestions | Cards that fit the deck being edited |
+| DeckStatsModal | Deck actions → stats | All analysis panels in a wide modal |
+| AllDecksModal | "View all decks" | Grid of every saved deck |
+| DeckTextImportModal | Import / Export → text | Paste an Arena/.DEC list |
+| BottomSheet | Filters on a phone | Drag-to-close sheet; body scrolls, handle stays |
+
+Every modal traps focus (`useFocusTrap`), is dismissed by Escape (`useEscapeKey`) and carries
+`role="dialog"` + `aria-modal`. Escape is read from a ref so one dialog's re-render cannot
+unhook another's listener mid-dispatch.
 
 ## Data Flow: Add Card to Deck
 

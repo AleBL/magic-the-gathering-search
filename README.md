@@ -11,8 +11,15 @@ Search Magic: The Gathering cards, build and manage decks with [Scryfall](https:
 - **Personal Collection** — Track how many copies of each printing you own, plus a wishlist, and filter search results by ownership. Virtualized rendering keeps thousands of entries smooth.
 - **Per-Copy Printings** — Each copy in a deck is its own entry, so four copies of a card can carry four different editions without merging.
 - **Profile Backup & Restore** — Export decks, collection, version history, and settings as a single JSON envelope, and restore it by replacing or merging.
-- **Goldfish Mana Simulation** — Plays the deck alone a thousand times to report mulligan rate, mana screw, turns with a play, and the median turn you reach 3/4/5 lands — answering what the closed-form probability panels cannot.
+- **Turn-by-Turn Simulation** — Plays the deck alone a thousand times through turn 8, taking London mulligans and tracking colors in play, to report mulligan rate, how often you stall on two lands, turns with a castable play, and the median turn you reach 3/4/5 lands. Complements the Deck Doctor, which scores the opening hand instead.
 - **Honest Offline Behaviour** — When the network is gone the app says so, instead of showing an empty result that reads as "nothing found".
+- **Two-Pane Deck Editor** — Build with search and decklist side by side, dragging results straight into the deck.
+- **Deck Version History** — Every save snapshots the deck; browse past versions with a summary of what changed and restore any of them.
+- **Deck Doctor & Card Suggestions** — A consistency score with colour-source diagnosis, plus suggestions that fit the deck being edited.
+- **Budget Planner** — Estimate deck price and get a cut list to reach a target budget.
+- **Shareable Deck Image** — Render the decklist as a PNG with hero art and stats.
+- **Deck Box Covers** — Pick which card's art represents each deck.
+- **Isolated Error Recovery** — A failing section renders its own retry instead of taking the whole app down.
 - **Card Art & Printing Selector** — Select alternative printings, sets, and artist illustrations for cards directly from the details modal, updating the specific card artwork inside your deck list.
 - **Deck Builder & Organizer** — Add, remove, edit, and organize cards in a dedicated workspace deck.
 - **Deck Manager** — Save, load, edit, import, and export decks locally via IndexedDB or JSON files (MTG Arena and `.DEC` file exports included).
@@ -116,6 +123,7 @@ npm run lint           # ESLint + Prettier auto-fix
 npm run type-check     # TypeScript type check only
 npm run i18n:check     # verify en/es/pt share the same key set
 npm run deadcode       # unused files/exports/dependencies (knip)
+npm run seed:profile   # generate a demo profile (7 decks + collection) to import via Backup
 npm run deps:update    # interactive major dependency updates (taze)
 npm run clean          # remove build output folders
 ```
