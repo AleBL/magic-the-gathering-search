@@ -472,6 +472,22 @@ const pt = {
       landsAvailable: 'Fontes',
       manaBaseExplanation:
         'Esta análise calcula a quantidade ideal de fontes de mana colorida com base nos símbolos exigidos pelas cartas no deck. Utiliza um modelo matemático proporcional à sua devoção.',
+      goldfish: 'Simulação Solitária',
+      goldfishRerun: 'Simular de novo',
+      goldfishExplanation:
+        'Joga o deck sozinho {{runs}} vezes até o turno {{turns}}, usando mulligan de Londres. Responde o que os painéis de probabilidade não alcançam: quais mãos são mantidas e com que frequência você tem jogada.',
+      goldfishMulligan: 'Taxa de mulligan',
+      goldfishScrew: 'Travado até o T4',
+      goldfishOnCurve: 'Turnos com jogada',
+      goldfishKeptHands: 'Mãos mantidas',
+      goldfishHandOf: '{{size}} cartas',
+      goldfishLandMilestones: 'Terrenos em jogo',
+      goldfishLandsCount: '{{lands}} terrenos',
+      goldfishByTurn: 'turno {{turn}} · {{share}}% dos jogos',
+      goldfishNeverReached: 'raramente atingido',
+      goldfishCaveat:
+        'O texto das cartas não é lido, então aceleração, rituais, compra e terrenos que entram virados contam como cartas comuns. Leia como o mana se comporta, não como o deck joga.',
+      goldfishTooSmall: 'Adicione ao menos sete cartas para simular uma mão inicial.',
       manaBaseOptimizer: 'Otimizador de Base de Mana',
       manaBaseWarning:
         'Aviso: Adicionar estes terrenos fará o deck ter {{finalSize}} cartas (limite de {{limit}}). Recomendamos remover {{removeCount}} mágicas para otimizar o deck.',

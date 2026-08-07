@@ -471,6 +471,22 @@ const en = {
       landsAvailable: 'Sources',
       manaBaseExplanation:
         'Analyze colors in your spells and auto-add basic lands to reach a solid {{target}} lands ratio.',
+      goldfish: 'Goldfish Simulation',
+      goldfishRerun: 'Simulate again',
+      goldfishExplanation:
+        'Plays the deck alone {{runs}} times through turn {{turns}}, taking London mulligans. Answers what the odds panels cannot: which hands get kept, and how often you have a play.',
+      goldfishMulligan: 'Mulligan rate',
+      goldfishScrew: 'Screwed by T4',
+      goldfishOnCurve: 'Turns with a play',
+      goldfishKeptHands: 'Hands kept',
+      goldfishHandOf: '{{size}} cards',
+      goldfishLandMilestones: 'Lands in play',
+      goldfishLandsCount: '{{lands}} lands',
+      goldfishByTurn: 'turn {{turn}} · {{share}}% of games',
+      goldfishNeverReached: 'rarely reached',
+      goldfishCaveat:
+        'Card text is not read, so ramp, rituals, card draw and lands that enter tapped count as ordinary cards. Read it as how the mana behaves, not how the deck plays.',
+      goldfishTooSmall: 'Add at least seven cards to simulate an opening hand.',
       manaBaseOptimizer: 'Mana Base Optimizer',
       manaBaseWarning:
         'Warning: Adding these lands will make the deck have {{finalSize}} cards (limit {{limit}}). We suggest removing {{removeCount}} non-land cards to keep the deck optimized.',

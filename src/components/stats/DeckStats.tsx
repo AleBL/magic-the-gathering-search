@@ -13,6 +13,7 @@ import { ManaPipAnalysisPanel } from '../stats/ManaPipAnalysisPanel';
 import { BudgetEstimatorPanel } from '../stats/BudgetEstimatorPanel';
 import { RarityPanel } from '../stats/RarityPanel';
 import { DeckDoctorPanel } from '../stats/DeckDoctorPanel';
+import { GoldfishPanel } from '../stats/GoldfishPanel';
 
 interface DeckStatsProps {
   currentDeck: Card[];
@@ -50,6 +51,12 @@ function DeckStats({ currentDeck, onApplySuggestedLands, renderFilteredCards }: 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6 text-left">
         <ManaBaseOptimizerPanel stats={stats} onApplySuggestedLands={onApplySuggestedLands} />
         <ManaPipAnalysisPanel stats={stats} colorLabels={colorLabels} />
+        {/* Next to the two analytic mana panels, since it answers the same question by the
+            one method they cannot: actually playing the deck out. */}
+        <GoldfishPanel currentDeck={currentDeck} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6 text-left">
         <BudgetEstimatorPanel stats={stats} />
       </div>
 

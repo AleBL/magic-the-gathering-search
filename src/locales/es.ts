@@ -477,6 +477,22 @@ const es = {
       landsAvailable: 'Fuentes',
       manaBaseExplanation:
         'Este análisis calcula la cantidad ideal de fuentes de maná de color basado en los símbolos necesarios por las cartas del mazo. Utiliza un modelo matemático proporcional a tu devoción.',
+      goldfish: 'Simulación en Solitario',
+      goldfishRerun: 'Simular de nuevo',
+      goldfishExplanation:
+        'Juega el mazo en solitario {{runs}} veces hasta el turno {{turns}}, con mulligan de Londres. Responde lo que los paneles de probabilidad no alcanzan: qué manos se quedan y con qué frecuencia tienes jugada.',
+      goldfishMulligan: 'Tasa de mulligan',
+      goldfishScrew: 'Atascado en el T4',
+      goldfishOnCurve: 'Turnos con jugada',
+      goldfishKeptHands: 'Manos conservadas',
+      goldfishHandOf: '{{size}} cartas',
+      goldfishLandMilestones: 'Tierras en juego',
+      goldfishLandsCount: '{{lands}} tierras',
+      goldfishByTurn: 'turno {{turn}} · {{share}}% de las partidas',
+      goldfishNeverReached: 'rara vez alcanzado',
+      goldfishCaveat:
+        'No se lee el texto de las cartas, así que aceleración, rituales, robo y tierras que entran giradas cuentan como cartas normales. Léelo como se comporta el maná, no como juega el mazo.',
+      goldfishTooSmall: 'Añade al menos siete cartas para simular una mano inicial.',
       manaBaseOptimizer: 'Optimizador de Base de Maná',
       manaBaseWarning:
         'Aviso: Agregar estas tierras hará que el mazo tenga {{finalSize}} cartas (límite de {{limit}}). Recomendamos quitar {{removeCount}} hechizos para optimizar su mazo.',

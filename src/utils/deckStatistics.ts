@@ -37,6 +37,35 @@ export function isLandCard(card: Card): boolean {
 }
 
 /**
+ * Which colors a land produces. Basics are matched by name (localized decks keep their
+ * printed names), everything else falls back to color identity and then to the reminder-free
+ * "{T}: Add {X}" line. Returns an empty list for non-lands.
+ *
+ * Approximate by construction: a fetchland reads as its own identity rather than what it
+ * finds, and a land that only produces conditionally still counts. Good enough to answer
+ * "can I cast this on curve", not a rules engine.
+ */
+export function landProducedColors(card: Card): ManaColor[] {
+  if (!isLandCard(card)) return [];
+
+  const name = card.name.toLowerCase();
+  if (name.includes('plains') || name.includes('planície')) return ['W'];
+  if (name.includes('island') || name.includes('ilha')) return ['U'];
+  if (name.includes('swamp') || name.includes('pântano')) return ['B'];
+  if (name.includes('mountain') || name.includes('montanha')) return ['R'];
+  if (name.includes('forest') || name.includes('floresta')) return ['G'];
+  if (name.includes('wastes') || name.includes('ermo')) return ['C'];
+
+  if (card.color_identity?.length) {
+    return card.color_identity.filter((color): color is ManaColor => MANA_COLORS.includes(color as ManaColor));
+  }
+
+  const oracleText = card.oracle_text?.toLowerCase() || '';
+  if (!oracleText) return [];
+  return MANA_COLORS.filter((color) => oracleText.includes(`{t}: add {${color.toLowerCase()}}`));
+}
+
+/**
  * Every non-land face's mana cost, combined into one string. Scryfall leaves
  * the top-level `mana_cost` empty for double-faced cards — it only lives per
  * face — so color/pip requirements have to be read from `card_faces`. Both
@@ -358,36 +387,9 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
   // 7. Land Color Counter for Mana Pip Analysis
   const landColorCounts: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   currentDeck.forEach((card) => {
-    if (!isLandCard(card)) return;
-
-    const name = card.name.toLowerCase();
-    const oracleText = card.oracle_text?.toLowerCase() || '';
-
-    // Check basic lands first (Wastes/Ermos is the colorless basic)
-    if (name.includes('plains') || name.includes('planície')) landColorCounts.W += 1;
-    else if (name.includes('island') || name.includes('ilha')) landColorCounts.U += 1;
-    else if (name.includes('swamp') || name.includes('pântano')) landColorCounts.B += 1;
-    else if (name.includes('mountain') || name.includes('montanha')) landColorCounts.R += 1;
-    else if (name.includes('forest') || name.includes('floresta')) landColorCounts.G += 1;
-    else if (name.includes('wastes') || name.includes('ermo')) landColorCounts.C += 1;
-    else {
-      // Non-basic lands: check color_identity first
-      if (card.color_identity && card.color_identity.length > 0) {
-        card.color_identity.forEach((color) => {
-          if (color in landColorCounts) {
-            landColorCounts[color as ManaColor] += 1;
-          }
-        });
-      } else if (oracleText) {
-        // Fallback to searching oracle text ({C} covers colorless utility lands)
-        if (oracleText.includes('{t}: add {w}')) landColorCounts.W += 1;
-        if (oracleText.includes('{t}: add {u}')) landColorCounts.U += 1;
-        if (oracleText.includes('{t}: add {b}')) landColorCounts.B += 1;
-        if (oracleText.includes('{t}: add {r}')) landColorCounts.R += 1;
-        if (oracleText.includes('{t}: add {g}')) landColorCounts.G += 1;
-        if (oracleText.includes('{t}: add {c}')) landColorCounts.C += 1;
-      }
-    }
+    landProducedColors(card).forEach((color) => {
+      landColorCounts[color] += 1;
+    });
   });
 
   // 8. Budget Price Estimator Calculations
