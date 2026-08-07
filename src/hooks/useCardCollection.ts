@@ -14,7 +14,21 @@ import { dispatchToast } from '../utils/toastHelper';
  */
 export function useCardCollection(card: Card) {
   const { t } = useTranslation();
-  const entry = useLiveQuery(() => db.collection.get(card.id), [card.id]);
+
+  // One query, both answers. Keyed on the indexed `oracleId` so the siblings come back with
+  // the entry itself: a second lookup per card would double the reads the collection grid
+  // already makes, for a number derived from rows this query has in hand.
+  const siblings = useLiveQuery(async () => {
+    if (!card.oracle_id) {
+      const own = await db.collection.get(card.id);
+      return own ? [own] : [];
+    }
+    return db.collection.where('oracleId').equals(card.oracle_id).toArray();
+  }, [card.id, card.oracle_id]);
+
+  const entry = siblings?.find((row) => row.id === card.id);
+  /** Copies of this card across every edition — what the search filter means by "owned". */
+  const totalOwned = (siblings ?? []).reduce((sum, row) => sum + Math.max(0, row.quantity), 0);
 
   const quantity = entry?.quantity ?? 0;
   const wishlist = entry?.wishlist ?? false;
@@ -51,5 +65,5 @@ export function useCardCollection(card: Card) {
     );
   }, [card, wishlist, displayName, t]);
 
-  return { quantity, wishlist, increment, decrement, setQuantity, toggleWishlist: toggleWish };
+  return { quantity, totalOwned, wishlist, increment, decrement, setQuantity, toggleWishlist: toggleWish };
 }

@@ -298,6 +298,7 @@ const en = {
       owned: 'Owned',
       wishlist: 'Wishlist',
       inCollection: 'In your collection',
+      ownsOtherPrinting: '{{count}} in total across editions',
       markOwned: 'Mark as owned',
       increment: 'Add one copy',
       decrement: 'Remove one copy',

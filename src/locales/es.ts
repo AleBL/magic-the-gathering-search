@@ -300,6 +300,7 @@ const es = {
       owned: 'Tengo',
       wishlist: 'Lista de deseos',
       inCollection: 'En tu colección',
+      ownsOtherPrinting: '{{count}} en total, sumando ediciones',
       markOwned: 'Marcar como adquirida',
       increment: 'Añadir una copia',
       decrement: 'Quitar una copia',

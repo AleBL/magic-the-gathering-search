@@ -59,3 +59,27 @@ test.describe('the collection at size', () => {
     expect(rendered, `${rendered} cards in the DOM after scrolling`).toBeLessThan(200);
   });
 });
+
+test.describe('ownership on a phone', () => {
+  test.use({ viewport: { width: 390, height: 700 } });
+
+  // Below sm the −/+ cluster stays hidden (mis-taps on a dense grid), but the count is the
+  // whole point of this tab and used to be reachable only by opening the card modal.
+  test('the collection shows how many copies are owned', async ({ appPage }) => {
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(500);
+    await seedCollection(appPage, 6);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+
+    const firstCard = appPage.locator(CARD_SELECTOR).first();
+    await expect(firstCard).toBeVisible();
+    // Visibility, not text: the badge is in the DOM either way, and `toContainText` matches
+    // a `display: none` element — which is exactly the bug being guarded against.
+    await expect(firstCard.getByText('1x', { exact: true })).toBeVisible();
+
+    // The editing controls stay out of the way at this width.
+    await expect(appPage.getByRole('button', { name: 'Add one copy' })).toHaveCount(0);
+  });
+});

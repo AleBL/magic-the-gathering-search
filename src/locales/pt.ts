@@ -298,6 +298,7 @@ const pt = {
       owned: 'Tenho',
       wishlist: 'Lista de desejos',
       inCollection: 'Na sua coleção',
+      ownsOtherPrinting: '{{count}} no total, somando edições',
       markOwned: 'Marcar como adquirida',
       increment: 'Adicionar uma cópia',
       decrement: 'Remover uma cópia',
