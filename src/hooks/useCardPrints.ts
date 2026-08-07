@@ -26,6 +26,17 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
       return;
     }
 
+    // With no connection the SDK's emitter is not dependable: an aborted request sometimes
+    // ends as `done` with zero results and sometimes emits nothing at all, so the sidebar
+    // either vanished — reading as "this card has one printing" — or waited forever.
+    // Knowing the answer up front removes the guesswork.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setPrints([]);
+      setIsLoading(false);
+      setError('offline');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -90,7 +101,19 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
         const bLang = b.lang === cleanLang ? 0 : 1;
         return aLang - bLang;
       });
+      // A dropped connection ends this lookup the same way a card with a single printing
+      // does — zero results, no error event — so the editions control simply disappeared
+      // and the card looked like it had no other printings. Say which one it was.
+      if (sorted.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setError('offline');
+      }
+
       setPrints(sorted);
+      setIsLoading(false);
+    });
+
+    emitter.on('not_found', () => {
+      setPrints([]);
       setIsLoading(false);
     });
 

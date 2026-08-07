@@ -62,7 +62,11 @@ export function useDeckTextImport(
         setImportedCardsCache(finalCards);
         setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false, current: prev.total }));
       } else {
-        setErrorMsg(t('deck.importError'));
+        // `fetchCardsFromParsedList` swallows per-card network failures and returns an
+        // empty list, which is indistinguishable from every name being wrong. Offline, the
+        // lookups never happened — blaming the user's spelling sends them to fix nothing.
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        setErrorMsg(isOffline ? t('search.scryfallOffline') : t('deck.importError'));
         setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false }));
       }
     } catch (err: unknown) {
@@ -72,7 +76,8 @@ export function useDeckTextImport(
       } else if (err instanceof Error && err.message === 'ScryfallRateLimited') {
         setErrorMsg(t('search.rateLimited'));
       } else {
-        setErrorMsg(t('deck.importError'));
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        setErrorMsg(isOffline ? t('search.scryfallOffline') : t('deck.importError'));
       }
       setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false }));
     }

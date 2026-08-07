@@ -70,7 +70,7 @@ function CardDetailModal({
   const [card, setCard] = useState<Card>(initialCard);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
   const [isRotated, setIsRotated] = useState(false);
-  const { prints, isLoading: isPrintsLoading } = useCardPrints(card, undefined, isToken);
+  const { prints, isLoading: isPrintsLoading, error: printsError } = useCardPrints(card, undefined, isToken);
   const [hoveredImageUrl, setHoveredImageUrl] = useState<string | null>(null);
   const [showPrintsSidebar, setShowPrintsSidebar] = useState(
     defaultShowPrints !== undefined ? defaultShowPrints : !isDeckCard && !hidePrintsSidebar
@@ -391,6 +391,7 @@ function CardDetailModal({
                   copiesCount={copiesCount}
                   hasArtChanged={hasArtChanged}
                   prints={prints}
+                  printsError={printsError}
                   showPrintsSidebar={showPrintsSidebar}
                   setShowPrintsSidebar={setShowPrintsSidebar}
                   handleDecrementCopies={handleDecrementCopies}
