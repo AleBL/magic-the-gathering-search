@@ -44,6 +44,15 @@ export default tseslint.config(
     files: ['**/*.{jsx,tsx}']
   },
 
+  // Node-only tooling scripts: no DOM, and .mjs is outside the main block's glob.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2021 },
+      parserOptions: { ecmaVersion: 'latest', sourceType: 'module' }
+    }
+  },
+
   // Main config for all TS/TSX/JS files
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { seedDecks } from './seed';
 
 /**
  * Horizontal overflow is the one responsive failure with no judgement call in it, so the
@@ -108,4 +109,36 @@ test('search results reflow without overflow on the narrowest phone', async ({ a
 
   const overflow = await horizontalOverflow(appPage);
   expect(overflow, `search results overflow by ${overflow}px at 320px`).toBeLessThanOrEqual(1);
+});
+
+/**
+ * Reported: opening "Saved decks" at an in-between width gave one deck most of the screen.
+ * The list is a narrow sidebar at lg+, but below that it expands to the full page width, and
+ * a single full-width column made each 4:3 cover 434-621px tall (48-69% of the viewport).
+ */
+test.describe('saved deck covers at in-between widths', () => {
+  const WIDTHS = [650, 768, 834, 900];
+
+  for (const width of WIDTHS) {
+    test(`the deck cover stays a reasonable size at ${width}px`, async ({ appPage }) => {
+      await appPage.setViewportSize({ width, height: 900 });
+      await appPage.goto('/');
+      // Dexie must create the stores before the seed can write to them.
+      await appPage.getByRole('button', { name: 'My Decks' }).click();
+      await seedDecks(appPage, ['Aggro', 'Control', 'Combo', 'Ramp']);
+      await appPage.reload();
+      await appPage.getByRole('button', { name: 'My Decks' }).click();
+
+      // Below lg the list sits behind this toggle, which is where the report came from.
+      const toggle = appPage.getByRole('button', { name: /Saved decks/i }).first();
+      await expect(toggle).toBeVisible();
+      if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+
+      const cover = appPage.locator('.deck-box-art').first();
+      await expect(cover).toBeVisible();
+
+      const share = await cover.evaluate((el) => el.getBoundingClientRect().height / window.innerHeight);
+      expect(share, `the deck cover takes ${Math.round(share * 100)}% of the viewport height`).toBeLessThan(0.35);
+    });
+  }
 });

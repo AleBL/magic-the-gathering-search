@@ -472,22 +472,31 @@ const pt = {
       landsAvailable: 'Fontes',
       manaBaseExplanation:
         'Esta análise calcula a quantidade ideal de fontes de mana colorida com base nos símbolos exigidos pelas cartas no deck. Utiliza um modelo matemático proporcional à sua devoção.',
-      goldfish: 'Simulação Solitária',
-      goldfishRerun: 'Simular de novo',
-      goldfishExplanation:
-        'Joga o deck sozinho {{runs}} vezes até o turno {{turns}}, usando mulligan de Londres. Responde o que os painéis de probabilidade não alcançam: quais mãos são mantidas e com que frequência você tem jogada.',
-      goldfishMulligan: 'Taxa de mulligan',
-      goldfishScrew: 'Travado até o T4',
-      goldfishOnCurve: 'Turnos com jogada',
-      goldfishKeptHands: 'Mãos mantidas',
-      goldfishHandOf: '{{size}} cartas',
-      goldfishLandMilestones: 'Terrenos em jogo',
-      goldfishLandsCount: '{{lands}} terrenos',
-      goldfishByTurn: 'turno {{turn}} · {{share}}% dos jogos',
-      goldfishNeverReached: 'raramente atingido',
-      goldfishCaveat:
+      playout: 'Simulação Turno a Turno',
+      playoutRerun: 'Simular de novo',
+      playoutExplanation:
+        'Joga o deck sozinho {{runs}} vezes até o turno {{turns}}, com mulligan de Londres e acompanhando quais cores estão em jogo. O Diagnóstico acima avalia sua mão inicial; aqui você vê o que acontece depois que ela é mantida.',
+      playoutMulligan: 'Taxa de mulligan',
+      playoutMulliganHelp:
+        'Em quantos jogos a mão inicial de sete foi devolvida — uma mão é mantida quando tem de 2 a 5 terrenos.',
+      playoutStalled: 'Preso em 2 terrenos',
+      playoutStalledHelp:
+        'Em quantos jogos você ainda estava com dois terrenos ou menos ao chegar no turno 4 — o ponto em que o deck normalmente para de funcionar.',
+      playoutOnCurve: 'Turnos com jogada',
+      playoutOnCurveHelp:
+        'Em quantos turnos havia pelo menos uma carta na mão que dava para conjurar com os terrenos em jogo, considerando as cores.',
+      playoutKeptHands: 'Mãos mantidas',
+      playoutKeptHandsHelp: 'Com quantas cartas você acabou ficando, depois dos mulligans.',
+      playoutHandOf: '{{size}} cartas',
+      playoutLandMilestones: 'Terrenos em jogo',
+      playoutLandMilestonesHelp:
+        'Em que turno você costuma alcançar cada quantidade de terrenos, e em quantos jogos chegou lá.',
+      playoutLandsCount: '{{lands}} terrenos',
+      playoutByTurn: 'turno {{turn}} · {{share}}% dos jogos',
+      playoutNeverReached: 'raramente atingido',
+      playoutCaveat:
         'O texto das cartas não é lido, então aceleração, rituais, compra e terrenos que entram virados contam como cartas comuns. Leia como o mana se comporta, não como o deck joga.',
-      goldfishTooSmall: 'Adicione ao menos sete cartas para simular uma mão inicial.',
+      playoutTooSmall: 'Adicione ao menos sete cartas para simular uma mão inicial.',
       manaBaseOptimizer: 'Otimizador de Base de Mana',
       manaBaseWarning:
         'Aviso: Adicionar estes terrenos fará o deck ter {{finalSize}} cartas (limite de {{limit}}). Recomendamos remover {{removeCount}} mágicas para otimizar o deck.',

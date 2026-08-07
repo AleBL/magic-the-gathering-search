@@ -1,9 +1,13 @@
 import { Card } from '../types/Card';
 import { ManaColor, MANA_COLORS, isLandCard, landProducedColors } from './deckStatistics';
+import { mulberry32 } from './deckDoctor';
 
 /**
- * Monte Carlo "goldfish": play the deck out alone, many times, and report what the closed-form
- * hypergeometric panels cannot answer.
+ * Plays the deck out alone for several turns, many times.
+ *
+ * Distinct from `deckDoctor.simulateGoldfish`, which scores the **opening hand** only: no
+ * mulligan, no colors, no turns. This one takes London mulligans, tracks which colors are on
+ * the battlefield and plays a land per turn, so it answers what happens *after* the keep.
  *
  * `hypergeometricAtLeast` already gives exact odds of N lands among the cards seen by turn T,
  * and a simulation would only add noise to a number that has a formula. What has no formula is
@@ -16,7 +20,7 @@ import { ManaColor, MANA_COLORS, isLandCard, landProducedColors } from './deckSt
  * "how does the mana behave", not "how does the deck play".
  */
 
-export interface GoldfishOptions {
+export interface PlayoutOptions {
   /** Games to play. Higher is steadier and slower; the panel's default is 1,000. */
   runs?: number;
   /** On the play skips the first-turn draw. */
@@ -34,28 +38,16 @@ export interface LandMilestone {
   reachedShare: number;
 }
 
-export interface GoldfishResult {
+export interface PlayoutResult {
   runs: number;
   /** Share of games kept at each hand size, after London mulligans. */
   keptHandSizes: { size: number; share: number }[];
   mulliganRate: number;
   landMilestones: LandMilestone[];
   /** Share of games still on two or fewer lands entering turn four. */
-  screwRate: number;
+  stalledRate: number;
   /** Mean share of turns that had something castable with the mana available. */
   onCurveShare: number;
-}
-
-/** Deterministic PRNG (mulberry32) so a seeded run is reproducible in tests. */
-function createRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 interface SimCard {
@@ -154,7 +146,7 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 }
 
-export function simulateGoldfish(deck: Card[], options: GoldfishOptions = {}): GoldfishResult | null {
+export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): PlayoutResult | null {
   const runs = Math.max(1, Math.floor(options.runs ?? 1000));
   const turns = Math.max(1, Math.floor(options.turns ?? 8));
   const onPlay = options.onPlay ?? true;
@@ -163,7 +155,7 @@ export function simulateGoldfish(deck: Card[], options: GoldfishOptions = {}): G
   // Nothing to report from a deck too small to deal an opening hand.
   if (library.length < 7) return null;
 
-  const random = createRandom(options.seed ?? Math.floor(Math.random() * 2 ** 31));
+  const random = mulberry32(options.seed ?? Math.floor(Math.random() * 2 ** 31));
 
   const keptSizes: number[] = [];
   let mulliganed = 0;
@@ -268,7 +260,7 @@ export function simulateGoldfish(deck: Card[], options: GoldfishOptions = {}): G
       medianTurn: median(milestoneTurns[lands]),
       reachedShare: milestoneReached[lands] / runs
     })),
-    screwRate: screwed / runs,
+    stalledRate: screwed / runs,
     onCurveShare: onCurveTotal / runs
   };
 }

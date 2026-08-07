@@ -77,7 +77,16 @@ export async function seedDecks(page: Page, names: string[]) {
           id: `seed-deck-${index}`,
           name,
           format: 'freeform',
-          cards: [],
+          // One card carrying art, so the deck box renders its cover rather than the
+          // placeholder — the cover is what the responsive checks measure.
+          cards: [
+            {
+              id: `seed-deck-card-${index}`,
+              name: 'Lightning Bolt',
+              type_line: 'Instant',
+              image_uris: { art_crop: 'https://cards.scryfall.io/art_crop/stub.jpg' }
+            }
+          ],
           createdAt: new Date(2026, 0, index + 1).toISOString()
         });
       });

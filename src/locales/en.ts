@@ -471,22 +471,30 @@ const en = {
       landsAvailable: 'Sources',
       manaBaseExplanation:
         'Analyze colors in your spells and auto-add basic lands to reach a solid {{target}} lands ratio.',
-      goldfish: 'Goldfish Simulation',
-      goldfishRerun: 'Simulate again',
-      goldfishExplanation:
-        'Plays the deck alone {{runs}} times through turn {{turns}}, taking London mulligans. Answers what the odds panels cannot: which hands get kept, and how often you have a play.',
-      goldfishMulligan: 'Mulligan rate',
-      goldfishScrew: 'Screwed by T4',
-      goldfishOnCurve: 'Turns with a play',
-      goldfishKeptHands: 'Hands kept',
-      goldfishHandOf: '{{size}} cards',
-      goldfishLandMilestones: 'Lands in play',
-      goldfishLandsCount: '{{lands}} lands',
-      goldfishByTurn: 'turn {{turn}} · {{share}}% of games',
-      goldfishNeverReached: 'rarely reached',
-      goldfishCaveat:
+      playout: 'Turn-by-Turn Simulation',
+      playoutRerun: 'Simulate again',
+      playoutExplanation:
+        'Plays the deck alone {{runs}} times through turn {{turns}}, taking London mulligans and tracking which colors are in play. The Deck Doctor above scores your opening hand; this shows what happens after you keep it.',
+      playoutMulligan: 'Mulligan rate',
+      playoutMulliganHelp: 'Share of games where the opening seven was thrown back — a hand is kept with 2 to 5 lands.',
+      playoutStalled: 'Stuck on 2 lands',
+      playoutStalledHelp:
+        'Share of games still on two or fewer lands entering turn 4 — the point where a deck usually stops functioning.',
+      playoutOnCurve: 'Turns with a play',
+      playoutOnCurveHelp:
+        'Share of turns where at least one card in hand could actually be cast with the lands in play, colors included.',
+      playoutKeptHands: 'Hands kept',
+      playoutKeptHandsHelp: 'How many cards you ended up keeping, after any mulligans.',
+      playoutHandOf: '{{size}} cards',
+      playoutLandMilestones: 'Lands in play',
+      playoutLandMilestonesHelp:
+        'The turn you typically reach each land count, and the share of games that got there at all.',
+      playoutLandsCount: '{{lands}} lands',
+      playoutByTurn: 'turn {{turn}} · {{share}}% of games',
+      playoutNeverReached: 'rarely reached',
+      playoutCaveat:
         'Card text is not read, so ramp, rituals, card draw and lands that enter tapped count as ordinary cards. Read it as how the mana behaves, not how the deck plays.',
-      goldfishTooSmall: 'Add at least seven cards to simulate an opening hand.',
+      playoutTooSmall: 'Add at least seven cards to simulate an opening hand.',
       manaBaseOptimizer: 'Mana Base Optimizer',
       manaBaseWarning:
         'Warning: Adding these lands will make the deck have {{finalSize}} cards (limit {{limit}}). We suggest removing {{removeCount}} non-land cards to keep the deck optimized.',

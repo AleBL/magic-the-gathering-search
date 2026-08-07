@@ -223,8 +223,12 @@ html.dark .import-export-dropdown {
   @apply bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border-blue-400 dark:border-blue-500/50 ring-2 ring-blue-500 shadow-md;
 }
 
+/* The 4:3 ratio sets the shape, the cap sets the limit: a wide lane would otherwise scale
+   the cover with the container and hand one deck most of the screen. 13rem matches what the
+   lg+ sidebar already produces, so nothing changes there. `object-cover` on the image keeps
+   the art from distorting once the cap bites. */
 .deck-box-art {
-  @apply relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
+  @apply relative aspect-[4/3] max-h-[13rem] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
 }
 
 .deck-box-art-image {

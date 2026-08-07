@@ -44,7 +44,8 @@
     "test:e2e": "playwright test",
     "test:e2e:bench": "BENCH=1 playwright test --workers=1 --reporter=list bench",
     "test:e2e:ui": "playwright test --ui",
-    "deadcode": "knip"
+    "deadcode": "knip",
+    "seed:profile": "node scripts/seed-profile.mjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.9",

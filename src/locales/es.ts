@@ -477,22 +477,31 @@ const es = {
       landsAvailable: 'Fuentes',
       manaBaseExplanation:
         'Este análisis calcula la cantidad ideal de fuentes de maná de color basado en los símbolos necesarios por las cartas del mazo. Utiliza un modelo matemático proporcional a tu devoción.',
-      goldfish: 'Simulación en Solitario',
-      goldfishRerun: 'Simular de nuevo',
-      goldfishExplanation:
-        'Juega el mazo en solitario {{runs}} veces hasta el turno {{turns}}, con mulligan de Londres. Responde lo que los paneles de probabilidad no alcanzan: qué manos se quedan y con qué frecuencia tienes jugada.',
-      goldfishMulligan: 'Tasa de mulligan',
-      goldfishScrew: 'Atascado en el T4',
-      goldfishOnCurve: 'Turnos con jugada',
-      goldfishKeptHands: 'Manos conservadas',
-      goldfishHandOf: '{{size}} cartas',
-      goldfishLandMilestones: 'Tierras en juego',
-      goldfishLandsCount: '{{lands}} tierras',
-      goldfishByTurn: 'turno {{turn}} · {{share}}% de las partidas',
-      goldfishNeverReached: 'rara vez alcanzado',
-      goldfishCaveat:
+      playout: 'Simulación Turno a Turno',
+      playoutRerun: 'Simular de nuevo',
+      playoutExplanation:
+        'Juega el mazo en solitario {{runs}} veces hasta el turno {{turns}}, con mulligan de Londres y siguiendo qué colores están en juego. El Diagnóstico de arriba evalúa tu mano inicial; aquí ves qué pasa después de quedártela.',
+      playoutMulligan: 'Tasa de mulligan',
+      playoutMulliganHelp:
+        'En cuántas partidas se devolvió la mano inicial de siete — una mano se conserva con 2 a 5 tierras.',
+      playoutStalled: 'Atascado en 2 tierras',
+      playoutStalledHelp:
+        'En cuántas partidas seguías con dos tierras o menos al llegar al turno 4 — el punto en que el mazo suele dejar de funcionar.',
+      playoutOnCurve: 'Turnos con jugada',
+      playoutOnCurveHelp:
+        'En cuántos turnos había al menos una carta en la mano que podías lanzar con las tierras en juego, colores incluidos.',
+      playoutKeptHands: 'Manos conservadas',
+      playoutKeptHandsHelp: 'Con cuántas cartas te quedaste al final, después de los mulligans.',
+      playoutHandOf: '{{size}} cartas',
+      playoutLandMilestones: 'Tierras en juego',
+      playoutLandMilestonesHelp:
+        'En qué turno sueles alcanzar cada cantidad de tierras, y en cuántas partidas llegaste.',
+      playoutLandsCount: '{{lands}} tierras',
+      playoutByTurn: 'turno {{turn}} · {{share}}% de las partidas',
+      playoutNeverReached: 'rara vez alcanzado',
+      playoutCaveat:
         'No se lee el texto de las cartas, así que aceleración, rituales, robo y tierras que entran giradas cuentan como cartas normales. Léelo como se comporta el maná, no como juega el mazo.',
-      goldfishTooSmall: 'Añade al menos siete cartas para simular una mano inicial.',
+      playoutTooSmall: 'Añade al menos siete cartas para simular una mano inicial.',
       manaBaseOptimizer: 'Optimizador de Base de Maná',
       manaBaseWarning:
         'Aviso: Agregar estas tierras hará que el mazo tenga {{finalSize}} cartas (límite de {{limit}}). Recomendamos quitar {{removeCount}} hechizos para optimizar su mazo.',
