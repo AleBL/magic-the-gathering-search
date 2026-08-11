@@ -5,7 +5,7 @@ import {
   computeConsistencyScore,
   diagnoseColorSources,
   mulberry32,
-  simulateGoldfish
+  simulateOpeningHands
 } from './deckDoctor';
 import { computeDeckStatistics } from './deckStatistics';
 import { makeCard } from '../test/factories';
@@ -34,23 +34,23 @@ const basicLand = (name: string, n = 1): Card[] =>
 /** A tuned mono-red 60: 36 one-drops + 24 Mountains. */
 const monoRed60 = (): Card[] => [...spells(36, '{R}'), ...basicLand('Mountain', 24)];
 
-describe('simulateGoldfish', () => {
+describe('simulateOpeningHands', () => {
   it('is deterministic for a fixed seed', () => {
     const deck = monoRed60();
-    const a = simulateGoldfish(deck, { iterations: 500, rng: mulberry32(42) });
-    const b = simulateGoldfish(deck, { iterations: 500, rng: mulberry32(42) });
+    const a = simulateOpeningHands(deck, { iterations: 500, rng: mulberry32(42) });
+    const b = simulateOpeningHands(deck, { iterations: 500, rng: mulberry32(42) });
     expect(a).toEqual(b);
   });
 
   it('converges to the hypergeometric expected land count', () => {
     // 60-card / 24-land deck ⇒ expected lands in opener = 7 * 24 / 60 = 2.8.
-    const result = simulateGoldfish(monoRed60(), { iterations: 20000, rng: mulberry32(7) });
+    const result = simulateOpeningHands(monoRed60(), { iterations: 20000, rng: mulberry32(7) });
     expect(result.avgLandsInHand).toBeGreaterThan(2.65);
     expect(result.avgLandsInHand).toBeLessThan(2.95);
   });
 
   it('reports playable/screw/flood rates as complementary fractions', () => {
-    const result = simulateGoldfish(monoRed60(), { iterations: 5000, rng: mulberry32(1) });
+    const result = simulateOpeningHands(monoRed60(), { iterations: 5000, rng: mulberry32(1) });
     expect(result.playableRate).toBeGreaterThan(0.7); // 2–5 lands dominates
     expect(result.screwRate).toBeGreaterThan(0);
     expect(result.floodRate).toBeGreaterThanOrEqual(0);
@@ -60,19 +60,19 @@ describe('simulateGoldfish', () => {
   it('averages the curve over drawn non-land cards only', () => {
     // Every spell is a 3-drop, so the average curve of drawn spells must be 3.
     const deck = [...spells(36, '{R}', { cmc: 3 }), ...basicLand('Mountain', 24)];
-    const result = simulateGoldfish(deck, { iterations: 1000, rng: mulberry32(9) });
+    const result = simulateOpeningHands(deck, { iterations: 1000, rng: mulberry32(9) });
     expect(result.avgCurve).toBeCloseTo(3, 5);
   });
 
   it('returns an empty result when there are fewer cards than a hand', () => {
-    const result = simulateGoldfish(spells(4, '{R}'), { iterations: 100 });
+    const result = simulateOpeningHands(spells(4, '{R}'), { iterations: 100 });
     expect(result.iterations).toBe(0);
     expect(result.avgLandsInHand).toBe(0);
   });
 
   it('excludes commanders from the shuffled library', () => {
     const deck = [...spells(20, '{R}'), makeCard({ name: 'Cmdr', isCommander: true })];
-    const result = simulateGoldfish(deck, { iterations: 200, rng: mulberry32(3) });
+    const result = simulateOpeningHands(deck, { iterations: 200, rng: mulberry32(3) });
     // No lands anywhere ⇒ every hand is a no-lander regardless of the commander.
     expect(result.noLandRate).toBe(1);
   });

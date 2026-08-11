@@ -5,7 +5,7 @@ import { mulberry32 } from './deckDoctor';
 /**
  * Plays the deck out alone for several turns, many times.
  *
- * Distinct from `deckDoctor.simulateGoldfish`, which scores the **opening hand** only: no
+ * Distinct from `deckDoctor.simulateOpeningHands`, which scores the **opening hand** only: no
  * mulligan, no colors, no turns. This one takes London mulligans, tracks which colors are on
  * the battlefield and plays a land per turn, so it answers what happens *after* the keep.
  *

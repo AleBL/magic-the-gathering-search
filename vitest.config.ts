@@ -25,13 +25,13 @@ export default defineConfig({
       // Ratchet, set just under the measured value at the time of writing. These read
       // lower than the old numbers only because the denominator is now ~4x larger.
       // Raise them as tests land; never widen the gap to make a red run pass.
-      // Raised 2026-08-06 (was 50/44/48/50) after covering the hook layer: 59.47/53.22/59.65/
-      // 59.99 measured, each floor set just under it.
+      // Raised 2026-08-07 (was 59/53/59/59) after covering deckImage's canvas render:
+      // 61.92/54.17/60.45/62.72 measured, each floor set just under it.
       thresholds: {
-        statements: 59,
-        branches: 53,
-        functions: 59,
-        lines: 59
+        statements: 61,
+        branches: 54,
+        functions: 60,
+        lines: 62
       }
     }
   }

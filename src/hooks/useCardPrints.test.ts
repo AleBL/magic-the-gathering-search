@@ -130,6 +130,29 @@ describe('useCardPrints', () => {
     await waitFor(() => expect(failed.result.current.error).toBe('500 boom'));
   });
 
+  /**
+   * Regression: `colors` is an array, and it used to sit in the effect's dependency list. A
+   * caller building its card object during render handed over a new array every time, so the
+   * effect re-ran, set state, re-rendered and re-ran — the first version of this file ran the
+   * heap out of memory. One lookup is the whole assertion.
+   */
+  it('does not re-run forever when the caller rebuilds the card each render', async () => {
+    search.mockImplementation(() => emitterOf((emit) => emit('done')));
+
+    const { rerender } = renderHook(() =>
+      // A fresh object and a fresh colors array each render, but the *same card*: the ids are
+      // pinned because `makeCard` otherwise mints a new oracle_id per call, which would be a
+      // genuinely different card and a legitimate reason to look it up again.
+      useCardPrints(makeCard({ id: 'bolt', oracle_id: 'oracle-bolt', name: 'Lightning Bolt', colors: ['R'] }))
+    );
+    rerender();
+    rerender();
+    rerender();
+    await waitFor(() => expect(search).toHaveBeenCalled());
+
+    expect(search, 'the effect re-ran for a card that did not actually change').toHaveBeenCalledTimes(1);
+  });
+
   it('cancels the in-flight lookup when the card changes', async () => {
     const emitters: { cancel: ReturnType<typeof vi.fn> }[] = [];
     search.mockImplementation(() => {

@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import CardItem from './CardItem';
 import { Card } from '../../types/Card';
@@ -72,17 +72,53 @@ export default function VirtualizedCardGrid({
   const { columns, rowGap, trackWidth } = metrics;
   const rowCount = Math.ceil(cards.length / columns);
 
-  // Every row holds identical cards, so one measurement describes all of them. Measuring
-  // rows individually instead would keep the total height an estimate, and the scrollbar
-  // would drift as rows resolved — jumping to the bottom would land short of the end.
-  const [rowHeight, setRowHeight] = useState(0);
+  /**
+   * Every row holds identical cards, so one measurement describes all of them — measured, not
+   * assumed: at any one card size every row comes back the same height, because names are
+   * truncated rather than wrapped. Measuring rows individually would keep the total height an
+   * estimate and the scrollbar would drift, so jumping to the bottom would land short.
+   *
+   * The measurement is only valid for the layout that produced it. Switching card size (or a
+   * resize that changes the track width) makes rows taller or shorter, and a stale height left
+   * the virtualizer spacing rows by the old value: at 223px spacing with 437px rows, every row
+   * overlapped the one above by 214px — cards drawn on top of each other. Tagging the
+   * measurement with the layout that produced it discards it exactly when it stops applying.
+   */
+  const layoutKey = `${size}:${trackWidth}:${rowGap}`;
+  const [measured, setMeasured] = useState({ key: layoutKey, height: 0 });
+  const rowHeight = measured.key === layoutKey ? measured.height : 0;
   const measuredHeight = rowHeight || Math.round(trackWidth * CARD_ASPECT) + rowGap;
 
-  const measureRow = useCallback((element: HTMLDivElement | null) => {
-    if (!element) return;
-    const height = Math.round(element.getBoundingClientRect().height);
-    if (height > 0) setRowHeight((current) => (current === height ? current : height));
-  }, []);
+  const rowObserverRef = useRef<ResizeObserver | null>(null);
+
+  const measureRow = useCallback(
+    (element: HTMLDivElement | null) => {
+      rowObserverRef.current?.disconnect();
+      rowObserverRef.current = null;
+      if (!element) return;
+
+      const update = () => {
+        const height = Math.round(element.getBoundingClientRect().height);
+        // A row measured before its cards have laid out is just its own bottom padding.
+        // Accepting that (the old check was only `> 0`) set the pitch to 8px and drew every
+        // row on top of the next. Keep waiting until the row is taller than its padding.
+        if (height <= rowGap) return;
+        setMeasured((current) =>
+          current.key === layoutKey && current.height === height ? current : { key: layoutKey, height }
+        );
+      };
+
+      update();
+      // Observed rather than measured once: card art loading, a font swap or a card-size
+      // change all resize the row after the ref first fires.
+      const observer = new ResizeObserver(update);
+      observer.observe(element);
+      rowObserverRef.current = observer;
+    },
+    [layoutKey, rowGap]
+  );
+
+  useEffect(() => () => rowObserverRef.current?.disconnect(), []);
 
   const virtualizer = useVirtualizer({
     count: rowCount,
@@ -90,6 +126,12 @@ export default function VirtualizedCardGrid({
     estimateSize: useCallback(() => measuredHeight, [measuredHeight]),
     overscan: 3
   });
+
+  // The virtualizer caches each item's measurement, so a new `estimateSize` alone does not
+  // reposition rows already in that cache — they keep the previous pitch and overlap.
+  useEffect(() => {
+    virtualizer.measure();
+  }, [measuredHeight, virtualizer]);
 
   return (
     <div
@@ -99,13 +141,13 @@ export default function VirtualizedCardGrid({
       // track list (read above) and the total scroll height.
       style={{ position: 'relative', height: `${virtualizer.getTotalSize()}px` }}
     >
-      {virtualizer.getVirtualItems().map((row, position) => {
+      {virtualizer.getVirtualItems().map((row) => {
         const start = row.index * columns;
         return (
           <div
             key={row.key}
             data-index={row.index}
-            ref={position === 0 ? measureRow : undefined}
+            ref={row.index === 0 ? measureRow : undefined}
             className={GRID_CLASSES[size]}
             style={{
               position: 'absolute',

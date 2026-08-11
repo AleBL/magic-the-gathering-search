@@ -17,6 +17,14 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
   const originalPower = isCardObject ? cardOrName?.power : undefined;
   const originalToughness = isCardObject ? cardOrName?.toughness : undefined;
   const originalColors = isCardObject ? cardOrName?.colors : undefined;
+  /**
+   * Arrays are compared by reference, so listing `originalColors` in the dependency array
+   * re-ran the lookup for any caller that built its card object during render — each run set
+   * state, which re-rendered, which built another array, forever. A caller passing a card held
+   * in state was fine, which is why nothing broke in the app; the fix removes the trap rather
+   * than relying on every future caller knowing about it.
+   */
+  const originalColorsKey = [...(originalColors ?? [])].sort().join(',');
   const originalTypeLine = isCardObject ? cardOrName?.type_line : undefined;
   const originalOracleText = isCardObject ? cardOrName?.oracle_text : undefined;
 
@@ -81,7 +89,8 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
         if (isToken && isCardObject) {
           const powerMatches = (printCard.power || '') === (originalPower || '');
           const toughnessMatches = (printCard.toughness || '') === (originalToughness || '');
-          const colorsMatches = (printCard.colors ?? []).sort().join(',') === (originalColors ?? []).sort().join(',');
+          // Spread before sorting: `.sort()` mutates, and these arrays belong to the cards.
+          const colorsMatches = [...(printCard.colors ?? [])].sort().join(',') === originalColorsKey;
           const typeLineMatches = (printCard.type_line || '') === (originalTypeLine || '');
           const oracleTextMatches =
             (printCard.oracle_text || '').trim().toLowerCase() === (originalOracleText || '').trim().toLowerCase();
@@ -145,7 +154,7 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     isCardObject,
     originalPower,
     originalToughness,
-    originalColors,
+    originalColorsKey,
     originalTypeLine,
     originalOracleText,
     t

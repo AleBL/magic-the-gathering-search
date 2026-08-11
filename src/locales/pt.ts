@@ -539,7 +539,7 @@ const pt = {
         keepableHands: '{{percent}} das mãos iniciais têm de 2 a 5 terrenos.',
         colorSources: 'Chance média de {{percent}} de ver cada cor necessária cedo.'
       },
-      goldfish: 'Simulação de mãos',
+      openingHands: 'Simulação de mãos iniciais',
       handsSimulated: '{{count}} mãos iniciais simuladas',
       playableHands: 'Jogáveis',
       avgCurve: 'Curva média',

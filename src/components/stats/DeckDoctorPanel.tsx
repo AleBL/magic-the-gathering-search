@@ -232,7 +232,7 @@ function useRecommendationText() {
 }
 
 /**
- * Deck Doctor — synthesizes the mana-base math, a goldfish simulation and a
+ * Deck Doctor — synthesizes the mana-base math, a openingHands simulation and a
  * transparent consistency score into actionable, localized advice. It builds on
  * the existing statistics panels (ConsistencyPanel, ManaBaseOptimizerPanel)
  * rather than repeating their charts.
@@ -245,7 +245,7 @@ export function DeckDoctorPanel({ currentDeck, stats }: DeckDoctorPanelProps) {
   const report = useMemo(() => analyzeDeck(currentDeck), [currentDeck]);
   const ready = useChartReady([report]);
 
-  const { score, goldfish, landOdds, colorSources, recommendations, hasData } = report;
+  const { score, openingHands, landOdds, colorSources, recommendations, hasData } = report;
 
   return (
     <div className="md:col-span-3 space-y-4 p-4 rounded-xl border border-teal-200 dark:border-teal-900 bg-teal-500/5 dark:bg-teal-950/10 transition-colors duration-300">
@@ -279,27 +279,27 @@ export function DeckDoctorPanel({ currentDeck, stats }: DeckDoctorPanelProps) {
             <div>
               <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold mb-1.5 flex items-center gap-1.5">
                 <FaFish className="text-teal-500" />
-                {t('deckDoctor.goldfish')}
+                {t('deckDoctor.openingHands')}
               </span>
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">
-                {t('deckDoctor.handsSimulated', { count: goldfish.iterations })}
+                {t('deckDoctor.handsSimulated', { count: openingHands.iterations })}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <StatTile
                   label={t('deckDoctor.playableHands')}
-                  value={percent(goldfish.playableRate)}
+                  value={percent(openingHands.playableRate)}
                   tone="text-teal-600 dark:text-teal-400"
                 />
-                <StatTile label={t('deckDoctor.avgCurve')} value={goldfish.avgCurve.toFixed(1)} />
+                <StatTile label={t('deckDoctor.avgCurve')} value={openingHands.avgCurve.toFixed(1)} />
                 <StatTile
                   label={t('deckDoctor.noLander')}
-                  value={percent(goldfish.noLandRate)}
-                  tone={goldfish.noLandRate > 0.1 ? 'text-red-500 dark:text-red-400' : undefined}
+                  value={percent(openingHands.noLandRate)}
+                  tone={openingHands.noLandRate > 0.1 ? 'text-red-500 dark:text-red-400' : undefined}
                 />
                 <StatTile
                   label={t('deckDoctor.floodRisk')}
-                  value={percent(goldfish.floodRate)}
-                  tone={goldfish.floodRate > 0.15 ? 'text-amber-500 dark:text-amber-400' : undefined}
+                  value={percent(openingHands.floodRate)}
+                  tone={openingHands.floodRate > 0.15 ? 'text-amber-500 dark:text-amber-400' : undefined}
                 />
               </div>
             </div>

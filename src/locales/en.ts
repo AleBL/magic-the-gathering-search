@@ -537,7 +537,7 @@ const en = {
         keepableHands: '{{percent}} of opening hands hold 2–5 lands.',
         colorSources: 'Avg. {{percent}} chance to see each needed color early.'
       },
-      goldfish: 'Goldfish simulation',
+      openingHands: 'Opening-hand simulation',
       handsSimulated: '{{count}} simulated opening hands',
       playableHands: 'Playable',
       avgCurve: 'Avg. curve',

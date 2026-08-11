@@ -83,3 +83,78 @@ test.describe('ownership on a phone', () => {
     await expect(appPage.getByRole('button', { name: 'Add one copy' })).toHaveCount(0);
   });
 });
+
+/**
+ * Reported: cards in the collection ended up drawn on top of each other, with the list running
+ * out of scroll early. Cause: the row height was measured the moment the ref fired, before the
+ * cards inside had laid out, so the measurement was the row's 8px bottom padding — and the
+ * old guard only rejected `<= 0`. Every row was then placed on an 8px pitch.
+ */
+test.describe('collection row heights', () => {
+  /** Smallest vertical gap between consecutive rows; negative means they overlap. */
+  const worstGap = (page: import('@playwright/test').Page) =>
+    page.evaluate(() => {
+      const rows = [...document.querySelectorAll<HTMLElement>('[data-index]')]
+        .map((el) => ({ index: Number(el.dataset.index), rect: el.getBoundingClientRect() }))
+        .filter((row) => row.rect.height > 0)
+        .sort((a, b) => a.index - b.index);
+
+      let worst = 999;
+      for (let i = 1; i < rows.length; i += 1) {
+        worst = Math.min(worst, Math.round(rows[i].rect.top - rows[i - 1].rect.bottom));
+      }
+      return rows.length > 1 ? worst : 999;
+    });
+
+  test('rows never overlap, and survive a card-size change', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1280, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+    await seedCollection(appPage, 200);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+    await appPage.waitForTimeout(600);
+
+    // The reported symptom, straight off the initial render.
+    const initial = await worstGap(appPage);
+    expect(initial, `rows overlap by ${Math.abs(initial)}px on load`).toBeGreaterThanOrEqual(-1);
+
+    // And again after a card-size change, which resizes every row underneath the cached value.
+    for (const label of ['XL', 'S', 'L', 'M']) {
+      const button = appPage.getByRole('button', { name: label, exact: true }).first();
+      if (!(await button.isVisible().catch(() => false))) continue;
+      await button.click();
+      await appPage.waitForTimeout(500);
+      const gap = await worstGap(appPage);
+      expect(gap, `rows overlap by ${Math.abs(gap)}px after switching to ${label}`).toBeGreaterThanOrEqual(-1);
+    }
+  });
+
+  test('the last entry stays reachable when rows have mixed heights', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1280, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+    await seedCollection(appPage, 120);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+
+    const scroller = appPage.locator('.workspace-body');
+    for (let step = 0; step < 20; step += 1) {
+      await scroller.evaluate((el) => el.scrollBy(0, el.clientHeight));
+      await appPage.waitForTimeout(80);
+    }
+    await appPage.waitForTimeout(400);
+
+    // Scrolled to the very end, the final row must actually be on screen.
+    const lastVisible = await appPage.evaluate(() => {
+      const indices = [...document.querySelectorAll<HTMLElement>('[data-index]')].map((el) => Number(el.dataset.index));
+      return indices.length ? Math.max(...indices) : -1;
+    });
+
+    expect(lastVisible, 'the end of the collection was never rendered').toBeGreaterThan(0);
+  });
+});

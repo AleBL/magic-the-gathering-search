@@ -9,6 +9,18 @@ import type { Page } from '@playwright/test';
  */
 export async function seedCollection(page: Page, count: number) {
   await page.evaluate(async (total) => {
+    /**
+     * Names of deliberately different lengths. Uniform names give uniform row heights, which
+     * would hide the very thing the virtualized grid has to cope with: a name that wraps to a
+     * second line makes its row taller than its neighbours.
+     */
+    const nameFor = (index: number) => {
+      const base = `Seeded Card ${String(index).padStart(5, '0')}`;
+      // Long enough to wrap, but rare enough that the *first* row has none: the grid used to
+      // measure only row 0, so a tall row further down is exactly the case that broke. The
+      // prefix stays intact so tests can still find a specific card by name.
+      return index % 23 === 17 ? `${base} With A Deliberately Long Tail That Wraps Twice Over` : base;
+    };
     const database: IDBDatabase = await new Promise((resolve, reject) => {
       const request = indexedDB.open('MagicDecksDB');
       request.onsuccess = () => resolve(request.result);
@@ -26,7 +38,7 @@ export async function seedCollection(page: Page, count: number) {
           id,
           // A real collection holds several printings of the same card.
           oracleId: `oracle-${index % 400}`,
-          name: `Seeded Card ${String(index).padStart(5, '0')}`,
+          name: nameFor(index),
           set: `s${index % 60}`,
           rarity,
           quantity: (index % 4) + 1,
@@ -35,7 +47,7 @@ export async function seedCollection(page: Page, count: number) {
           card: {
             id,
             oracle_id: `oracle-${index % 400}`,
-            name: `Seeded Card ${String(index).padStart(5, '0')}`,
+            name: nameFor(index),
             lang: 'en',
             type_line: ['Creature — Human', 'Instant', 'Land', 'Artifact'][index % 4],
             mana_cost: '{1}{R}',
