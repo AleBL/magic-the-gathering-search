@@ -334,7 +334,9 @@ const en = {
       deckComplete: 'You own every card in this deck.',
       deckMissing: 'Missing {{count}} cards (~{{value}})',
       deckOwnedOf: 'You own {{owned}} of {{total}}',
-      deckShoppingList: 'Shopping list'
+      deckShoppingList: 'Shopping list',
+      deckGapHide: 'Hide this summary',
+      deckGapToggle: 'Show missing-cards summary'
     },
     commandPalette: {
       title: 'Command Palette',

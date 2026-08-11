@@ -8,6 +8,8 @@ export interface DeckListProps {
   selectedDeckId: string | null;
   editingDeckId: string | null;
   onSelectDeck: (deck: Deck) => void;
+  /** Double-click / Enter: select and commit. The all-decks modal closes itself with it. */
+  onActivateDeck?: (deck: Deck) => void;
   onEditDeck: (
     id: string,
     name: string,
@@ -32,6 +34,7 @@ function DeckList({
   selectedDeckId,
   editingDeckId,
   onSelectDeck,
+  onActivateDeck,
   onEditDeck,
   onExportDeck,
   onDuplicateDeck,
@@ -78,6 +81,7 @@ function DeckList({
               isSelected={selectedDeckId === deck.id}
               isEditing={editingDeckId === deck.id}
               onSelect={onSelectDeck}
+              onActivate={onActivateDeck}
               onEdit={onEditDeck}
               onExport={onExportDeck}
               onDuplicate={onDuplicateDeck}

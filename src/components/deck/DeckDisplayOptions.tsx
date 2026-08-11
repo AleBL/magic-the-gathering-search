@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { useCollectionSettings } from '../../store/useCollectionSettings';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FaSlidersH, FaList, FaTh, FaLayerGroup } from 'react-icons/fa';
@@ -34,6 +35,8 @@ export function DeckDisplayOptions({
   setIsOpen
 }: DeckDisplayOptionsProps) {
   const { t } = useTranslation();
+  const showDeckGap = useCollectionSettings((state) => state.showDeckGap);
+  const setShowDeckGap = useCollectionSettings((state) => state.setShowDeckGap);
   useEscapeKey(() => setIsOpen(false), isOpen);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -183,6 +186,20 @@ export function DeckDisplayOptions({
                     </div>
                   </div>
                 ) : null}
+
+                {/* Where the collection summary comes back from, after being dismissed on a deck. */}
+                <div className="space-y-2">
+                  <span className="display-settings-section-label">{t('collection.tab')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeckGap(!showDeckGap)}
+                    aria-pressed={showDeckGap}
+                    className={`option-toggle-btn-compact w-full ${showDeckGap ? 'option-toggle-btn-compact-active' : ''}`}
+                    title={t('collection.deckGapToggle')}
+                  >
+                    {t('collection.deckGapToggle')}
+                  </button>
+                </div>
               </div>
             </>,
             document.body

@@ -17,7 +17,7 @@ function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...
   const [isAllDecksOpen, setIsAllDecksOpen] = useState(false);
 
   return (
-    <div className="col-span-1">
+    <div className="col-span-1 lg:flex lg:flex-col lg:min-h-0">
       {/* Below lg the saved-decks list collapses behind this toggle so it
           stops permanently eating vertical space on phones. */}
       <button
@@ -41,9 +41,14 @@ function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...
           className={`text-xs text-gray-400 transition-transform duration-200 ${isMobileOpen ? 'rotate-180' : ''}`}
         />
       </button>
-      <div id="saved-decks-panel" className={`${isMobileOpen ? 'block' : 'hidden'} lg:block`}>
-        {/* Capped: unbounded, 30 decks make this column ~9,500px tall. */}
-        <div className="max-h-[calc(100vh-13rem)] overflow-y-auto pr-1">
+      <div
+        id="saved-decks-panel"
+        className={`${isMobileOpen ? 'block' : 'hidden'} lg:flex lg:flex-col lg:min-h-0 lg:flex-1`}
+      >
+        {/* Capped: unbounded, 30 decks make this column ~9,500px tall. At lg+ it fills the
+            lane its parent sized, and `overscroll-contain` stops a scroll that reaches the end
+            here from continuing into the page — which is what made the two lanes move together. */}
+        <div className="max-h-[calc(100vh-13rem)] lg:max-h-none lg:flex-1 lg:min-h-0 overflow-y-auto overscroll-contain pr-1">
           <DeckList {...deckListProps} />
         </div>
 

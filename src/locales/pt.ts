@@ -335,7 +335,9 @@ const pt = {
       deckComplete: 'Você possui todas as cartas deste deck.',
       deckMissing: 'Faltam {{count}} cartas (~{{value}})',
       deckOwnedOf: 'Você tem {{owned}} de {{total}}',
-      deckShoppingList: 'Lista de compras'
+      deckShoppingList: 'Lista de compras',
+      deckGapHide: 'Ocultar este resumo',
+      deckGapToggle: 'Mostrar resumo de cartas faltantes'
     },
     commandPalette: {
       title: 'Paleta de Comandos',

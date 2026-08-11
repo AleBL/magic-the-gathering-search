@@ -336,7 +336,9 @@ const es = {
       deckComplete: 'Tienes todas las cartas de este mazo.',
       deckMissing: 'Faltan {{count}} cartas (~{{value}})',
       deckOwnedOf: 'Tienes {{owned}} de {{total}}',
-      deckShoppingList: 'Lista de compras'
+      deckShoppingList: 'Lista de compras',
+      deckGapHide: 'Ocultar este resumen',
+      deckGapToggle: 'Mostrar resumen de cartas faltantes'
     },
     commandPalette: {
       title: 'Paleta de Comandos',
