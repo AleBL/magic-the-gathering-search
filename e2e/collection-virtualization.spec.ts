@@ -202,3 +202,54 @@ test.describe('collection filters', () => {
     await expect(appPage.getByLabel(/Converted Mana Cost/i)).toBeVisible();
   });
 });
+
+/** The deck tab's three view modes, applied to the collection. */
+test.describe('collection view modes', () => {
+  const openCollection = async (page: import('@playwright/test').Page, count: number) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await page.waitForTimeout(400);
+    await seedCollection(page, count);
+    await page.reload();
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+  };
+
+  test('switches between grid, list and stacks', async ({ appPage }) => {
+    await openCollection(appPage, 40);
+
+    await appPage.getByRole('button', { name: 'List', exact: true }).click();
+    await expect(appPage.getByRole('table')).toBeVisible();
+    await expect(appPage.locator(CARD_SELECTOR)).toHaveCount(0);
+
+    await appPage.getByRole('button', { name: 'Stacks', exact: true }).click();
+    await expect(appPage.getByRole('table')).toHaveCount(0);
+    await expect(appPage.locator('.deck-stack-card-wrapper').first()).toBeVisible();
+
+    await appPage.getByRole('button', { name: 'Grid', exact: true }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+  });
+
+  test('the list sorts by a column and reverses on a second click', async ({ appPage }) => {
+    await openCollection(appPage, 40);
+    await appPage.getByRole('button', { name: 'List', exact: true }).click();
+
+    const firstCell = () => appPage.locator('tbody tr').first().locator('td').first().innerText();
+    const ascending = await firstCell();
+
+    await appPage.getByRole('button', { name: /^Card$/ }).click();
+    const descending = await firstCell();
+
+    expect(descending, 'sorting by name did not reverse').not.toBe(ascending);
+  });
+
+  test('a row opens the card detail, since the list has no card to click', async ({ appPage }) => {
+    await openCollection(appPage, 20);
+    await appPage.getByRole('button', { name: 'List', exact: true }).click();
+
+    await appPage.locator('tbody tr').first().click();
+
+    await expect(appPage.getByRole('dialog')).toBeVisible();
+  });
+});

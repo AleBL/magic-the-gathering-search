@@ -19,7 +19,7 @@ const readInitialShowGap = (): boolean => {
   try {
     return localStorage.getItem(GAP_KEY) !== 'false';
   } catch {
-    return true;
+    return false;
   }
 };
 

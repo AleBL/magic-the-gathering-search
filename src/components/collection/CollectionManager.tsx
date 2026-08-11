@@ -11,6 +11,12 @@ import { matchesFilters } from '../../utils/collectionFilter';
 import { clearCollection } from '../../services/collectionService';
 import CardFilterBar from '../card/CardFilterBar';
 import SearchFiltersPanel from '../card/SearchFilters';
+import CardDetailModal from '../card/CardDetailModal';
+import { CollectionListView } from './CollectionListView';
+import { CollectionStackView } from './CollectionStackView';
+import { FaTh, FaList, FaLayerGroup } from 'react-icons/fa';
+import type { ViewMode } from '../../hooks/useDeckPreviewState';
+import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
 import CardSizeSelector from '../card/CardSizeSelector';
@@ -27,6 +33,10 @@ function CollectionManager() {
   const [setFilter, setSetFilter] = useState('');
   const [nameQuery, setNameQuery] = useState('');
   const [cardSize, setCardSize] = useCardSizePreference();
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  // The grid's CardItem owns its own modal; the list and stack views do not, so the tab holds
+  // the selection for them.
+  const [detailCard, setDetailCard] = useState<Card | null>(null);
 
   const { entries, visibleEntries, summary, isLoading } = useCollection(view, filters);
   const currency = useCollectionSettings((state) => state.currency);
@@ -200,8 +210,34 @@ function CollectionManager() {
                   ))}
                 </select>
               </label>
-              <div className="ml-auto">
-                <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
+              <div className="ml-auto flex items-center gap-2">
+                <div className="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-slate-800 p-0.5">
+                  {(
+                    [
+                      { mode: 'grid', label: t('collection.viewGrid'), icon: FaTh },
+                      { mode: 'list', label: t('collection.viewList'), icon: FaList },
+                      { mode: 'stack', label: t('collection.viewStack'), icon: FaLayerGroup }
+                    ] as const
+                  ).map(({ mode, label, icon: Icon }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      aria-pressed={viewMode === mode}
+                      title={label}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                        viewMode === mode
+                          ? 'bg-white dark:bg-slate-700 text-primary dark:text-blue-400 shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      <Icon className="text-[11px] shrink-0" />
+                      <span className="hidden sm:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Card size only means something where cards are drawn. */}
+                {viewMode === 'grid' ? <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} /> : null}
               </div>
             </div>
           </div>
@@ -214,13 +250,21 @@ function CollectionManager() {
               ))}
             </div>
           ) : cards.length > 0 ? (
-            <VirtualizedCardGrid
-              cards={cards}
-              size={cardSize}
-              scrollRef={scrollRef}
-              showCollectionControls
-              showPrintingBadge
-            />
+            <>
+              {viewMode === 'grid' ? (
+                <VirtualizedCardGrid
+                  cards={cards}
+                  size={cardSize}
+                  scrollRef={scrollRef}
+                  showCollectionControls
+                  showPrintingBadge
+                />
+              ) : viewMode === 'list' ? (
+                <CollectionListView entries={displayedEntries} currency={currency} onSelectCard={setDetailCard} />
+              ) : (
+                <CollectionStackView entries={displayedEntries} onSelectCard={setDetailCard} />
+              )}
+            </>
           ) : (
             <EmptyState
               icon={view === 'wishlist' ? <FaHeart /> : <FaBoxOpen />}
@@ -235,6 +279,17 @@ function CollectionManager() {
           )}
         </div>
       </div>
+
+      {/* The list and stack views hand their selection up here; the grid's CardItem still
+          opens its own, so this only ever has one card at a time. */}
+      {detailCard ? (
+        <CardDetailModal
+          card={detailCard}
+          imageUrl={detailCard.image_uris?.normal ?? detailCard.card_faces?.[0]?.image_uris?.normal ?? ''}
+          onClose={() => setDetailCard(null)}
+          showCollectionControls
+        />
+      ) : null}
 
       {dialogState.isOpen ? (
         <CustomDialog
