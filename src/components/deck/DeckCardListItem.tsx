@@ -67,7 +67,11 @@ export const DeckCardListItem = memo(function DeckCardListItem({
         tabIndex={0}
         aria-label={displayName}
         className={`group relative overflow-hidden transition-all duration-200 h-11 border-b border-gray-300 dark:border-gray-800 cursor-pointer ${
-          isBanned ? 'ring-1 ring-inset ring-red-500' : isRestricted ? 'ring-1 ring-inset ring-amber-500' : ''
+          isBanned
+            ? 'ring-1 ring-inset ring-red-500 bg-red-50 dark:bg-red-950/40'
+            : isRestricted
+              ? 'ring-1 ring-inset ring-amber-500 bg-amber-50 dark:bg-amber-950/40'
+              : 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800'
         }`}
         draggable={isRemovable && !isTokenZone}
         onDragStart={(e) => {
@@ -91,22 +95,26 @@ export const DeckCardListItem = memo(function DeckCardListItem({
         onMouseMove={onHoverMove}
         onMouseLeave={onHoverLeave}
       >
-        {/* Background Image Container */}
-        <div
-          className="absolute inset-0 z-0 bg-no-repeat bg-cover bg-slate-200 dark:bg-slate-800"
-          style={artCropUrl ? { backgroundImage: `url(${artCropUrl})`, backgroundPosition: '50% 25%' } : {}}
-        />
+        {/*
+          A strip of art on the trailing edge, faded out with a mask.
 
-        {/* Gradient Overlay */}
-        <div
-          className={`absolute inset-0 z-10 bg-gradient-to-r from-white/95 via-white/75 to-transparent dark:from-slate-900 dark:via-slate-900/95 transition-colors duration-200 ${
-            isBanned
-              ? 'dark:from-red-950/90 dark:via-red-900/80 from-red-100/95 via-red-50/80'
-              : isRestricted
-                ? 'dark:from-amber-950/90 dark:via-amber-900/80 from-amber-100/95 via-amber-50/80'
-                : 'group-hover:dark:via-slate-800/90 group-hover:via-white/60'
-          }`}
-        />
+          It used to be the full-bleed art with a 75-95% scrim laid over it, which washed the
+          whole row into a blur and made the text sit on a muddy background. Confining the art
+          to the side it can afford, and fading it with a mask instead of covering it with a
+          gradient, keeps the artwork sharp where it shows and the text on a flat surface.
+        */}
+        {artCropUrl ? (
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 right-0 z-0 w-2/5 bg-no-repeat bg-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
+            style={{
+              backgroundImage: `url(${artCropUrl})`,
+              backgroundPosition: '50% 25%',
+              maskImage: 'linear-gradient(to right, transparent, black 55%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 55%)'
+            }}
+          />
+        ) : null}
 
         {/* Content */}
         <div className="relative z-20 flex items-center justify-between h-full px-2">

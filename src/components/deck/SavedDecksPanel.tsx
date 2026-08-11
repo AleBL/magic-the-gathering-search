@@ -48,7 +48,11 @@ function SavedDecksPanel({ savedDeckCount, isMobileOpen, onToggleMobileOpen, ...
         {/* Capped: unbounded, 30 decks make this column ~9,500px tall. At lg+ it fills the
             lane its parent sized, and `overscroll-contain` stops a scroll that reaches the end
             here from continuing into the page — which is what made the two lanes move together. */}
-        <div className="max-h-[calc(100vh-13rem)] lg:max-h-none lg:flex-1 lg:min-h-0 overflow-y-auto overscroll-contain pr-1">
+        {/* Only a scroller from lg up, where it is a fixed sidebar lane. Below that the panel
+            sits above the deck in normal page flow: giving it its own capped scroller meant you
+            scrolled the list, hit its end, and the page stopped — with the deck still below and
+            out of reach. */}
+        <div className="lg:max-h-[calc(100vh-13rem)] lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <DeckList {...deckListProps} />
         </div>
 

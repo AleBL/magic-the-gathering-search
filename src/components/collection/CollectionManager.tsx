@@ -161,8 +161,12 @@ function CollectionManager() {
           </div>
 
           <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-            {/* The same advanced panel the search tab uses, so one mental model covers both.
-                Community tags are hidden: they are Scryfall-side data this tab cannot honour. */}
+            {/* Mirrors the search tab exactly: the colour/type quick filters on their own row
+                above, the advanced panel behind its button below. Below `sm` the quick filters
+                move into the sheet, which is why they are hidden rather than duplicated. */}
+            <div className="hidden sm:block">
+              <CardFilterBar filters={filters} setFilters={setFilters} />
+            </div>
             <SearchFiltersPanel
               filters={filters}
               setFilters={setFilters}

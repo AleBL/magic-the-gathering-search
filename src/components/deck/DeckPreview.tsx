@@ -261,7 +261,7 @@ function DeckPreview({
 
     return (
       <div className="deck-preview-section relative">
-        <div className="panel-header relative z-50">
+        <div className="panel-header panel-header-sticky relative">
           <div className="min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 flex items-center gap-2 min-w-0">
@@ -403,7 +403,7 @@ function DeckPreview({
     <div
       className={`deck-preview-section relative ${editingDeckId ? 'border-l-4 border-amber-400 dark:border-amber-500 pl-3' : ''}`}
     >
-      <div className="panel-header relative z-50">
+      <div className="panel-header panel-header-sticky relative">
         <div>
           {editingDeckId ? (
             <>

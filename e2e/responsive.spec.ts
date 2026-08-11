@@ -112,15 +112,17 @@ test('search results reflow without overflow on the narrowest phone', async ({ a
 });
 
 /**
- * Reported: opening "Saved decks" at an in-between width gave one deck most of the screen.
- * The list is a narrow sidebar at lg+, but below that it expands to the full page width, and
- * a single full-width column made each 4:3 cover 434-621px tall (48-69% of the viewport).
+ * Reported twice, and the answer changed. First: at an in-between width one deck cover took
+ * 48-69% of the screen. Capping the cover helped, but the real fix was dropping the artwork
+ * below lg entirely — there the list sits above the deck in page flow, and a picture per deck
+ * turns choosing one into a long scroll. So below lg each deck is a compact row, and from lg up
+ * the cover returns as the deck-box identity, bounded.
  */
-test.describe('saved deck covers at in-between widths', () => {
+test.describe('saved deck rows at in-between widths', () => {
   const WIDTHS = [650, 768, 834, 900];
 
   for (const width of WIDTHS) {
-    test(`the deck cover stays a reasonable size at ${width}px`, async ({ appPage }) => {
+    test(`each saved deck stays compact at ${width}px`, async ({ appPage }) => {
       await appPage.setViewportSize({ width, height: 900 });
       await appPage.goto('/');
       // Dexie must create the stores before the seed can write to them.
@@ -134,11 +136,27 @@ test.describe('saved deck covers at in-between widths', () => {
       await expect(toggle).toBeVisible();
       if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
 
-      const cover = appPage.locator('.deck-box-art').first();
-      await expect(cover).toBeVisible();
+      // No artwork at this width — that is the point.
+      await expect(appPage.locator('.deck-box-art').first()).toBeHidden();
 
-      const share = await cover.evaluate((el) => el.getBoundingClientRect().height / window.innerHeight);
-      expect(share, `the deck cover takes ${Math.round(share * 100)}% of the viewport height`).toBeLessThan(0.35);
+      const box = appPage.locator('.deck-box').first();
+      await expect(box).toBeVisible();
+      const share = await box.evaluate((el) => el.getBoundingClientRect().height / window.innerHeight);
+      expect(share, `a saved deck row takes ${Math.round(share * 100)}% of the viewport height`).toBeLessThan(0.25);
     });
   }
+
+  test('the cover comes back, bounded, once the list is a sidebar', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'My Decks' }).click();
+    await seedDecks(appPage, ['Aggro', 'Control', 'Combo', 'Ramp']);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'My Decks' }).click();
+
+    const cover = appPage.locator('.deck-box-art').first();
+    await expect(cover).toBeVisible();
+    const share = await cover.evaluate((el) => el.getBoundingClientRect().height / window.innerHeight);
+    expect(share, `the deck cover takes ${Math.round(share * 100)}% of the viewport height`).toBeLessThan(0.35);
+  });
 });

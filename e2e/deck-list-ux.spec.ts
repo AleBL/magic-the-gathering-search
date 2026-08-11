@@ -164,3 +164,62 @@ test.describe('deck page scrolling', () => {
     expect(capped, 'a viewport-height lock leaked below the lg breakpoint').toBe(false);
   });
 });
+
+test.describe('deck panel header', () => {
+  test('stays visible while the card list scrolls under it', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 800 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'My Decks' }).click();
+    await appPage.waitForTimeout(500);
+
+    await appPage.evaluate(async () => {
+      const database: IDBDatabase = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('MagicDecksDB');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('decks', 'readwrite');
+        transaction.objectStore('decks').put({
+          id: 'tall-deck',
+          name: 'Tall Deck',
+          format: 'freeform',
+          createdAt: new Date().toISOString(),
+          cards: Array.from({ length: 80 }, (_, i) => ({
+            id: `c-${i}`,
+            name: `Card ${i}`,
+            type_line: 'Creature'
+          }))
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+    });
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'My Decks' }).click();
+    await appPage
+      .getByRole('button', { name: /Tall Deck/ })
+      .first()
+      .click();
+    await appPage.waitForTimeout(600);
+
+    const header = appPage.locator('.panel-header-sticky').last();
+    await expect(header).toBeVisible();
+    const before = await header.boundingBox();
+
+    // Scroll the deck pane, not the page.
+    await appPage.evaluate(() => {
+      const pane = [...document.querySelectorAll<HTMLElement>('div')].find(
+        (el) => getComputedStyle(el).overflowY === 'auto' && el.scrollHeight > el.clientHeight + 200
+      );
+      pane?.scrollBy(0, 600);
+    });
+    await appPage.waitForTimeout(400);
+
+    const after = await header.boundingBox();
+    await expect(header, 'the deck header scrolled away with the list').toBeVisible();
+    // A sticky element still travels the padding above it before it pins, so a few pixels are
+    // expected; the list moved 600, so anything in this range means it stuck.
+    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0)), 'the header scrolled with the list').toBeLessThan(30);
+  });
+});

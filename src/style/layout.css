@@ -110,6 +110,30 @@ html.dark .modal-container {
   @apply flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-300 dark:border-gray-700 pb-3 mb-4 gap-3 transition-colors duration-300;
 }
 
+/* The deck's header carries the view controls and the deck's identity, so it has to stay put
+   while the card list scrolls under it. `sticky` only works because the pane around it is the
+   scroller.
+
+   Styled as the app's other floating layers (dropdowns, command palette) rather than a flat
+   white bar: the same translucent fill plus blur, so the artwork moving underneath is hinted
+   at instead of hidden, and a defined bottom edge with a soft shadow so it reads as a pinned
+   surface rather than content that happens to be at the top. Pulled to the panel's padding
+   edges so nothing slides through the gap beside it. */
+.panel-header-sticky {
+  @apply sticky -top-4 z-30 -mx-4 -mt-4 px-4 pt-4 rounded-t-xl;
+  background-color: var(--glass-fill-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid rgba(203, 213, 225, 0.7);
+  box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.18);
+}
+
+html.dark .panel-header-sticky {
+  background-color: var(--glass-fill-dark);
+  border-bottom-color: rgba(51, 65, 85, 0.7);
+  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.5);
+}
+
 /* Workspace main areas */
 .workspace-container {
   @apply flex flex-col h-full bg-white dark:bg-gray-900 transition-colors duration-300;

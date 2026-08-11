@@ -103,18 +103,27 @@ export const DeckListItem = memo(function DeckListItem({
       }}
       className={`deck-box cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isSelected ? 'deck-box-active' : 'deck-box-inactive'} ${showExportMenu ? 'z-50' : 'z-0'}`}
     >
-      {/* Hero art banner — the "deck box" identity (commander / chosen cover). */}
-      <div className="deck-box-art">
-        {coverArt ? (
-          <img src={coverArt} alt="" loading="lazy" className="deck-box-art-image" />
-        ) : (
-          <div className="deck-box-art-placeholder">
-            <FaLayerGroup />
-          </div>
-        )}
-        <div className="deck-box-art-scrim" />
-        <div className="deck-box-title-row">
-          <p className="deck-box-title">{deck.name}</p>
+      {/*
+        Below lg the list sits above the deck in page flow, so a cover per deck turns choosing
+        one into a long scroll past pictures — the art is dropped there and each deck is a
+        compact row. From lg up it is a sidebar and the cover returns as the deck-box identity.
+
+        The title is rendered once and repositioned, not duplicated: two copies put the deck
+        name in the accessible name twice and left tests matching a hidden node.
+      */}
+      <div className="relative">
+        <div className="deck-box-art hidden lg:block">
+          {coverArt ? (
+            <img src={coverArt} alt="" loading="lazy" className="deck-box-art-image" />
+          ) : (
+            <div className="deck-box-art-placeholder">
+              <FaLayerGroup />
+            </div>
+          )}
+          <div className="deck-box-art-scrim" />
+        </div>
+        <div className="deck-box-title-row-compact">
+          <p className="deck-box-title-compact">{deck.name}</p>
           {isEditing && <span className="deck-list-item-editing-badge" title={t('deck.editingDeck')} />}
         </div>
       </div>

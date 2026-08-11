@@ -247,6 +247,26 @@ html.dark .import-export-dropdown {
   @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent;
 }
 
+/* Below lg the title is an ordinary header row; from lg up it overlays the cover art. Same
+   element either way — duplicating it would repeat the deck name in the accessible name. */
+.deck-box-title-row-compact {
+  @apply flex items-center gap-2 px-3 pt-2.5 pb-1;
+}
+
+.deck-box-title-compact {
+  @apply truncate text-sm font-bold text-gray-900 dark:text-white;
+}
+
+@media (min-width: 1024px) {
+  .deck-box-title-row-compact {
+    @apply absolute inset-x-0 bottom-0 px-3 pt-0 pb-2;
+  }
+
+  .deck-box-title-compact {
+    @apply text-white drop-shadow;
+  }
+}
+
 .deck-box-title-row {
   @apply absolute inset-x-0 bottom-0 flex items-center gap-2 px-3 pb-2;
 }
