@@ -158,3 +158,47 @@ test.describe('collection row heights', () => {
     expect(lastVisible, 'the end of the collection was never rendered').toBeGreaterThan(0);
   });
 });
+
+/** The advanced filter panel from the search tab, applied locally to the collection. */
+test.describe('collection filters', () => {
+  test('advanced filters narrow the collection without a network call', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+    await seedCollection(appPage, 120);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+
+    const before = await appPage.locator(CARD_SELECTOR).count();
+    expect(before).toBeGreaterThan(0);
+
+    await appPage.getByRole('button', { name: 'Advanced Filters' }).click();
+    const cmc = appPage.getByLabel(/Converted Mana Cost/i);
+    await expect(cmc).toBeVisible();
+    await cmc.fill('3');
+    await appPage.keyboard.press('Escape');
+    await appPage.waitForTimeout(500);
+
+    const after = await appPage.locator(CARD_SELECTOR).count();
+    expect(after, 'the mana-value filter changed nothing').toBeLessThan(before);
+    expect(after, 'the filter removed everything').toBeGreaterThan(0);
+  });
+
+  // Community tags are Scryfall-side data; offering the control here would do nothing.
+  test('the community-tag filter is not offered in the collection', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+    await seedCollection(appPage, 20);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+
+    await appPage.getByRole('button', { name: 'Advanced Filters' }).click();
+    await expect(appPage.getByLabel('Function', { exact: true })).toBeHidden();
+    // The rest of the panel is there, so this is an omission and not a missing panel.
+    await expect(appPage.getByLabel(/Converted Mana Cost/i)).toBeVisible();
+  });
+});

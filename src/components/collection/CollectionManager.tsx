@@ -7,9 +7,11 @@ import { useCardSizePreference } from '../../hooks/useCardSizePreference';
 import { useCollection, CollectionView } from '../../hooks/useCollection';
 import { useCollectionImportExport } from '../../hooks/useCollectionImportExport';
 import { useCollectionSettings } from '../../store/useCollectionSettings';
-import { useSearchFilters } from '../../hooks/useSearchFilters';
+import { matchesFilters } from '../../utils/collectionFilter';
 import { clearCollection } from '../../services/collectionService';
 import CardFilterBar from '../card/CardFilterBar';
+import SearchFiltersPanel from '../card/SearchFilters';
+import { useSearchFilters } from '../../hooks/useSearchFilters';
 import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
 import CardSizeSelector from '../card/CardSizeSelector';
 import EmptyState from '../ui/EmptyState';
@@ -47,15 +49,19 @@ function CollectionManager() {
 
   const displayedEntries = useMemo(() => {
     const bySet = setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries;
+    // The search tab turns these filters into a Scryfall query; here the cards are already in
+    // hand, so the same predicates are applied locally and the tab keeps working offline.
+    const byFilters = bySet.filter((entry) => matchesFilters(entry.card, filters));
+
     const term = nameQuery.trim().toLowerCase();
-    if (!term) return bySet;
+    if (!term) return byFilters;
 
     // Printed name too, so a localised collection is searched by what is on the card.
-    return bySet.filter((entry) => {
+    return byFilters.filter((entry) => {
       const printed = entry.card.printed_name?.toLowerCase() ?? '';
       return entry.name.toLowerCase().includes(term) || printed.includes(term);
     });
-  }, [visibleEntries, setFilter, nameQuery]);
+  }, [visibleEntries, setFilter, nameQuery, filters]);
 
   const cards = useMemo(() => displayedEntries.map((entry) => entry.card), [displayedEntries]);
 
@@ -145,7 +151,14 @@ function CollectionManager() {
           </div>
 
           <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-            <CardFilterBar filters={filters} setFilters={setFilters} />
+            {/* The same advanced panel the search tab uses, so one mental model covers both.
+                Community tags are hidden: they are Scryfall-side data this tab cannot honour. */}
+            <SearchFiltersPanel
+              filters={filters}
+              setFilters={setFilters}
+              hideOracleTag
+              mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
+            />
             {/* Below sm the selects stack full-width for comfortable tapping. */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
               <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px]">

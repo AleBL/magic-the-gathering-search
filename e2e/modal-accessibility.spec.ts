@@ -51,3 +51,48 @@ test.describe('modal accessibility', () => {
     await expect(dialog).toBeHidden();
   });
 });
+
+/**
+ * Reported: scrolling a long rules text moved the card art and the edition list with it,
+ * because one scroller wrapped both columns. From md up each lane scrolls on its own.
+ */
+test.describe('card detail scrolling', () => {
+  test('the text column scrolls without moving the card art', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 800 });
+    await appPage.goto('/');
+    await appPage.getByRole('textbox', { name: 'Search cards...' }).fill('bolt');
+    await appPage.getByRole('button', { name: 'Search', exact: true }).click();
+    await appPage.getByRole('button', { name: 'Lightning Bolt' }).first().click();
+
+    const dialog = appPage.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await appPage.waitForTimeout(500);
+
+    const shared = await dialog.evaluate((el) => {
+      const wrapper = el.querySelector('.flex.flex-col.md\\:flex-row') as HTMLElement | null;
+      if (!wrapper) return null;
+      return { overflowY: getComputedStyle(wrapper).overflowY };
+    });
+
+    // The wrapper must not be the scroller at this width; its children are.
+    expect(shared?.overflowY, 'both columns still share one scrollbar').toBe('hidden');
+  });
+
+  test('below md the dialog keeps a single scrolling column', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 600, height: 800 });
+    await appPage.goto('/');
+    await appPage.getByRole('textbox', { name: 'Search cards...' }).fill('bolt');
+    await appPage.getByRole('button', { name: 'Search', exact: true }).click();
+    await appPage.getByRole('button', { name: 'Lightning Bolt' }).first().click();
+
+    const dialog = appPage.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    const overflow = await dialog.evaluate((el) => {
+      const wrapper = el.querySelector('.flex.flex-col.md\\:flex-row') as HTMLElement | null;
+      return wrapper ? getComputedStyle(wrapper).overflowY : null;
+    });
+
+    expect(overflow, 'the phone layout lost its scroller').toBe('auto');
+  });
+});

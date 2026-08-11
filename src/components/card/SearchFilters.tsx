@@ -22,6 +22,12 @@ interface SearchFiltersProps {
   mobileExtras?: ReactNode;
   /** Extra controls for the advanced panel, shared by the desktop dropdown and the sheet. */
   extraFilters?: ReactNode;
+  /**
+   * Hides the community-tag filter. Those tags are Scryfall-side metadata, so a screen that
+   * filters cards it already holds (the collection, offline) has no way to honour them —
+   * leaving the control visible would offer a filter that quietly does nothing.
+   */
+  hideOracleTag?: boolean;
 }
 
 // Pairs with Tailwind's `sm` breakpoint used by the dropdown markup below.
@@ -30,7 +36,7 @@ const MOBILE_QUERY = '(max-width: 639px)';
 const FIELD_CLASS =
   'w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700/80 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:font-normal placeholder:text-gray-400 shadow-inner dark:shadow-none hover:bg-gray-100 dark:hover:bg-slate-800';
 
-function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: SearchFiltersProps) {
+function SearchFilters({ filters, setFilters, mobileExtras, extraFilters, hideOracleTag }: SearchFiltersProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTextFields, setShowTextFields] = useState(true);
@@ -104,7 +110,7 @@ function SearchFilters({ filters, setFilters, mobileExtras, extraFilters }: Sear
         </select>
       </div>
 
-      <div>
+      <div className={hideOracleTag ? 'hidden' : undefined}>
         {fieldLabel('filter-oracle-tag', t('search.oracleTag'))}
         <select
           id="filter-oracle-tag"

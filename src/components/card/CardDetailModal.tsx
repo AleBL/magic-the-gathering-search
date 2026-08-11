@@ -288,9 +288,12 @@ function CardDetailModal({
           >
             <FaTimes className="text-base" />
           </button>
-          <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
+          {/* One scroller on phones, two lanes from md up: reading a long rules text used to
+              scroll the card art and the edition list along with it. Each side gets its own
+              scroller so the image stays put while the text moves. */}
+          <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 overflow-y-auto md:overflow-hidden custom-scrollbar pr-2 pb-2">
             {/* ── Left: edition sidebar + card image ── */}
-            <div className="flex flex-col md:flex-row gap-4 items-center md:items-start shrink-0 animate-fadeIn">
+            <div className="flex flex-col md:flex-row gap-4 items-center md:items-start shrink-0 animate-fadeIn md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
               {showPrintsSidebar && !hidePrintsSidebar && (
                 <CardDetailPrintsSidebar
                   isLoading={isPrintsLoading}
@@ -363,11 +366,21 @@ function CardDetailModal({
                     <FaRedo className="text-xl" />
                   </button>
                 )}
+
+                {/* Ownership actions sit under the art rather than in the text column: on wide
+                    screens that space was empty, and the controls belong next to the card they
+                    act on. On phones the columns stack, so they land between art and text —
+                    still directly below the card. */}
+                {showCollectionControls && !isToken ? (
+                  <div className="w-full max-w-[300px]">
+                    <CardCollectionControls card={card} variant="panel" />
+                  </div>
+                ) : null}
               </div>
             </div>
 
             {/* ── Right: card info ── */}
-            <div className="card-detail-info">
+            <div className="card-detail-info md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
               <CardDetailData
                 card={card}
                 currentFace={currentFace}
@@ -378,8 +391,6 @@ function CardDetailModal({
 
               {/* Related tokens section */}
               <CardDetailRelatedTokens relatedTokens={relatedTokens} onCardClick={setSelectedToken} />
-
-              {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="panel" />}
 
               {/* Edit and Copy controls for Deck Cards */}
               <div className="w-full mt-auto">

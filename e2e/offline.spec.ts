@@ -66,6 +66,15 @@ test.describe('offline', () => {
     const deckRow = appPage.getByRole('button', { name: 'Lightning Bolt' }).first();
     await expect(deckRow).toBeVisible();
 
+    // Open and close the modal once while still online. Under `vite dev` its modules arrive as
+    // separate requests, and one still in flight when the connection drops rejects for good —
+    // React.lazy caches the rejection and the tab renders its error boundary instead. Warming
+    // it keeps this journey measuring the editions control rather than the dev server.
+    await deckRow.click();
+    await expect(appPage.getByRole('dialog')).toBeVisible();
+    await appPage.keyboard.press('Escape');
+    await expect(appPage.getByRole('dialog')).toBeHidden();
+
     await goOffline(appPage);
     await deckRow.click();
 
