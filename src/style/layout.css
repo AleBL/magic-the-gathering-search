@@ -117,10 +117,16 @@ html.dark .modal-container {
    Styled as the app's other floating layers (dropdowns, command palette) rather than a flat
    white bar: the same translucent fill plus blur, so the artwork moving underneath is hinted
    at instead of hidden, and a defined bottom edge with a soft shadow so it reads as a pinned
-   surface rather than content that happens to be at the top. Pulled to the panel's padding
-   edges so nothing slides through the gap beside it. */
+   surface rather than content that happens to be at the top.
+
+   The offsets matter and are easy to get wrong in either direction. `-mx-4 px-4` stretches it
+   over the panel's side padding so nothing slides through beside it. `-mt-4 pt-4` pulls it up
+   to the panel's top edge and takes that padding into itself, so the header already starts at
+   the scroller's origin — with `top-0` it then pins instantly. Leaving the negative margin off
+   makes it travel 16px of padding first, and a negative `top` makes it slide under the edge;
+   both read as the panel jolting on the first scroll. */
 .panel-header-sticky {
-  @apply sticky -top-4 z-30 -mx-4 -mt-4 px-4 pt-4 rounded-t-xl;
+  @apply sticky top-0 z-30 -mx-4 -mt-4 px-4 pt-4 rounded-t-xl;
   background-color: var(--glass-fill-light);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));

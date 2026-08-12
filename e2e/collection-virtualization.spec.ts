@@ -216,16 +216,16 @@ test.describe('collection view modes', () => {
     await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
   };
 
-  test('switches between grid, list and stacks', async ({ appPage }) => {
+  test('switches between grid, list and binder', async ({ appPage }) => {
     await openCollection(appPage, 40);
 
     await appPage.getByRole('button', { name: 'List', exact: true }).click();
     await expect(appPage.getByRole('table')).toBeVisible();
     await expect(appPage.locator(CARD_SELECTOR)).toHaveCount(0);
 
-    await appPage.getByRole('button', { name: 'Stacks', exact: true }).click();
+    await appPage.getByRole('button', { name: 'Binder', exact: true }).click();
     await expect(appPage.getByRole('table')).toHaveCount(0);
-    await expect(appPage.locator('.deck-stack-card-wrapper').first()).toBeVisible();
+    await expect(appPage.getByText(/Page 1 of/)).toBeVisible();
 
     await appPage.getByRole('button', { name: 'Grid', exact: true }).click();
     await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
@@ -301,5 +301,81 @@ test.describe('collection checklist view', () => {
     await appPage.locator('ul > li').first().getByRole('button').nth(1).click();
 
     await expect(appPage.getByRole('dialog')).toBeVisible();
+  });
+});
+
+/** 6b — collapsible sections per edition, counts without a denominator. */
+test.describe('collection by-set view', () => {
+  test('groups into editions and collapses a section', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1440, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+    await seedCollection(appPage, 40);
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+    await appPage.getByRole('button', { name: 'By set', exact: true }).click();
+
+    const sections = appPage.locator('section');
+    await expect(sections.first()).toBeVisible();
+
+    // Counts say what they mean: owned copies, with no invented total.
+    await expect(appPage.getByText(/\d+ owned/).first()).toBeVisible();
+    await expect(appPage.getByText(/\d+ \/ \d+/)).toHaveCount(0);
+
+    const header = sections.first().getByRole('button').first();
+    const rowsBefore = await sections.first().locator('li').count();
+    expect(rowsBefore).toBeGreaterThan(0);
+
+    await header.click();
+    await expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(await sections.first().locator('li').count()).toBe(0);
+  });
+});
+
+/** 6a — the binder: fixed 3x3 pockets and page navigation. */
+test.describe('collection binder view', () => {
+  const openBinder = async (page: import('@playwright/test').Page, count: number) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await page.waitForTimeout(400);
+    await seedCollection(page, count);
+    await page.reload();
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Binder', exact: true }).click();
+  };
+
+  test('pages through nine cards at a time', async ({ appPage }) => {
+    await openBinder(appPage, 20);
+
+    await expect(appPage.getByText('Page 1 of 3')).toBeVisible();
+    await expect(appPage.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+
+    await appPage.getByRole('button', { name: 'Next page' }).click();
+    await expect(appPage.getByText('Page 2 of 3')).toBeVisible();
+    await expect(appPage.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+  });
+
+  /**
+   * An empty pocket is information — a gap in the page — so the last page still draws nine.
+   * Reflowing would break "page 3, second row" as a way to find a card.
+   */
+  test('the last page keeps nine slots even when partly empty', async ({ appPage }) => {
+    await openBinder(appPage, 20);
+
+    await appPage.getByRole('button', { name: 'Next page' }).click();
+    await appPage.getByRole('button', { name: 'Next page' }).click();
+    await expect(appPage.getByText('Page 3 of 3')).toBeVisible();
+    await expect(appPage.getByRole('button', { name: 'Next page' })).toBeDisabled();
+
+    // 20 cards = 9 + 9 + 2, so the last page has 2 cards and 7 empty pockets.
+    const slots = await appPage.evaluate(() => {
+      const grid = document.querySelector('[data-binder-page]');
+      return grid ? grid.children.length : -1;
+    });
+    expect(slots, 'the last page reflowed instead of keeping its pockets').toBe(9);
   });
 });

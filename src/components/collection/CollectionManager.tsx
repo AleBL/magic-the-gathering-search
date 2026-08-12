@@ -13,11 +13,17 @@ import CardFilterBar from '../card/CardFilterBar';
 import SearchFiltersPanel from '../card/SearchFilters';
 import CardDetailModal from '../card/CardDetailModal';
 import { CollectionListView } from './CollectionListView';
-import { CollectionStackView } from './CollectionStackView';
 import { CollectionChecklistView } from './CollectionChecklistView';
-import { FaTh, FaList, FaLayerGroup, FaCheckSquare } from 'react-icons/fa';
+import { CollectionBySetView } from './CollectionBySetView';
+import { CollectionBinderView } from './CollectionBinderView';
+import { FaTh, FaList, FaCheckSquare, FaFolderOpen, FaBook } from 'react-icons/fa';
 /** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
-type CollectionViewMode = 'grid' | 'list' | 'stack' | 'checklist';
+/**
+ * Binder replaces Stacks here by decision: both do dense visual browsing, and the binder does
+ * it better with a real page metaphor. Stacks stays in the deck tab, where grouping by type is
+ * what it is for.
+ */
+type CollectionViewMode = 'grid' | 'list' | 'binder' | 'checklist' | 'bySet';
 import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
@@ -222,8 +228,9 @@ function CollectionManager() {
                     [
                       { mode: 'grid', label: t('collection.viewGrid'), icon: FaTh },
                       { mode: 'list', label: t('collection.viewList'), icon: FaList },
-                      { mode: 'stack', label: t('collection.viewStack'), icon: FaLayerGroup },
-                      { mode: 'checklist', label: t('collection.viewChecklist'), icon: FaCheckSquare }
+                      { mode: 'binder', label: t('collection.viewBinder'), icon: FaBook },
+                      { mode: 'checklist', label: t('collection.viewChecklist'), icon: FaCheckSquare },
+                      { mode: 'bySet', label: t('collection.viewBySet'), icon: FaFolderOpen }
                     ] as const
                   ).map(({ mode, label, icon: Icon }) => (
                     <button
@@ -270,8 +277,12 @@ function CollectionManager() {
                 <CollectionListView entries={displayedEntries} currency={currency} onSelectCard={setDetailCard} />
               ) : viewMode === 'checklist' ? (
                 <CollectionChecklistView entries={displayedEntries} onSelectCard={setDetailCard} />
+              ) : viewMode === 'bySet' ? (
+                <CollectionBySetView entries={displayedEntries} onSelectCard={setDetailCard} />
+              ) : viewMode === 'binder' ? (
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} />
               ) : (
-                <CollectionStackView entries={displayedEntries} onSelectCard={setDetailCard} />
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} />
               )}
             </>
           ) : (

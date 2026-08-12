@@ -218,8 +218,65 @@ test.describe('deck panel header', () => {
 
     const after = await header.boundingBox();
     await expect(header, 'the deck header scrolled away with the list').toBeVisible();
-    // A sticky element still travels the padding above it before it pins, so a few pixels are
-    // expected; the list moved 600, so anything in this range means it stuck.
-    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0)), 'the header scrolled with the list').toBeLessThan(30);
+    // Pinned at `top-0` with no negative offset, so it should not travel at all: any real
+    // movement here is the jolt that was reported on the first scroll.
+    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0)), 'the header jolted instead of staying put').toBeLessThan(4);
+  });
+});
+
+/**
+ * Reported: even on a screen with room to spare, a third scrollbar wrapped both lanes and moved
+ * a few pixels. Cause: the grid's height was guessed from the viewport (`100vh - 8rem`) while
+ * `.workspace-body` already knew its own height, so the guess overshot and the wrapper scrolled.
+ */
+test.describe('deck tab scroller count', () => {
+  test('exactly two scrollers at a large viewport: the deck list and the deck', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1680, height: 1000 });
+    await withDecks(appPage);
+
+    await appPage.evaluate(async () => {
+      const database: IDBDatabase = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('MagicDecksDB');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('decks', 'readwrite');
+        transaction.objectStore('decks').put({
+          id: 'scroll-deck',
+          name: 'Scroll Deck',
+          format: 'freeform',
+          createdAt: new Date().toISOString(),
+          cards: Array.from({ length: 60 }, (_, i) => ({ id: `s-${i}`, name: `Card ${i}`, type_line: 'Creature' }))
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+    });
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'My Decks' }).click();
+    await appPage
+      .getByRole('button', { name: /Scroll Deck/ })
+      .first()
+      .click();
+    await appPage.waitForTimeout(700);
+
+    const scrollers = await appPage.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('*')]
+        .filter((el) => {
+          const style = getComputedStyle(el);
+          return ['auto', 'scroll'].includes(style.overflowY) && el.scrollHeight > el.clientHeight + 1;
+        })
+        .map((el) => `${el.className?.toString().slice(0, 40)} (+${el.scrollHeight - el.clientHeight}px)`)
+    );
+
+    expect(scrollers, `scrollers found: ${JSON.stringify(scrollers)}`).toHaveLength(2);
+
+    // And specifically not the wrapper that holds both lanes.
+    const wrapperScrolls = await appPage.evaluate(() => {
+      const body = document.querySelector('.workspace-body') as HTMLElement | null;
+      return body ? body.scrollHeight - body.clientHeight : -1;
+    });
+    expect(wrapperScrolls, 'the wrapper around both lanes still scrolls').toBeLessThanOrEqual(1);
   });
 });
