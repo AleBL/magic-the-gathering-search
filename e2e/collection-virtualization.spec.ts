@@ -253,3 +253,53 @@ test.describe('collection view modes', () => {
     await expect(appPage.getByRole('dialog')).toBeVisible();
   });
 });
+
+/** 6c — the compact checklist, for stocktaking. */
+test.describe('collection checklist view', () => {
+  const openChecklist = async (page: import('@playwright/test').Page) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await page.waitForTimeout(400);
+    await seedCollection(page, 30);
+    await page.reload();
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Checklist', exact: true }).click();
+  };
+
+  test('lists every card in one thin row each', async ({ appPage }) => {
+    await openChecklist(appPage);
+
+    const rows = appPage.locator('ul > li');
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.count()).toBe(30);
+  });
+
+  /**
+   * The tick must not touch the owned count: ownership is a number, and a checkbox meaning
+   * "one copy" would destroy it. It toggles the wishlist instead.
+   */
+  test('the tick toggles wishlist and leaves the owned count alone', async ({ appPage }) => {
+    await openChecklist(appPage);
+
+    const row = appPage.locator('ul > li').first();
+    const quantityBefore = await row.locator('span').last().innerText();
+
+    const tick = row.getByRole('button', { name: /Wishlist/i });
+    const pressedBefore = await tick.getAttribute('aria-pressed');
+    await tick.click();
+    await appPage.waitForTimeout(400);
+
+    await expect(tick).not.toHaveAttribute('aria-pressed', pressedBefore ?? 'false');
+    expect(await row.locator('span').last().innerText(), 'the owned count changed').toBe(quantityBefore);
+  });
+
+  test('a row opens the card detail', async ({ appPage }) => {
+    await openChecklist(appPage);
+
+    await appPage.locator('ul > li').first().getByRole('button').nth(1).click();
+
+    await expect(appPage.getByRole('dialog')).toBeVisible();
+  });
+});

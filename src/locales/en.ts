@@ -314,6 +314,7 @@ const en = {
       viewGrid: 'Grid',
       viewList: 'List',
       viewStack: 'Stacks',
+      viewChecklist: 'Checklist',
       searchLabel: 'Search',
       searchPlaceholder: 'Card name…',
       importCsv: 'Import CSV',

@@ -314,6 +314,7 @@ const pt = {
       viewGrid: 'Grade',
       viewList: 'Lista',
       viewStack: 'Pilhas',
+      viewChecklist: 'Checklist',
       searchLabel: 'Buscar',
       searchPlaceholder: 'Nome da carta…',
       importCsv: 'Importar CSV',

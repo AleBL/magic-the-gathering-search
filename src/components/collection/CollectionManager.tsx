@@ -14,8 +14,10 @@ import SearchFiltersPanel from '../card/SearchFilters';
 import CardDetailModal from '../card/CardDetailModal';
 import { CollectionListView } from './CollectionListView';
 import { CollectionStackView } from './CollectionStackView';
-import { FaTh, FaList, FaLayerGroup } from 'react-icons/fa';
-import type { ViewMode } from '../../hooks/useDeckPreviewState';
+import { CollectionChecklistView } from './CollectionChecklistView';
+import { FaTh, FaList, FaLayerGroup, FaCheckSquare } from 'react-icons/fa';
+/** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
+type CollectionViewMode = 'grid' | 'list' | 'stack' | 'checklist';
 import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
@@ -33,7 +35,7 @@ function CollectionManager() {
   const [setFilter, setSetFilter] = useState('');
   const [nameQuery, setNameQuery] = useState('');
   const [cardSize, setCardSize] = useCardSizePreference();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<CollectionViewMode>('grid');
   // The grid's CardItem owns its own modal; the list and stack views do not, so the tab holds
   // the selection for them.
   const [detailCard, setDetailCard] = useState<Card | null>(null);
@@ -220,7 +222,8 @@ function CollectionManager() {
                     [
                       { mode: 'grid', label: t('collection.viewGrid'), icon: FaTh },
                       { mode: 'list', label: t('collection.viewList'), icon: FaList },
-                      { mode: 'stack', label: t('collection.viewStack'), icon: FaLayerGroup }
+                      { mode: 'stack', label: t('collection.viewStack'), icon: FaLayerGroup },
+                      { mode: 'checklist', label: t('collection.viewChecklist'), icon: FaCheckSquare }
                     ] as const
                   ).map(({ mode, label, icon: Icon }) => (
                     <button
@@ -265,6 +268,8 @@ function CollectionManager() {
                 />
               ) : viewMode === 'list' ? (
                 <CollectionListView entries={displayedEntries} currency={currency} onSelectCard={setDetailCard} />
+              ) : viewMode === 'checklist' ? (
+                <CollectionChecklistView entries={displayedEntries} onSelectCard={setDetailCard} />
               ) : (
                 <CollectionStackView entries={displayedEntries} onSelectCard={setDetailCard} />
               )}

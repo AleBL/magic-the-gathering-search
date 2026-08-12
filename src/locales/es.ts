@@ -316,6 +316,7 @@ const es = {
       viewGrid: 'Cuadrícula',
       viewList: 'Lista',
       viewStack: 'Pilas',
+      viewChecklist: 'Lista de control',
       searchLabel: 'Buscar',
       searchPlaceholder: 'Nombre de la carta…',
       importCsv: 'Importar CSV',
