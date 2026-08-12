@@ -1,12 +1,21 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCrown, FaBan, FaExclamationTriangle, FaPalette, FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
+import {
+  FaCrown,
+  FaBan,
+  FaExclamationTriangle,
+  FaTimesCircle,
+  FaPalette,
+  FaPlus,
+  FaMinus,
+  FaTrash
+} from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { DeckFormat } from '../../types/Deck';
-import { DeckFormatType } from '../../types/enums';
 import { getCardArtCropUrl } from '../../utils/deckGrouping';
 import { localizedCardName } from '../../utils/cardFaces';
 import { parseTextWithSymbols } from '../../utils/symbolHelper';
+import { cardFormatStatus } from '../../utils/deckValidator';
 
 interface DeckCardListItemProps {
   card: Card;
@@ -43,14 +52,11 @@ export const DeckCardListItem = memo(function DeckCardListItem({
 }: DeckCardListItemProps) {
   const { t } = useTranslation();
 
-  const isBanned =
-    activeFormat &&
-    activeFormat !== DeckFormatType.FREEFORM &&
-    card.legalities?.[activeFormat as keyof typeof card.legalities] === 'banned';
-  const isRestricted =
-    activeFormat &&
-    activeFormat !== DeckFormatType.FREEFORM &&
-    card.legalities?.[activeFormat as keyof typeof card.legalities] === 'restricted';
+  // One source of truth, so a rule that can invalidate the deck cannot be missing here.
+  const formatStatus = cardFormatStatus(card, activeFormat);
+  const isBanned = formatStatus === 'banned';
+  const isRestricted = formatStatus === 'restricted';
+  const isInvalid = formatStatus === 'invalid';
 
   const artCropUrl = getCardArtCropUrl(card);
   const displayName = localizedCardName(card);
@@ -146,6 +152,12 @@ export const DeckCardListItem = memo(function DeckCardListItem({
               <span className="deck-card-status-chip-restricted ml-2">
                 <FaExclamationTriangle className="text-amber-500 dark:text-amber-400 text-[9px] shrink-0" />
                 {t('cardDetails.restricted').toUpperCase()}
+              </span>
+            )}
+            {isInvalid && (
+              <span className="deck-card-status-chip-invalid ml-2" title={t('cardDetails.invalidInFormatHint')}>
+                <FaTimesCircle className="text-violet-500 dark:text-violet-400 text-[9px] shrink-0" />
+                {t('cardDetails.invalidInFormat').toUpperCase()}
               </span>
             )}
           </div>

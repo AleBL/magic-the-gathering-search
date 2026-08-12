@@ -1,16 +1,17 @@
 import { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCrown, FaBan, FaExclamationTriangle, FaPlus, FaMinus, FaSync } from 'react-icons/fa';
+import { FaCrown, FaBan, FaExclamationTriangle, FaPlus, FaMinus, FaSync, FaTimesCircle } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
-import { DeckFormatType, DeckZone } from '../../types/enums';
+import { DeckZone } from '../../types/enums';
 import CardDetailModal from './CardDetailModal';
 import FlipCard from './FlipCard';
 import { CardCollectionControls } from './CardCollectionControls';
 import { getCardFaceImages } from '../../utils/cardFaces';
 import { useVisualEffects } from '../../hooks/useVisualEffects';
 import locales from '../../locales';
+import { cardFormatStatus } from '../../utils/deckValidator';
 
 const getGlowColor = (rarity: string | undefined): string => {
   switch (rarity?.toLowerCase()) {
@@ -153,15 +154,12 @@ function CardItem({
 
   const imageUrl = useMemo(() => getCardImageUrl(card, size), [card, size]);
 
-  const isBanned = useMemo(() => {
-    if (!activeFormat || activeFormat === DeckFormatType.FREEFORM) return false;
-    return card.legalities?.[activeFormat as keyof typeof card.legalities] === 'banned';
-  }, [card, activeFormat]);
-
-  const isRestricted = useMemo(() => {
-    if (!activeFormat || activeFormat === DeckFormatType.FREEFORM) return false;
-    return card.legalities?.[activeFormat as keyof typeof card.legalities] === 'restricted';
-  }, [card, activeFormat]);
+  // Shared with the deck list and the stack view: a rule that invalidates a deck has to mark
+  // the card everywhere the card is drawn, not in whichever surface remembered to check.
+  const formatStatus = useMemo(() => cardFormatStatus(card, activeFormat), [card, activeFormat]);
+  const isBanned = formatStatus === 'banned';
+  const isRestricted = formatStatus === 'restricted';
+  const isInvalid = formatStatus === 'invalid';
 
   const isDraggable = isDeckCard && isEditMode && !isToken;
   // A search result can be dragged to add it, but only when it isn't already a
@@ -230,6 +228,16 @@ function CardItem({
         <div className="absolute top-2 right-2 z-10 bg-amber-500/90 dark:bg-warning/90 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold shadow-lg border border-amber-400 flex items-center gap-1 select-none">
           <FaExclamationTriangle className="text-white text-[9px] shrink-0" />
           {t('cardDetails.restricted')}
+        </div>
+      )}
+
+      {isInvalid && (
+        <div
+          title={t('cardDetails.invalidInFormatHint')}
+          className="absolute top-2 right-2 z-10 bg-violet-600/90 dark:bg-violet-700/90 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold shadow-lg border border-violet-500 flex items-center gap-1 select-none"
+        >
+          <FaTimesCircle className="text-white text-[9px] shrink-0" />
+          {t('cardDetails.invalidInFormat')}
         </div>
       )}
 

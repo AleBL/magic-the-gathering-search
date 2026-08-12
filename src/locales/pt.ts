@@ -436,6 +436,8 @@ const pt = {
       removeAsCommander: 'Remover como Comandante',
       removeCopy: 'Remover cópia',
       restricted: 'Restrita',
+      invalidInFormat: 'Inválida',
+      invalidInFormatHint: 'Esta carta não é permitida neste formato',
       setAsCommander: 'Definir como Comandante',
       setLabel: 'Coleção',
       textLabel: 'Texto',

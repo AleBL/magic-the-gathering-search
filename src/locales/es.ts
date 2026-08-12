@@ -441,6 +441,8 @@ const es = {
       removeAsCommander: 'Quitar como Comandante',
       removeCopy: 'Quitar copia',
       restricted: 'Restringida',
+      invalidInFormat: 'Inválida',
+      invalidInFormatHint: 'Esta carta no está permitida en este formato',
       setAsCommander: 'Definir como Comandante',
       setLabel: 'Colección',
       textLabel: 'Texto',

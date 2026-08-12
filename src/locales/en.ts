@@ -435,6 +435,8 @@ const en = {
       removeAsCommander: 'Remove as Commander',
       removeCopy: 'Remove copy',
       restricted: 'Restricted',
+      invalidInFormat: 'Invalid',
+      invalidInFormatHint: 'This card is not allowed in this format',
       setAsCommander: 'Set as Commander',
       setLabel: 'Set',
       textLabel: 'Text',

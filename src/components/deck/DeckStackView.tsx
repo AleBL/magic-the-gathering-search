@@ -9,15 +9,17 @@ import {
   FaExclamationTriangle,
   FaPalette,
   FaPlus,
-  FaMinus
+  FaMinus,
+  FaTimesCircle
 } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
-import { DeckFormatType, DeckZone } from '../../types/enums';
+import { DeckZone } from '../../types/enums';
 import { DeckFormat } from '../../types/Deck';
 import { DeckCardGrouped, GroupedCards, groupCardsByUnique, getCardImageUrl } from '../../utils/deckGrouping';
 import { isBacklineSupportCard, isFrontlineCard, isLandCard, isSpellCard } from '../../utils/cardTypePredicates';
 import CardDetailModal from '../card/CardDetailModal';
+import { cardFormatStatus } from '../../utils/deckValidator';
 
 interface DeckStackViewProps {
   groups: GroupedCards[];
@@ -125,22 +127,19 @@ const DeckStackView = memo(function DeckStackView({
     [t, frontlineCards, backlineCards, spellCards, landCards]
   );
 
-  function getCardLegalityStatus(card: Card): { isBanned: boolean; isRestricted: boolean } {
-    if (!activeFormat || activeFormat === DeckFormatType.FREEFORM) {
-      return { isBanned: false, isRestricted: false };
-    }
-
-    const legalityStatus = card.legalities?.[activeFormat as keyof typeof card.legalities];
+  function getCardLegalityStatus(card: Card): { isBanned: boolean; isRestricted: boolean; isInvalid: boolean } {
+    const status = cardFormatStatus(card, activeFormat);
     return {
-      isBanned: legalityStatus === 'banned',
-      isRestricted: legalityStatus === 'restricted'
+      isBanned: status === 'banned',
+      isRestricted: status === 'restricted',
+      isInvalid: status === 'invalid'
     };
   }
 
   const renderPlaymatCard = (item: { name: string; count: number; card: Card }) => {
     const { count, card } = item;
     const imageUrl = getCardImageUrl(card);
-    const { isBanned, isRestricted } = getCardLegalityStatus(card);
+    const { isBanned, isRestricted, isInvalid } = getCardLegalityStatus(card);
     const dynamicCardStyle = {
       '--stack-card-width': cardDimensions.width,
       '--stack-card-height': cardDimensions.height
@@ -235,6 +234,16 @@ const DeckStackView = memo(function DeckStackView({
             <div className="deck-stack-status-badge deck-stack-status-badge-restricted">
               <FaExclamationTriangle className="text-white text-[8px] shrink-0" />
               <span>{t('cardDetails.restricted').toUpperCase()}</span>
+            </div>
+          ) : null}
+
+          {isInvalid ? (
+            <div
+              className="deck-stack-status-badge bg-violet-600/90 border border-violet-500"
+              title={t('cardDetails.invalidInFormatHint')}
+            >
+              <FaTimesCircle className="text-white text-[8px] shrink-0" />
+              <span>{t('cardDetails.invalidInFormat').toUpperCase()}</span>
             </div>
           ) : null}
 
