@@ -301,7 +301,9 @@ function CardItem({
         </button>
       )}
 
-      {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="overlay" />}
+      {showCollectionControls && !isToken && (
+        <CardCollectionControls card={card} variant="overlay" revealOnHover={size === 'small' || size === 'medium'} />
+      )}
 
       {showPrintingBadge && card.set ? (
         <span className="absolute bottom-2 right-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">

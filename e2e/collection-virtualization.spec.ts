@@ -1,6 +1,11 @@
 import { expect, test } from './fixtures';
 import { CARD_SELECTOR, seedCollection } from './seed';
 
+/** The view picker is a dropdown now, matching the deck tab's display settings. */
+const openViewMenu = async (page: import('@playwright/test').Page) => {
+  await page.locator('.display-settings-btn').first().click();
+};
+
 /**
  * Guards the Phase 1 fix. Before it, the collection rendered every entry: 5,000 cards
  * meant 95,000 DOM nodes, 5,000 IndexedDB reads and ~426 ms scroll frames.
@@ -219,20 +224,24 @@ test.describe('collection view modes', () => {
   test('switches between grid, list and binder', async ({ appPage }) => {
     await openCollection(appPage, 40);
 
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'List', exact: true }).click();
     await expect(appPage.getByRole('table')).toBeVisible();
     await expect(appPage.locator(CARD_SELECTOR)).toHaveCount(0);
 
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'Binder', exact: true }).click();
     await expect(appPage.getByRole('table')).toHaveCount(0);
     await expect(appPage.getByText(/Page 1 of/)).toBeVisible();
 
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'Grid', exact: true }).click();
     await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
   });
 
   test('the list sorts by a column and reverses on a second click', async ({ appPage }) => {
     await openCollection(appPage, 40);
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'List', exact: true }).click();
 
     const firstCell = () => appPage.locator('tbody tr').first().locator('td').first().innerText();
@@ -246,6 +255,7 @@ test.describe('collection view modes', () => {
 
   test('a row opens the card detail, since the list has no card to click', async ({ appPage }) => {
     await openCollection(appPage, 20);
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'List', exact: true }).click();
 
     await appPage.locator('tbody tr').first().click();
@@ -265,6 +275,7 @@ test.describe('collection checklist view', () => {
     await page.reload();
     await page.getByRole('button', { name: 'Collection' }).click();
     await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+    await openViewMenu(page);
     await page.getByRole('button', { name: 'Checklist', exact: true }).click();
   };
 
@@ -315,6 +326,7 @@ test.describe('collection by-set view', () => {
     await appPage.reload();
     await appPage.getByRole('button', { name: 'Collection' }).click();
     await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+    await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'By set', exact: true }).click();
 
     const sections = appPage.locator('section');
@@ -345,6 +357,7 @@ test.describe('collection binder view', () => {
     await page.reload();
     await page.getByRole('button', { name: 'Collection' }).click();
     await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+    await openViewMenu(page);
     await page.getByRole('button', { name: 'Binder', exact: true }).click();
   };
 

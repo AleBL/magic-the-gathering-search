@@ -10,9 +10,15 @@ interface CardCollectionControlsProps {
    * visible while owned/wishlisted). `panel` — labelled row for the detail modal.
    */
   variant?: 'overlay' | 'panel';
+  /**
+   * Small card sizes: the overlay covers most of the art, so it fades in on hover/focus
+   * instead of sitting on top permanently. It stays put whenever the card is already owned or
+   * wishlisted, since then the badge is the information, not a control.
+   */
+  revealOnHover?: boolean;
 }
 
-export function CardCollectionControls({ card, variant = 'overlay' }: CardCollectionControlsProps) {
+export function CardCollectionControls({ card, variant = 'overlay', revealOnHover }: CardCollectionControlsProps) {
   const { t } = useTranslation();
   const { quantity, totalOwned, wishlist, increment, decrement, toggleWishlist } = useCardCollection(card);
 
@@ -79,7 +85,13 @@ export function CardCollectionControls({ card, variant = 'overlay' }: CardCollec
     // sm+: always visible — hidden-until-hover controls were the main reason
     // adding to the collection felt undiscoverable. Bottom strip: the card's
     // name runs along the top edge.
-    <div className="absolute bottom-2 left-2 z-30 flex flex-col items-start gap-1.5">
+    <div
+      className={`absolute bottom-2 left-2 z-30 flex flex-col items-start gap-1.5 ${
+        revealOnHover && quantity === 0 && !wishlist
+          ? 'opacity-0 focus-within:opacity-100 group-hover:opacity-100 transition-opacity duration-200'
+          : ''
+      }`}
+    >
       {/* Below sm the editing cluster stays hidden — on phones the grid is dense and mis-taps
           were constant, so editing lives in the detail panel — but the count itself is the
           point of the collection tab, so it shows read-only. */}

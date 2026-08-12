@@ -16,18 +16,11 @@ import { CollectionListView } from './CollectionListView';
 import { CollectionChecklistView } from './CollectionChecklistView';
 import { CollectionBySetView } from './CollectionBySetView';
 import { CollectionBinderView } from './CollectionBinderView';
-import { FaTh, FaList, FaCheckSquare, FaFolderOpen, FaBook } from 'react-icons/fa';
+import { CollectionViewOptions, type CollectionViewMode } from './CollectionViewOptions';
 /** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
-/**
- * Binder replaces Stacks here by decision: both do dense visual browsing, and the binder does
- * it better with a real page metaphor. Stacks stays in the deck tab, where grouping by type is
- * what it is for.
- */
-type CollectionViewMode = 'grid' | 'list' | 'binder' | 'checklist' | 'bySet';
 import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
 import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
-import CardSizeSelector from '../card/CardSizeSelector';
 import EmptyState from '../ui/EmptyState';
 import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
@@ -222,36 +215,13 @@ function CollectionManager() {
                   ))}
                 </select>
               </label>
-              <div className="ml-auto flex items-center gap-2">
-                <div className="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-slate-800 p-0.5">
-                  {(
-                    [
-                      { mode: 'grid', label: t('collection.viewGrid'), icon: FaTh },
-                      { mode: 'list', label: t('collection.viewList'), icon: FaList },
-                      { mode: 'binder', label: t('collection.viewBinder'), icon: FaBook },
-                      { mode: 'checklist', label: t('collection.viewChecklist'), icon: FaCheckSquare },
-                      { mode: 'bySet', label: t('collection.viewBySet'), icon: FaFolderOpen }
-                    ] as const
-                  ).map(({ mode, label, icon: Icon }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setViewMode(mode)}
-                      aria-pressed={viewMode === mode}
-                      title={label}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                        viewMode === mode
-                          ? 'bg-white dark:bg-slate-700 text-primary dark:text-blue-400 shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                      }`}
-                    >
-                      <Icon className="text-[11px] shrink-0" />
-                      <span className="hidden sm:inline">{label}</span>
-                    </button>
-                  ))}
-                </div>
-                {/* Card size only means something where cards are drawn. */}
-                {viewMode === 'grid' ? <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} /> : null}
+              <div className="ml-auto">
+                <CollectionViewOptions
+                  viewMode={viewMode}
+                  setViewMode={setViewMode}
+                  cardSize={cardSize}
+                  onCardSizeChange={setCardSize}
+                />
               </div>
             </div>
           </div>
