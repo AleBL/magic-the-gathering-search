@@ -22,11 +22,15 @@ const LAYOUTS = {
 export type BinderLayout = keyof typeof LAYOUTS;
 
 /**
- * A card is 63×88mm. At ~96dpi that is roughly 240px wide, which is what "actual size" means
- * here: pockets stay this size instead of stretching, because a binder page does not grow with
- * the desk it sits on. Spare width goes to showing more pages side by side.
+ * Actual size, derived rather than eyeballed: a Magic card is 63×88mm, and at the CSS
+ * reference 96dpi that is 63 × 96 / 25.4 ≈ 238px wide. Pockets stay this size instead of
+ * stretching, because a binder page does not grow with the desk it sits on — spare width goes
+ * to showing more pages side by side.
+ *
+ * A 3×3 sheet therefore needs ~730px and a 2×2 sheet ~484px. Narrower than that and the sheet
+ * scrolls sideways rather than shrinking, since a shrunk pocket is no longer actual size.
  */
-const POCKET_WIDTH_PX = 172;
+const POCKET_WIDTH_PX = Math.round((63 * 96) / 25.4);
 
 const artOf = (card: Card): string | undefined =>
   card.image_uris?.normal ?? card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.normal;
@@ -95,7 +99,8 @@ export function CollectionBinderView({ entries, onSelectCard, layout }: Collecti
 
   return (
     <div ref={sheetRef} className="flex flex-col gap-3">
-      <div className="flex flex-wrap justify-center gap-6">
+      {/* Scrolls rather than scales: shrinking the pocket would defeat the point of the view. */}
+      <div className="flex flex-wrap justify-center gap-6 overflow-x-auto">
         {visiblePages.map((binderPage) => (
           <div key={binderPage.number} className="flex flex-col gap-1.5">
             <div

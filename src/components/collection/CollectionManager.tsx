@@ -111,12 +111,21 @@ function CollectionManager() {
       <div ref={scrollRef} className="workspace-body">
         <div className="flex flex-col gap-4 p-4">
           <div className="panel-header relative z-10 flex-col items-start gap-3 md:flex-row md:items-center">
-            <h2 className="text-gray-900 dark:text-white text-xl font-serif font-semibold flex items-center gap-2">
+            <h2 className="text-gray-900 dark:text-white text-xl font-serif font-semibold flex items-center gap-2 shrink-0">
               <FaBoxOpen className="text-primary shrink-0" />
               {t('collection.title')}
             </h2>
+
+            {/* The tabs live in the header's middle, which was empty on wide screens while they
+                sat on a row of their own below. Centred at md+ so they read as the header's
+                subject rather than as another toolbar; full width below, where they stack. */}
+            <div className="flex w-full md:w-auto md:flex-1 md:justify-center items-center gap-2">
+              {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
+              {viewTab('wishlist', <FaHeart className="text-xs" />, t('collection.wishlist'), summary.wishlistCount)}
+            </div>
+
             {/* Below md: three equal compact buttons filling the row. */}
-            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center md:ml-auto">
+            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -157,11 +166,6 @@ function CollectionManager() {
           />
 
           <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
-
-          <div className="flex flex-wrap items-center gap-2">
-            {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
-            {viewTab('wishlist', <FaHeart className="text-xs" />, t('collection.wishlist'), summary.wishlistCount)}
-          </div>
 
           <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
             {/* Mirrors the search tab exactly: the colour/type quick filters on their own row

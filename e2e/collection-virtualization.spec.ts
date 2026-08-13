@@ -394,12 +394,14 @@ test.describe('collection binder view', () => {
     const sheets = await appPage.locator('[data-binder-page]').count();
     expect(sheets, 'a wide viewport should fit more than one sheet').toBeGreaterThan(1);
 
-    // And the pocket keeps its real-world width rather than growing with the screen.
+    // A card is 63mm wide, which is 238px at the CSS reference 96dpi. The pocket must be that
+    // size whatever the screen — this is the whole claim the binder makes.
     const width = await appPage.evaluate(() => {
       const pocket = document.querySelector('[data-binder-page] > *');
       return pocket ? Math.round(pocket.getBoundingClientRect().width) : -1;
     });
-    expect(width, `pocket width ${width}px`).toBeLessThan(220);
+    expect(width, `pocket width ${width}px, expected ~238`).toBeGreaterThan(230);
+    expect(width, `pocket width ${width}px, expected ~238`).toBeLessThan(246);
   });
 
   test('2x2 gives four pockets a sheet', async ({ appPage }) => {
@@ -460,5 +462,36 @@ test.describe('collection toolbar layout', () => {
 
     const box = await appPage.getByPlaceholder('Card name…').boundingBox();
     expect(box!.width, `the name field is ${Math.round(box!.width)}px wide`).toBeLessThan(400);
+  });
+});
+
+/** The tabs moved into the header's empty middle; they must stay usable at every width. */
+test.describe('collection header layout', () => {
+  for (const width of [390, 820, 1680]) {
+    test(`the Owned/Wishlist tabs are reachable at ${width}px`, async ({ appPage }) => {
+      await appPage.setViewportSize({ width, height: 900 });
+      await appPage.goto('/');
+      await appPage.getByRole('button', { name: 'Collection' }).click();
+      await appPage.waitForTimeout(400);
+
+      const owned = appPage.getByRole('button', { name: /Owned/ }).first();
+      const wishlist = appPage.getByRole('button', { name: /Wishlist/ }).first();
+      await expect(owned).toBeVisible();
+      await expect(wishlist).toBeVisible();
+
+      // Switching still works from the new position.
+      await wishlist.click();
+      await expect(appPage.getByText(/Cards wanted/i)).toBeVisible();
+    });
+  }
+
+  test('the header does not overflow sideways at a wide viewport', async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1680, height: 900 });
+    await appPage.goto('/');
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+    await appPage.waitForTimeout(400);
+
+    const overflow = await appPage.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
   });
 });
