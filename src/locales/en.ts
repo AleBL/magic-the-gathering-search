@@ -314,6 +314,8 @@ const en = {
       quantity: 'Quantity',
       value: 'Value',
       viewGrid: 'Grid',
+      hideTools: 'Hide filters',
+      showTools: 'Show filters',
       viewList: 'List',
       viewChecklist: 'Checklist',
       viewBySet: 'By set',

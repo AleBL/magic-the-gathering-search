@@ -10,7 +10,8 @@ export const STORAGE_KEYS = {
   cardSize: 'deckforge_card_size',
   budgetTarget: 'deckforge_budget_target',
   collectionCurrency: 'deckforge_collection_currency',
-  showDeckCollectionGap: 'deckforge_show_deck_collection_gap'
+  showDeckCollectionGap: 'deckforge_show_deck_collection_gap',
+  collectionToolsOpen: 'deckforge_collection_tools_open'
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

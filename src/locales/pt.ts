@@ -314,6 +314,8 @@ const pt = {
       quantity: 'Quantidade',
       value: 'Valor',
       viewGrid: 'Grade',
+      hideTools: 'Ocultar filtros',
+      showTools: 'Mostrar filtros',
       viewList: 'Lista',
       viewChecklist: 'Checklist',
       viewBySet: 'Por edição',

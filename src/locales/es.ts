@@ -316,6 +316,8 @@ const es = {
       quantity: 'Cantidad',
       value: 'Valor',
       viewGrid: 'Cuadrícula',
+      hideTools: 'Ocultar filtros',
+      showTools: 'Mostrar filtros',
       viewList: 'Lista',
       viewChecklist: 'Lista de control',
       viewBySet: 'Por edición',
