@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FaSlidersH, FaTh, FaList, FaBook, FaCheckSquare, FaFolderOpen } from 'react-icons/fa';
 import { CardSize } from '../../types';
-import CardSizeSelector from '../card/CardSizeSelector';
+import type { BinderLayout } from './CollectionBinderView';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 export type CollectionViewMode = 'grid' | 'list' | 'binder' | 'checklist' | 'bySet';
@@ -20,6 +20,8 @@ interface CollectionViewOptionsProps {
   setViewMode: (mode: CollectionViewMode) => void;
   cardSize: CardSize;
   onCardSizeChange: (size: CardSize) => void;
+  binderLayout: BinderLayout;
+  onBinderLayoutChange: (layout: BinderLayout) => void;
 }
 
 /**
@@ -30,7 +32,9 @@ export function CollectionViewOptions({
   viewMode,
   setViewMode,
   cardSize,
-  onCardSizeChange
+  onCardSizeChange,
+  binderLayout,
+  onBinderLayoutChange
 }: CollectionViewOptionsProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -93,50 +97,93 @@ export function CollectionViewOptions({
 
       {isOpen && anchor
         ? createPortal(
-          <>
-            {/* Backdrop click is a mouse-only convenience; Escape covers the keyboard. */}
-            <div
-              className="fixed inset-0 z-[var(--z-backdrop)]"
-              onClick={() => setIsOpen(false)}
-              aria-hidden="true"
-            />
-            <div
-              className="display-settings-dropdown"
-              style={{ position: 'fixed', top: anchor.top, right: anchor.right, marginTop: 0 }}
-            >
-              <div className="space-y-2">
-                <span className="display-settings-section-label">{t('common.viewMode')}</span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {modes.map(({ mode, label, icon: Icon }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => {
-                        setViewMode(mode);
-                        setIsOpen(false);
-                      }}
-                      aria-pressed={viewMode === mode}
-                      className={`option-toggle-btn ${viewMode === mode ? 'option-toggle-btn-active' : ''}`}
-                      title={label}
-                    >
-                      <Icon className="text-sm" />
-                      <span className="text-[10px] leading-none">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Card size only means anything where cards are actually drawn. */}
-              {viewMode === 'grid' ? (
+            <>
+              {/* Backdrop click is a mouse-only convenience; Escape covers the keyboard. */}
+              <div
+                className="fixed inset-0 z-[var(--z-backdrop)]"
+                onClick={() => setIsOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                className="display-settings-dropdown"
+                style={{ position: 'fixed', top: anchor.top, right: anchor.right, marginTop: 0 }}
+              >
                 <div className="space-y-2">
-                  <span className="display-settings-section-label">{t('search.cardSize')}</span>
-                  <CardSizeSelector selectedSize={cardSize} onSizeChange={onCardSizeChange} />
+                  <span className="display-settings-section-label">{t('common.viewMode')}</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {modes.map(({ mode, label, icon: Icon }) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => {
+                          setViewMode(mode);
+                          setIsOpen(false);
+                        }}
+                        aria-pressed={viewMode === mode}
+                        className={`option-toggle-btn ${viewMode === mode ? 'option-toggle-btn-active' : ''}`}
+                        title={label}
+                      >
+                        <Icon className="text-sm" />
+                        <span className="text-[10px] leading-none">{label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : null}
-            </div>
-          </>,
-          document.body
-        )
+
+                {/* The binder draws cards at a fixed, true-to-life size, so what varies is the
+                    sheet: how many pockets a page holds. */}
+                {viewMode === 'binder' ? (
+                  <div className="space-y-2">
+                    <span className="display-settings-section-label">{t('collection.binderLayout')}</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['3x3', '2x2'] as const).map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => onBinderLayoutChange(option)}
+                          aria-pressed={binderLayout === option}
+                          className={`option-toggle-btn-compact ${binderLayout === option ? 'option-toggle-btn-compact-active' : ''}`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Card size only means anything where cards are actually drawn. Rendered as a
+                    compact four-up grid rather than the standalone selector, which is sized for
+                    a toolbar and overflowed this dropdown off the edge of the screen. */}
+                {viewMode === 'grid' ? (
+                  <div className="space-y-2">
+                    <span className="display-settings-section-label">{t('search.cardSize')}</span>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {(
+                        [
+                          { key: 'small', label: t('search.smallInitial') },
+                          { key: 'medium', label: t('search.mediumInitial') },
+                          { key: 'large', label: t('search.largeInitial') },
+                          { key: 'xlarge', label: t('search.xlargeInitial') }
+                        ] as const
+                      ).map(({ key, label }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => onCardSizeChange(key)}
+                          aria-pressed={cardSize === key}
+                          title={t(`search.${key}`)}
+                          className={`option-toggle-btn-compact ${cardSize === key ? 'option-toggle-btn-compact-active' : ''}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </>,
+            document.body
+          )
         : null}
     </div>
   );

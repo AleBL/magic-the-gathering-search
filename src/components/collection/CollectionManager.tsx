@@ -17,6 +17,7 @@ import { CollectionChecklistView } from './CollectionChecklistView';
 import { CollectionBySetView } from './CollectionBySetView';
 import { CollectionBinderView } from './CollectionBinderView';
 import { CollectionViewOptions, type CollectionViewMode } from './CollectionViewOptions';
+import type { BinderLayout } from './CollectionBinderView';
 /** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
 import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
@@ -35,6 +36,7 @@ function CollectionManager() {
   const [nameQuery, setNameQuery] = useState('');
   const [cardSize, setCardSize] = useCardSizePreference();
   const [viewMode, setViewMode] = useState<CollectionViewMode>('grid');
+  const [binderLayout, setBinderLayout] = useState<BinderLayout>('3x3');
   // The grid's CardItem owns its own modal; the list and stack views do not, so the tab holds
   // the selection for them.
   const [detailCard, setDetailCard] = useState<Card | null>(null);
@@ -168,15 +170,19 @@ function CollectionManager() {
             <div className="hidden sm:block">
               <CardFilterBar filters={filters} setFilters={setFilters} />
             </div>
-            <SearchFiltersPanel
-              filters={filters}
-              setFilters={setFilters}
-              hideOracleTag
-              mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
-            />
-            {/* Below sm the selects stack full-width for comfortable tapping. */}
+            {/* Below sm the selects stack full-width for comfortable tapping. The advanced
+                filters button joins this row rather than sitting on its own line: on a wide
+                screen it was dropping below a row that had space to spare. */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px]">
+              <SearchFiltersPanel
+                filters={filters}
+                setFilters={setFilters}
+                hideOracleTag
+                mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
+              />
+              {/* Capped: as a `flex-1` it grew to fill the row on wide screens, which made a
+                  short card name look like a form field for an essay. */}
+              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px] sm:max-w-[320px]">
                 <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
                 <input
                   type="search"
@@ -221,6 +227,8 @@ function CollectionManager() {
                   setViewMode={setViewMode}
                   cardSize={cardSize}
                   onCardSizeChange={setCardSize}
+                  binderLayout={binderLayout}
+                  onBinderLayoutChange={setBinderLayout}
                 />
               </div>
             </div>
@@ -250,9 +258,9 @@ function CollectionManager() {
               ) : viewMode === 'bySet' ? (
                 <CollectionBySetView entries={displayedEntries} onSelectCard={setDetailCard} />
               ) : viewMode === 'binder' ? (
-                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} />
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} layout={binderLayout} />
               ) : (
-                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} />
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} layout={binderLayout} />
               )}
             </>
           ) : (

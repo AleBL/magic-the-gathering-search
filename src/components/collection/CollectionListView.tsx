@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { CollectionEntry, Currency } from '../../types/Collection';
@@ -15,6 +15,14 @@ type SortKey = 'name' | 'set' | 'rarity' | 'quantity' | 'price';
 
 /** Rarity has a meaningful order that alphabetical sorting would scramble. */
 const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rare: 2, mythic: 3 };
+
+/** Rarity is stored as the Scryfall slug; the UI must not show the slug. */
+const RARITY_KEYS: Record<string, string> = {
+  common: 'search.common',
+  uncommon: 'search.uncommon',
+  rare: 'search.rare',
+  mythic: 'search.mythic'
+};
 
 const unitPrice = (entry: CollectionEntry, currency: Currency): number => {
   const raw = currency === 'eur' ? entry.card.prices?.eur : entry.card.prices?.usd;
@@ -50,7 +58,7 @@ export function CollectionListView({ entries, currency, onSelectCard }: Collecti
 
   const toggle = (key: SortKey) => setSort((current) => ({ key, asc: current.key === key ? !current.asc : true }));
 
-  const header = (key: SortKey, label: string, className = '') => (
+  const header = (key: SortKey, label: ReactNode, className = '') => (
     // `aria-sort` belongs on the header cell, not on the control inside it.
     <th
       scope="col"
@@ -77,13 +85,22 @@ export function CollectionListView({ entries, currency, onSelectCard }: Collecti
   return (
     // Wide on purpose: the table scrolls inside itself rather than pushing the page sideways.
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
-      <table className="w-full min-w-[560px] text-sm">
+      <table className="w-full min-w-[320px] text-sm">
         <thead className="bg-gray-50 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-700">
           <tr>
             {header('name', t('collection.cardName'), 'text-left')}
             {header('set', t('collection.set'), 'text-left hidden sm:table-cell')}
             {header('rarity', t('search.rarity'), 'text-left hidden md:table-cell')}
-            {header('quantity', t('collection.quantityShort'), 'text-right')}
+            {/* One column, label spelled out only where it fits — two <th> would leave the
+                body cells misaligned against the header. */}
+            {header(
+              'quantity',
+              <>
+                <span className="hidden md:inline">{t('collection.quantity')}</span>
+                <span className="md:hidden">{t('collection.quantityShort')}</span>
+              </>,
+              'text-right'
+            )}
             {header('price', t('collection.value'), 'text-right hidden sm:table-cell')}
           </tr>
         </thead>
@@ -102,11 +119,14 @@ export function CollectionListView({ entries, currency, onSelectCard }: Collecti
                   {entry.card.printed_name || entry.name}
                 </button>
               </td>
-              <td className="px-3 py-2 text-gray-500 dark:text-gray-400 uppercase text-xs hidden sm:table-cell">
-                {entry.set}
+              {/* Set name in full where there is room; the code is the fallback and the
+                  narrow-screen form, since "DOM" is recognisable but not readable. */}
+              <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs hidden sm:table-cell max-w-[180px]">
+                <span className="hidden lg:inline truncate">{entry.card.set_name || entry.set?.toUpperCase()}</span>
+                <span className="lg:hidden uppercase">{entry.set}</span>
               </td>
-              <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs capitalize hidden md:table-cell">
-                {entry.rarity}
+              <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell">
+                {RARITY_KEYS[entry.rarity] ? t(RARITY_KEYS[entry.rarity]) : entry.rarity}
               </td>
               <td className="px-3 py-2 text-right font-bold tabular-nums text-gray-800 dark:text-gray-100">
                 {entry.quantity}

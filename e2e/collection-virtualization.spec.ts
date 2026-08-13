@@ -232,7 +232,7 @@ test.describe('collection view modes', () => {
     await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'Binder', exact: true }).click();
     await expect(appPage.getByRole('table')).toHaveCount(0);
-    await expect(appPage.getByText(/Page 1 of/)).toBeVisible();
+    await expect(appPage.locator('[data-binder-page]').first()).toBeVisible();
 
     await openViewMenu(appPage);
     await appPage.getByRole('button', { name: 'Grid', exact: true }).click();
@@ -346,10 +346,10 @@ test.describe('collection by-set view', () => {
   });
 });
 
-/** 6a — the binder: fixed 3x3 pockets and page navigation. */
+/** 6a — the binder: pockets at a fixed size, pages side by side when the width allows. */
 test.describe('collection binder view', () => {
-  const openBinder = async (page: import('@playwright/test').Page, count: number) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+  const openBinder = async (page: import('@playwright/test').Page, count: number, width = 820) => {
+    await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await page.getByRole('button', { name: 'Collection' }).click();
     await page.waitForTimeout(400);
@@ -361,34 +361,104 @@ test.describe('collection binder view', () => {
     await page.getByRole('button', { name: 'Binder', exact: true }).click();
   };
 
-  test('pages through nine cards at a time', async ({ appPage }) => {
+  test('pages through the binder', async ({ appPage }) => {
     await openBinder(appPage, 20);
 
-    await expect(appPage.getByText('Page 1 of 3')).toBeVisible();
     await expect(appPage.getByRole('button', { name: 'Previous page' })).toBeDisabled();
-
     await appPage.getByRole('button', { name: 'Next page' }).click();
-    await expect(appPage.getByText('Page 2 of 3')).toBeVisible();
     await expect(appPage.getByRole('button', { name: 'Previous page' })).toBeEnabled();
   });
 
   /**
-   * An empty pocket is information — a gap in the page — so the last page still draws nine.
+   * An empty pocket is information — a gap in the page — so every sheet draws its full set.
    * Reflowing would break "page 3, second row" as a way to find a card.
    */
-  test('the last page keeps nine slots even when partly empty', async ({ appPage }) => {
+  test('every sheet keeps its full set of pockets, even when partly empty', async ({ appPage }) => {
     await openBinder(appPage, 20);
 
-    await appPage.getByRole('button', { name: 'Next page' }).click();
-    await appPage.getByRole('button', { name: 'Next page' }).click();
-    await expect(appPage.getByText('Page 3 of 3')).toBeVisible();
-    await expect(appPage.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    const pockets = await appPage.evaluate(() =>
+      [...document.querySelectorAll('[data-binder-page]')].map((page) => page.children.length)
+    );
 
-    // 20 cards = 9 + 9 + 2, so the last page has 2 cards and 7 empty pockets.
-    const slots = await appPage.evaluate(() => {
-      const grid = document.querySelector('[data-binder-page]');
-      return grid ? grid.children.length : -1;
+    expect(pockets.length, 'no binder sheet rendered').toBeGreaterThan(0);
+    expect(
+      pockets.every((count) => count === 9),
+      `pocket counts: ${JSON.stringify(pockets)}`
+    ).toBe(true);
+  });
+
+  /** Cards are drawn at a fixed size, so spare width shows more sheets rather than bigger cards. */
+  test('a wide screen shows more sheets instead of stretching the cards', async ({ appPage }) => {
+    await openBinder(appPage, 40, 1680);
+
+    const sheets = await appPage.locator('[data-binder-page]').count();
+    expect(sheets, 'a wide viewport should fit more than one sheet').toBeGreaterThan(1);
+
+    // And the pocket keeps its real-world width rather than growing with the screen.
+    const width = await appPage.evaluate(() => {
+      const pocket = document.querySelector('[data-binder-page] > *');
+      return pocket ? Math.round(pocket.getBoundingClientRect().width) : -1;
     });
-    expect(slots, 'the last page reflowed instead of keeping its pockets').toBe(9);
+    expect(width, `pocket width ${width}px`).toBeLessThan(220);
+  });
+
+  test('2x2 gives four pockets a sheet', async ({ appPage }) => {
+    await openBinder(appPage, 20);
+
+    await openViewMenu(appPage);
+    await appPage.getByRole('button', { name: '2x2', exact: true }).click();
+
+    const pockets = await appPage.evaluate(() =>
+      [...document.querySelectorAll('[data-binder-page]')].map((page) => page.children.length)
+    );
+    expect(
+      pockets.every((count) => count === 4),
+      `pocket counts: ${JSON.stringify(pockets)}`
+    ).toBe(true);
+  });
+});
+
+/** Layout of the collection toolbar, reported as three separate annoyances. */
+test.describe('collection toolbar layout', () => {
+  const openTab = async (page: import('@playwright/test').Page, width: number) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await page.waitForTimeout(400);
+    await seedCollection(page, 20);
+    await page.reload();
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+  };
+
+  test('the view dropdown stays inside the viewport', async ({ appPage }) => {
+    await openTab(appPage, 1440);
+    await openViewMenu(appPage);
+
+    const box = await appPage.locator('.display-settings-dropdown').boundingBox();
+    expect(box, 'the dropdown did not open').not.toBeNull();
+    expect(box!.x, 'the dropdown starts off the left edge').toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width, 'the dropdown runs past the right edge').toBeLessThanOrEqual(1441);
+  });
+
+  test('the advanced filters button shares the row instead of dropping below it', async ({ appPage }) => {
+    await openTab(appPage, 1440);
+
+    const filters = appPage.getByRole('button', { name: 'Advanced Filters' });
+    const search = appPage.getByPlaceholder('Card name…');
+    const filtersBox = await filters.boundingBox();
+    const searchBox = await search.boundingBox();
+
+    // Same row: their vertical centres line up.
+    const filtersMid = filtersBox!.y + filtersBox!.height / 2;
+    const searchMid = searchBox!.y + searchBox!.height / 2;
+    expect(Math.abs(filtersMid - searchMid), 'the filters button wrapped onto its own line').toBeLessThan(30);
+  });
+
+  test('the name field does not stretch across a wide screen', async ({ appPage }) => {
+    await openTab(appPage, 1680);
+
+    const box = await appPage.getByPlaceholder('Card name…').boundingBox();
+    expect(box!.width, `the name field is ${Math.round(box!.width)}px wide`).toBeLessThan(400);
   });
 });

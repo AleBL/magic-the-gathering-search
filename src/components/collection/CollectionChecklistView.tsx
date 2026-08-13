@@ -37,8 +37,10 @@ export function CollectionChecklistView({ entries, onSelectCard }: CollectionChe
       {sorted.map((entry) => (
         <li
           key={entry.id}
-          className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
+          className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
         >
+          {/* A bordered control rather than a bare glyph: as a faint outline it read as
+              decoration and people did not realise the row could be ticked at all. */}
           <button
             type="button"
             onClick={() => handleToggle(entry)}
@@ -46,13 +48,13 @@ export function CollectionChecklistView({ entries, onSelectCard }: CollectionChe
             aria-pressed={entry.wishlist}
             title={t('collection.wishlist')}
             aria-label={`${t('collection.wishlist')} — ${entry.card.printed_name || entry.name}`}
-            className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors disabled:opacity-50 ${
               entry.wishlist
-                ? 'text-rose-500 dark:text-rose-400'
-                : 'text-gray-300 dark:text-slate-600 hover:text-rose-400'
+                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-500 dark:text-rose-400'
+                : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-rose-300 hover:text-rose-400'
             }`}
           >
-            {entry.wishlist ? <FaHeart className="text-xs" /> : <FaRegHeart className="text-xs" />}
+            {entry.wishlist ? <FaHeart className="text-sm" /> : <FaRegHeart className="text-sm" />}
           </button>
 
           <button
@@ -63,8 +65,10 @@ export function CollectionChecklistView({ entries, onSelectCard }: CollectionChe
             {entry.card.printed_name || entry.name}
           </button>
 
-          <span className="shrink-0 text-[10px] uppercase text-gray-400 dark:text-gray-500 tabular-nums hidden sm:inline">
-            {entry.set}
+          {/* Full set name where there is room; the code once the row gets tight. */}
+          <span className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500 hidden sm:inline max-w-[160px] truncate">
+            <span className="hidden lg:inline">{entry.card.set_name || entry.set?.toUpperCase()}</span>
+            <span className="lg:hidden uppercase">{entry.set}</span>
           </span>
           <span
             className={`shrink-0 w-8 text-right text-xs font-bold tabular-nums ${
