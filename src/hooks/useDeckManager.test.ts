@@ -24,6 +24,12 @@ vi.mock('../db/database', () => ({
         putSpy(deck);
         decks.set(deck.id, deck);
       },
+      bulkPut: async (list: Deck[]) => {
+        for (const deck of list) {
+          putSpy(deck);
+          decks.set(deck.id, deck);
+        }
+      },
       get: async (id: string) => decks.get(id),
       delete: async (id: string) => void decks.delete(id),
       orderBy: () => ({ toArray: async () => [...decks.values()] }),
@@ -189,6 +195,41 @@ describe('useDeckManager', () => {
       expect(copy!.name).not.toBe('Mono Red');
       expect(copy!.cards).toEqual(original.cards);
       expect(decks.has('a')).toBe(false); // original was never in the fake table
+    });
+  });
+
+  describe('importDeckFile', () => {
+    const jsonFile = (payload: unknown, name = 'decks.json') =>
+      new File([JSON.stringify(payload)], name, { type: 'application/json' });
+
+    // The round trip that was broken: exportAllDecks writes an array, and importing it
+    // used to be refused as an invalid file.
+    it('restores every deck from an "export all decks" file', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(jsonFile([aDeck('a', 'Atraxa'), aDeck('b', 'Krenko')]));
+      });
+
+      expect([...decks.values()].map((deck) => deck.name).sort()).toEqual(['Atraxa', 'Krenko']);
+    });
+
+    it('still imports a single exported deck', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(jsonFile(aDeck('a', 'Atraxa')));
+      });
+
+      expect([...decks.values()].map((deck) => deck.name)).toEqual(['Atraxa']);
+    });
+
+    it('reports a malformed file and writes nothing', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(jsonFile({ name: 'No cards here' }));
+      });
+
+      expect(result.current.fileImportError).toBeTruthy();
+      expect(putSpy).not.toHaveBeenCalled();
     });
   });
 });

@@ -10,18 +10,36 @@ interface CardCollectionControlsProps {
    * visible while owned/wishlisted). `panel` — labelled row for the detail modal.
    */
   variant?: 'overlay' | 'panel';
+  /**
+   * Small card sizes: the overlay covers most of the art, so it fades in on hover/focus
+   * instead of sitting on top permanently. It stays put whenever the card is already owned or
+   * wishlisted, since then the badge is the information, not a control.
+   */
+  revealOnHover?: boolean;
 }
 
-export function CardCollectionControls({ card, variant = 'overlay' }: CardCollectionControlsProps) {
+export function CardCollectionControls({ card, variant = 'overlay', revealOnHover }: CardCollectionControlsProps) {
   const { t } = useTranslation();
-  const { quantity, wishlist, increment, decrement, toggleWishlist } = useCardCollection(card);
+  const { quantity, totalOwned, wishlist, increment, decrement, toggleWishlist } = useCardCollection(card);
+
+  // The search filter matches by card, the badge counts a printing — so a result could read
+  // "0" while the filter had just kept it as owned. Naming the other copies reconciles the
+  // two without changing what either one means.
+  const ownsOtherPrintings = totalOwned > quantity;
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   if (variant === 'panel') {
     return (
       <div className="flex items-center justify-between gap-3 w-full mt-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-700">
-        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('collection.inCollection')}</span>
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+          {t('collection.inCollection')}
+          {ownsOtherPrintings ? (
+            <span className="block text-[11px] font-medium text-gray-500 dark:text-gray-400">
+              {t('collection.ownsOtherPrinting', { count: totalOwned })}
+            </span>
+          ) : null}
+        </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -65,74 +83,89 @@ export function CardCollectionControls({ card, variant = 'overlay' }: CardCollec
 
   return (
     // sm+: always visible — hidden-until-hover controls were the main reason
-    // adding to the collection felt undiscoverable. Below sm the overlay is
-    // hidden entirely: on phones the card grid is dense and mis-taps were
-    // constant, so collection actions live in the card detail panel instead.
-    // Bottom strip: the card's name runs along the top edge.
-    <div className="absolute bottom-2 left-2 z-30 hidden sm:flex flex-col items-start gap-1.5">
-      {quantity > 0 ? (
-        <div className="flex items-center gap-1 bg-black/65 backdrop-blur-md rounded-full shadow-md border border-white/20 p-1 pointer-events-auto">
-          <button
-            type="button"
-            onClick={(e) => {
-              stop(e);
-              decrement();
-            }}
-            title={t('collection.decrement')}
-            aria-label={t('collection.decrement')}
-            className="w-7 h-7 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-          >
-            <FaMinus className="text-[9px]" />
-          </button>
-          <span className="min-w-[2ch] text-center text-xs font-extrabold text-white tabular-nums">{quantity}</span>
+    // adding to the collection felt undiscoverable. Bottom strip: the card's
+    // name runs along the top edge.
+    <div
+      className={`absolute bottom-2 left-2 z-30 flex flex-col items-start gap-1.5 ${
+        revealOnHover && quantity === 0 && !wishlist
+          ? 'opacity-0 focus-within:opacity-100 group-hover:opacity-100 transition-opacity duration-200'
+          : ''
+      }`}
+    >
+      {/* Below sm the editing cluster stays hidden — on phones the grid is dense and mis-taps
+          were constant, so editing lives in the detail panel — but the count itself is the
+          point of the collection tab, so it shows read-only. */}
+      {totalOwned > 0 ? (
+        <span className="sm:hidden pointer-events-none rounded-full bg-black/70 backdrop-blur-md border border-white/20 px-2 py-0.5 text-[11px] font-extrabold text-white tabular-nums shadow-md">
+          {quantity > 0 ? `${quantity}x` : t('collection.ownsOtherPrinting', { count: totalOwned })}
+        </span>
+      ) : null}
+
+      <div className="hidden sm:flex flex-col items-start gap-1.5">
+        {quantity > 0 ? (
+          <div className="flex items-center gap-1 bg-black/65 backdrop-blur-md rounded-full shadow-md border border-white/20 p-1 pointer-events-auto">
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e);
+                decrement();
+              }}
+              title={t('collection.decrement')}
+              aria-label={t('collection.decrement')}
+              className="w-7 h-7 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+            >
+              <FaMinus className="text-[9px]" />
+            </button>
+            <span className="min-w-[2ch] text-center text-xs font-extrabold text-white tabular-nums">{quantity}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e);
+                increment();
+              }}
+              title={t('collection.increment')}
+              aria-label={t('collection.increment')}
+              className="w-7 h-7 sm:w-6 sm:h-6 rounded-full flex items-center justify-center bg-primary text-white hover:bg-blue-500 transition-colors"
+            >
+              <FaPlus className="text-[9px]" />
+            </button>
+          </div>
+        ) : (
+          // Labeled chip ("+ Collection") instead of a bare plus icon — the
+          // action reads instantly on both desktop and mobile.
           <button
             type="button"
             onClick={(e) => {
               stop(e);
               increment();
             }}
-            title={t('collection.increment')}
-            aria-label={t('collection.increment')}
-            className="w-7 h-7 sm:w-6 sm:h-6 rounded-full flex items-center justify-center bg-primary text-white hover:bg-blue-500 transition-colors"
+            title={t('collection.markOwned')}
+            aria-label={t('collection.markOwned')}
+            className="flex items-center gap-1.5 h-8 sm:h-7 pl-2.5 pr-3 rounded-full bg-black/65 text-white text-[11px] sm:text-[10px] font-bold shadow-md backdrop-blur-md border border-white/20 hover:bg-primary transition-colors pointer-events-auto"
           >
-            <FaPlus className="text-[9px]" />
+            <FaPlus className="text-[9px] shrink-0" />
+            {t('collection.tab')}
           </button>
-        </div>
-      ) : (
-        // Labeled chip ("+ Collection") instead of a bare plus icon — the
-        // action reads instantly on both desktop and mobile.
+        )}
+
         <button
           type="button"
           onClick={(e) => {
             stop(e);
-            increment();
+            toggleWishlist();
           }}
-          title={t('collection.markOwned')}
-          aria-label={t('collection.markOwned')}
-          className="flex items-center gap-1.5 h-8 sm:h-7 pl-2.5 pr-3 rounded-full bg-black/65 text-white text-[11px] sm:text-[10px] font-bold shadow-md backdrop-blur-md border border-white/20 hover:bg-primary transition-colors pointer-events-auto"
+          aria-pressed={wishlist}
+          title={t('collection.wishlist')}
+          aria-label={t('collection.wishlist')}
+          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shadow-md backdrop-blur-md border transition-colors pointer-events-auto ${
+            wishlist
+              ? 'bg-rose-500/90 text-white border-rose-400'
+              : 'bg-black/65 text-white/90 border-white/20 hover:bg-rose-500/80 hover:text-white'
+          }`}
         >
-          <FaPlus className="text-[9px] shrink-0" />
-          {t('collection.tab')}
+          {wishlist ? <FaHeart className="text-xs" /> : <FaRegHeart className="text-xs" />}
         </button>
-      )}
-
-      <button
-        type="button"
-        onClick={(e) => {
-          stop(e);
-          toggleWishlist();
-        }}
-        aria-pressed={wishlist}
-        title={t('collection.wishlist')}
-        aria-label={t('collection.wishlist')}
-        className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shadow-md backdrop-blur-md border transition-colors pointer-events-auto ${
-          wishlist
-            ? 'bg-rose-500/90 text-white border-rose-400'
-            : 'bg-black/65 text-white/90 border-white/20 hover:bg-rose-500/80 hover:text-white'
-        }`}
-      >
-        {wishlist ? <FaHeart className="text-xs" /> : <FaRegHeart className="text-xs" />}
-      </button>
+      </div>
     </div>
   );
 }

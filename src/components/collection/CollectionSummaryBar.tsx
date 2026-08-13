@@ -12,7 +12,12 @@ interface CollectionSummaryBarProps {
   view: CollectionView;
 }
 
-/** Totals strip: owned copies, unique printings, wishlist count and estimated value. */
+/**
+ * Totals strip for the tab in view. Every figure describes the list on screen: the owned tab
+ * counts copies and printings, the wishlist counts wanted cards. Showing the owned totals while
+ * the wishlist is open — and repeating the wishlist as a fourth chip — made the strip read as a
+ * mismatched set of numbers.
+ */
 export function CollectionSummaryBar({ summary, currency, onCurrencyChange, view }: CollectionSummaryBarProps) {
   const { t } = useTranslation();
 
@@ -37,9 +42,20 @@ export function CollectionSummaryBar({ summary, currency, onCurrencyChange, view
       {/* Below sm: 2×2 grid of stat chips (a wrap-line of four uneven chips
           reads poorly on phones); the currency toggle takes its own row. */}
       <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
-        {stat(<FaBoxOpen className="text-base" />, t('collection.totalCards'), String(summary.totalCopies))}
-        {stat(<FaLayerGroup className="text-base" />, t('collection.uniquePrintings'), String(summary.uniquePrintings))}
-        {stat(<FaHeart className="text-base" />, t('collection.wishlist'), String(summary.wishlistCount))}
+        {isWishlist ? (
+          // On the wishlist a "unique printings" chip would just repeat the count: each wanted
+          // card is one printing, and quantity has no meaning there.
+          stat(<FaHeart className="text-base" />, t('collection.wishlistCards'), String(summary.wishlistCount))
+        ) : (
+          <>
+            {stat(<FaBoxOpen className="text-base" />, t('collection.totalCards'), String(summary.totalCopies))}
+            {stat(
+              <FaLayerGroup className="text-base" />,
+              t('collection.uniquePrintings'),
+              String(summary.uniquePrintings)
+            )}
+          </>
+        )}
         {stat(<FaDollarSign className="text-base" />, valueLabel, formatCurrency(value, currency))}
 
         <div className="col-span-2 w-fit sm:col-span-1 flex items-center rounded-full bg-white dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 p-0.5 shadow-sm">

@@ -38,8 +38,11 @@ export function useCardRelatedTokensForCard(card: Card | null) {
             const fullCard = (await Scry.Cards.byName(card.name)) as CardWithScryfallMetadata;
             allParts = fullCard.all_parts || [];
           } catch (fetchAllPartsError) {
+            // Swallowing this made "we could not ask" look exactly like "this card makes no
+            // tokens": the list rendered empty with nothing to say otherwise. The outer
+            // catch reports it.
             logger.error('Failed to fetch full card for related tokens:', fetchAllPartsError);
-            allParts = [];
+            throw fetchAllPartsError;
           }
         }
 

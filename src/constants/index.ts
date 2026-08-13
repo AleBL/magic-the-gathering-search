@@ -12,7 +12,13 @@ export const EMPTY_SEARCH_FILTERS: SearchFilters = {
   colors: [],
   types: [],
   rarity: '',
-  cmc: ''
+  cmc: '',
+  text: '',
+  excludeText: '',
+  keyword: '',
+  oracleTag: '',
+  power: '',
+  toughness: ''
 };
 
 export const TOAST_DURATION_MS = 2500;

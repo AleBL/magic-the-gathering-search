@@ -7,11 +7,21 @@ import { useCardSizePreference } from '../../hooks/useCardSizePreference';
 import { useCollection, CollectionView } from '../../hooks/useCollection';
 import { useCollectionImportExport } from '../../hooks/useCollectionImportExport';
 import { useCollectionSettings } from '../../store/useCollectionSettings';
-import { useSearchFilters } from '../../hooks/useSearchFilters';
+import { matchesFilters } from '../../utils/collectionFilter';
 import { clearCollection } from '../../services/collectionService';
 import CardFilterBar from '../card/CardFilterBar';
-import CardGrid from '../card/CardGrid';
-import CardSizeSelector from '../card/CardSizeSelector';
+import SearchFiltersPanel from '../card/SearchFilters';
+import CardDetailModal from '../card/CardDetailModal';
+import { CollectionListView } from './CollectionListView';
+import { CollectionChecklistView } from './CollectionChecklistView';
+import { CollectionBySetView } from './CollectionBySetView';
+import { CollectionBinderView } from './CollectionBinderView';
+import { CollectionViewOptions, type CollectionViewMode } from './CollectionViewOptions';
+import type { BinderLayout } from './CollectionBinderView';
+/** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
+import type { Card } from '../../types/Card';
+import { useSearchFilters } from '../../hooks/useSearchFilters';
+import VirtualizedCardGrid from '../card/VirtualizedCardGrid';
 import EmptyState from '../ui/EmptyState';
 import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
@@ -25,6 +35,11 @@ function CollectionManager() {
   const [setFilter, setSetFilter] = useState('');
   const [nameQuery, setNameQuery] = useState('');
   const [cardSize, setCardSize] = useCardSizePreference();
+  const [viewMode, setViewMode] = useState<CollectionViewMode>('grid');
+  const [binderLayout, setBinderLayout] = useState<BinderLayout>('3x3');
+  // The grid's CardItem owns its own modal; the list and stack views do not, so the tab holds
+  // the selection for them.
+  const [detailCard, setDetailCard] = useState<Card | null>(null);
 
   const { entries, visibleEntries, summary, isLoading } = useCollection(view, filters);
   const currency = useCollectionSettings((state) => state.currency);
@@ -34,6 +49,7 @@ function CollectionManager() {
   const { dialogState, showConfirm, closeDialog } = useDialog();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Sets present in the current view, for the set dropdown.
   const availableSets = useMemo(() => {
@@ -46,15 +62,19 @@ function CollectionManager() {
 
   const displayedEntries = useMemo(() => {
     const bySet = setFilter ? visibleEntries.filter((entry) => entry.set === setFilter) : visibleEntries;
+    // The search tab turns these filters into a Scryfall query; here the cards are already in
+    // hand, so the same predicates are applied locally and the tab keeps working offline.
+    const byFilters = bySet.filter((entry) => matchesFilters(entry.card, filters));
+
     const term = nameQuery.trim().toLowerCase();
-    if (!term) return bySet;
+    if (!term) return byFilters;
 
     // Printed name too, so a localised collection is searched by what is on the card.
-    return bySet.filter((entry) => {
+    return byFilters.filter((entry) => {
       const printed = entry.card.printed_name?.toLowerCase() ?? '';
       return entry.name.toLowerCase().includes(term) || printed.includes(term);
     });
-  }, [visibleEntries, setFilter, nameQuery]);
+  }, [visibleEntries, setFilter, nameQuery, filters]);
 
   const cards = useMemo(() => displayedEntries.map((entry) => entry.card), [displayedEntries]);
 
@@ -88,15 +108,24 @@ function CollectionManager() {
 
   return (
     <div className="workspace-container">
-      <div className="workspace-body">
+      <div ref={scrollRef} className="workspace-body">
         <div className="flex flex-col gap-4 p-4">
           <div className="panel-header relative z-10 flex-col items-start gap-3 md:flex-row md:items-center">
-            <h2 className="text-gray-900 dark:text-white text-xl font-serif font-semibold flex items-center gap-2">
+            <h2 className="text-gray-900 dark:text-white text-xl font-serif font-semibold flex items-center gap-2 shrink-0">
               <FaBoxOpen className="text-primary shrink-0" />
               {t('collection.title')}
             </h2>
+
+            {/* The tabs live in the header's middle, which was empty on wide screens while they
+                sat on a row of their own below. Centred at md+ so they read as the header's
+                subject rather than as another toolbar; full width below, where they stack. */}
+            <div className="flex w-full md:w-auto md:flex-1 md:justify-center items-center gap-2">
+              {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
+              {viewTab('wishlist', <FaHeart className="text-xs" />, t('collection.wishlist'), summary.wishlistCount)}
+            </div>
+
             {/* Below md: three equal compact buttons filling the row. */}
-            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center md:ml-auto">
+            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -138,16 +167,26 @@ function CollectionManager() {
 
           <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
 
-          <div className="flex flex-wrap items-center gap-2">
-            {viewTab('owned', <FaBoxOpen className="text-xs" />, t('collection.owned'), summary.uniquePrintings)}
-            {viewTab('wishlist', <FaHeart className="text-xs" />, t('collection.wishlist'), summary.wishlistCount)}
-          </div>
-
           <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-            <CardFilterBar filters={filters} setFilters={setFilters} />
-            {/* Below sm the selects stack full-width for comfortable tapping. */}
+            {/* Mirrors the search tab exactly: the colour/type quick filters on their own row
+                above, the advanced panel behind its button below. Below `sm` the quick filters
+                move into the sheet, which is why they are hidden rather than duplicated. */}
+            <div className="hidden sm:block">
+              <CardFilterBar filters={filters} setFilters={setFilters} />
+            </div>
+            {/* Below sm the selects stack full-width for comfortable tapping. The advanced
+                filters button joins this row rather than sitting on its own line: on a wide
+                screen it was dropping below a row that had space to spare. */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px]">
+              <SearchFiltersPanel
+                filters={filters}
+                setFilters={setFilters}
+                hideOracleTag
+                mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
+              />
+              {/* Capped: as a `flex-1` it grew to fill the row on wide screens, which made a
+                  short card name look like a form field for an essay. */}
+              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px] sm:max-w-[320px]">
                 <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
                 <input
                   type="search"
@@ -187,7 +226,14 @@ function CollectionManager() {
                 </select>
               </label>
               <div className="ml-auto">
-                <CardSizeSelector selectedSize={cardSize} onSizeChange={setCardSize} />
+                <CollectionViewOptions
+                  viewMode={viewMode}
+                  setViewMode={setViewMode}
+                  cardSize={cardSize}
+                  onCardSizeChange={setCardSize}
+                  binderLayout={binderLayout}
+                  onBinderLayoutChange={setBinderLayout}
+                />
               </div>
             </div>
           </div>
@@ -200,7 +246,27 @@ function CollectionManager() {
               ))}
             </div>
           ) : cards.length > 0 ? (
-            <CardGrid cards={cards} size={cardSize} showCollectionControls showPrintingBadge />
+            <>
+              {viewMode === 'grid' ? (
+                <VirtualizedCardGrid
+                  cards={cards}
+                  size={cardSize}
+                  scrollRef={scrollRef}
+                  showCollectionControls
+                  showPrintingBadge
+                />
+              ) : viewMode === 'list' ? (
+                <CollectionListView entries={displayedEntries} currency={currency} onSelectCard={setDetailCard} />
+              ) : viewMode === 'checklist' ? (
+                <CollectionChecklistView entries={displayedEntries} onSelectCard={setDetailCard} />
+              ) : viewMode === 'bySet' ? (
+                <CollectionBySetView entries={displayedEntries} onSelectCard={setDetailCard} />
+              ) : viewMode === 'binder' ? (
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} layout={binderLayout} />
+              ) : (
+                <CollectionBinderView entries={displayedEntries} onSelectCard={setDetailCard} layout={binderLayout} />
+              )}
+            </>
           ) : (
             <EmptyState
               icon={view === 'wishlist' ? <FaHeart /> : <FaBoxOpen />}
@@ -215,6 +281,17 @@ function CollectionManager() {
           )}
         </div>
       </div>
+
+      {/* The list and stack views hand their selection up here; the grid's CardItem still
+          opens its own, so this only ever has one card at a time. */}
+      {detailCard ? (
+        <CardDetailModal
+          card={detailCard}
+          imageUrl={detailCard.image_uris?.normal ?? detailCard.card_faces?.[0]?.image_uris?.normal ?? ''}
+          onClose={() => setDetailCard(null)}
+          showCollectionControls
+        />
+      ) : null}
 
       {dialogState.isOpen ? (
         <CustomDialog

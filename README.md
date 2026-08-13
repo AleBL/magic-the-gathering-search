@@ -7,6 +7,19 @@ Search Magic: The Gathering cards, build and manage decks with [Scryfall](https:
 ## Features
 
 - **Card Search** — Advanced filtering by name, colors, types, rarity, and converted mana cost (CMC) using debounced Scryfall search.
+- **Oracle Text & Stat Filters** — Search by rules text ("contains" / "doesn't contain"), keyword abilities, community function tags (removal, ramp, tutor, ...), and power/toughness with comparators (`4`, `>=4`, `<2`). Keywords and tags are shown in your language and sent to Scryfall in English; text searches carry your language, so Portuguese and Spanish rules text match too.
+- **Personal Collection** — Track how many copies of each printing you own, plus a wishlist, and filter search results by ownership. Virtualized rendering keeps thousands of entries smooth.
+- **Per-Copy Printings** — Each copy in a deck is its own entry, so four copies of a card can carry four different editions without merging.
+- **Profile Backup & Restore** — Export decks, collection, version history, and settings as a single JSON envelope, and restore it by replacing or merging.
+- **Turn-by-Turn Simulation** — Plays the deck alone a thousand times through turn 8, taking London mulligans and tracking colors in play, to report mulligan rate, how often you stall on two lands, turns with a castable play, and the median turn you reach 3/4/5 lands. Complements the Deck Doctor, which scores the opening hand instead.
+- **Honest Offline Behaviour** — When the network is gone the app says so, instead of showing an empty result that reads as "nothing found".
+- **Two-Pane Deck Editor** — Build with search and decklist side by side, dragging results straight into the deck.
+- **Deck Version History** — Every save snapshots the deck; browse past versions with a summary of what changed and restore any of them.
+- **Deck Doctor & Card Suggestions** — A consistency score with colour-source diagnosis, plus suggestions that fit the deck being edited.
+- **Budget Planner** — Estimate deck price and get a cut list to reach a target budget.
+- **Shareable Deck Image** — Render the decklist as a PNG with hero art and stats.
+- **Deck Box Covers** — Pick which card's art represents each deck.
+- **Isolated Error Recovery** — A failing section renders its own retry instead of taking the whole app down.
 - **Card Art & Printing Selector** — Select alternative printings, sets, and artist illustrations for cards directly from the details modal, updating the specific card artwork inside your deck list.
 - **Deck Builder & Organizer** — Add, remove, edit, and organize cards in a dedicated workspace deck.
 - **Deck Manager** — Save, load, edit, import, and export decks locally via IndexedDB or JSON files (MTG Arena and `.DEC` file exports included).
@@ -96,6 +109,7 @@ npm run test           # unit + component tests (Vitest)
 npm run test:coverage  # same, enforcing the coverage thresholds in vitest.config.ts
 npm run test:e2e       # end-to-end journeys (Playwright)
 npm run test:e2e:ui    # the same journeys in Playwright's interactive runner
+npm run test:e2e:bench # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
 ```
 
 The E2E suite starts its own dev server on port 5199 and stubs every Scryfall request, so
@@ -108,6 +122,8 @@ drives Chrome locally; CI installs Playwright's own chromium.
 npm run lint           # ESLint + Prettier auto-fix
 npm run type-check     # TypeScript type check only
 npm run i18n:check     # verify en/es/pt share the same key set
+npm run deadcode       # unused files/exports/dependencies (knip)
+npm run seed:profile   # generate a demo profile (7 decks + collection) to import via Backup
 npm run deps:update    # interactive major dependency updates (taze)
 npm run clean          # remove build output folders
 ```
@@ -118,8 +134,10 @@ npm run clean          # remove build output folders
 src/
 ├── components/   # UI components organized by domain
 │   ├── card/     # Card-related components (Search, Grid, Detail Modal, ...)
+│   ├── collection/ # Personal collection tab
 │   ├── deck/     # Deck management components (List, Editor, Stats, ...)
 │   ├── playtest/ # Playtest simulator components (Battlefield, Hand, Log, ...)
+│   ├── stats/    # Deck analysis panels (mana curve, mana base, goldfish, ...)
 │   └── ui/       # Reusable base components (Dialogs, Toasts, EmptyStates, ...)
 ├── db/           # Local database configuration (IndexedDB)
 ├── hooks/        # Custom React hooks (useDeckManager, usePlaytestSimulator, ...)

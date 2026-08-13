@@ -95,30 +95,24 @@ Current owners: `CardSearch` (`focus-search`), `SearchFilters` (`open-search-fil
 
 **File**: `src/db/database.ts`
 
-**Schema**:
+**Schema** (v3 — the indexed keys; every other field rides along unindexed):
 ```javascript
-// Decks table
-id (primary key)
-name
-format (Standard, Modern, Commander, etc.)
-cards (Card[] serialized as JSON)
-tokens (DeckRelatedToken[] serialized as JSON)
-notes
-createdAt
-updatedAt
-
-// Cards table (optional, for caching Scryfall data)
-scryfall_id (primary key)
-name
-set
-foil
-printing_index
+decks:        'id, name, format, createdAt'
+collection:   'id, oracleId, name, set, rarity, updatedAt'
+deckVersions: 'id, deckId, createdAt'
 ```
+
+A deck row carries its `cards` (`Card[]`) and `tokens` inline as JSON. A collection row is
+**one printing**, keyed by the Scryfall card id, with `oracleId` indexed so every printing of
+the same card can be found in one query — that index is what lets a card's badge show both
+"this printing" and "all printings" without a second read per card.
 
 **Usage**:
 - `useDeckManager` loads/saves decks to IndexedDB
 - Full offline support: once a deck is saved, it's available without internet
-- Auto-migrations handled by Dexie version bumps
+- Auto-migrations handled by Dexie version bumps; unlisted stores survive an upgrade untouched
+- `profileBackup.ts` exports/imports all three tables as one envelope, restoring inside a
+  single `rw` transaction so a failed merge leaves nothing half-written
 
 **Why Dexie?**:
 - Thin wrapper over IndexedDB API
@@ -185,6 +179,26 @@ i18n.changeLanguage('es');                      // Switch to Spanish
 | `src/utils/symbolHelper.tsx` | Render mana symbols | ~110 |
 | `src/components/deck/DeckManager.tsx` | Deck editor UI | ~765 |
 | `src/components/playtest/PlaytestSimulator.tsx` | Playtest UI | ~215 |
+| `src/components/card/VirtualizedCardGrid.tsx` | Windowed grid for the collection | ~120 |
+| `src/services/profileBackup.ts` | Full profile export/restore | ~200 |
+| `src/utils/searchQuery.ts` | Builds the Scryfall query from the filters | ~70 |
+| `src/utils/goldfishSimulation.ts` | Monte Carlo mana/curve report | ~230 |
+| `src/utils/deckEntry.ts` | Per-copy identity (`instanceId`) for deck cards | ~30 |
+
+### Invariants worth knowing before editing
+
+- **A deck entry is a copy, not a name.** Every card added to a deck gets its own
+  `instanceId` (`utils/deckEntry.ts`), so four copies of one card can hold four different
+  printings. Anything keying deck cards by `card.id` will merge copies that must stay apart.
+- **"Owned" means two things on purpose.** The collection counts *printings*; the search
+  filter matches *cards* by `oracle_id`. Both are correct for their surface — the badge
+  reconciles them rather than picking a winner.
+- **`hasActiveFilters` is derived, never listed.** `searchQuery.ts` decides "are any filters
+  set?" from the terms it just built, so a new filter field cannot be forgotten and silently
+  fall back to the default query.
+- **`useEscapeKey` reads its callback from a ref.** Its effect depends on `active` alone; a
+  listener re-registering per render can be torn out of a live event dispatch (see
+  `useEscapeKey.ts` for the full mechanism).
 
 ## Code Splitting
 
@@ -199,6 +213,11 @@ the tab switch and the heavy modals.
 | `DeckStats` | `DeckPreview` / `DeckStatsModal` | Pulls in all of Recharts — by far the largest single dependency |
 | `PlaytestSimulator` | `DeckPreviewOverlays` | Full-screen mode most sessions never enter |
 | `DeckProxyPrint` | `DeckPreviewOverlays` | Print-only view |
+
+`@tanstack/react-virtual` (~4 kB gzip) is imported only by `VirtualizedCardGrid`, which only
+the collection uses — so it lands in the lazy collection chunk rather than the entry bundle.
+Search and deck keep the plain `CardGrid`: Scryfall pages search at 175 results and decks top
+out near 100, so neither has the problem nor pays for the fix.
 
 `App.tsx` warms the two tab chunks on `requestIdleCallback` after boot, so the
 split costs startup work without making the first tab switch wait on a download.

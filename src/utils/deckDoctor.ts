@@ -15,7 +15,7 @@ import {
  * It never invents card data Scryfall doesn't provide: every number here derives
  * from the deck's own type lines, mana costs and pip/source counts.
  *
- * The math (hypergeometric odds, goldfish simulation, source counting) lives in
+ * The math (hypergeometric odds, opening-hand simulation, source counting) lives in
  * pure functions so it can be unit-tested without React. The UI turns the
  * structured {@link DeckRecommendation}s into localized natural-language advice.
  */
@@ -30,7 +30,7 @@ const SCREW_MAX_LANDS = 1;
 
 const DEFAULT_GOLDFISH_ITERATIONS = 1000;
 
-// --- Deterministic RNG (for reproducible goldfish tests) -------------------
+// --- Deterministic RNG (for reproducible simulation tests) -----------------
 
 /** mulberry32 — a tiny seedable PRNG. Same seed ⇒ same hand sequence. */
 export function mulberry32(seed: number): () => number {
@@ -60,13 +60,13 @@ const bandScore = (value: number, lo: number, hi: number): number =>
 
 // --- Goldfish simulation ----------------------------------------------------
 
-/** A minimal per-card model — the only fields the goldfish actually reads. */
+/** A minimal per-card model — the only fields the simulation actually reads. */
 interface DeckCardModel {
   isLand: boolean;
   cmc: number;
 }
 
-export interface GoldfishResult {
+export interface OpeningHandsResult {
   iterations: number;
   /** Fraction of hands with 2–5 lands. */
   playableRate: number;
@@ -81,26 +81,27 @@ export interface GoldfishResult {
   avgCurve: number;
 }
 
-/** Non-commander cards, reduced to the {@link DeckCardModel} the goldfish needs. */
+/** Non-commander cards, reduced to the {@link DeckCardModel} the simulation needs. */
 function toDeckModel(cards: Card[]): DeckCardModel[] {
   return cards.filter((card) => !card.isCommander).map((card) => ({ isLand: isLandCard(card), cmc: card.cmc || 0 }));
 }
 
 /**
- * Monte-Carlo simulation of opening hands: shuffle (Fisher–Yates, mirroring
- * usePlaytestSimulator) and deal `handSize`, `iterations` times. Pass a seeded
- * `rng` for reproducible results.
+ * Monte-Carlo over **opening hands only**: shuffle (Fisher–Yates, mirroring
+ * usePlaytestSimulator) and deal `handSize`, `iterations` times. No mulligans, no colors and
+ * no turns — for those, see `playoutSimulation.simulatePlayout`, which plays the game out.
+ * Pass a seeded `rng` for reproducible results.
  */
-export function simulateGoldfish(
+export function simulateOpeningHands(
   cards: Card[],
   options: { iterations?: number; handSize?: number; rng?: () => number } = {}
-): GoldfishResult {
+): OpeningHandsResult {
   const iterations = options.iterations ?? DEFAULT_GOLDFISH_ITERATIONS;
   const handSize = options.handSize ?? OPENING_HAND_SIZE;
   const rng = options.rng ?? Math.random;
   const deck = toDeckModel(cards);
 
-  const empty: GoldfishResult = {
+  const empty: OpeningHandsResult = {
     iterations: 0,
     playableRate: 0,
     noLandRate: 0,
@@ -389,7 +390,7 @@ export interface DeckDoctorReport {
   score: ConsistencyScore;
   colorSources: ColorSourceDiagnosis[];
   landOdds: LandOdds;
-  goldfish: GoldfishResult;
+  openingHands: OpeningHandsResult;
   recommendations: DeckRecommendation[];
 }
 
@@ -419,8 +420,8 @@ function computeLandOdds(deckSize: number, landCount: number): LandOdds {
 }
 
 /**
- * Full Deck Doctor analysis. Deterministic apart from the goldfish sub-object;
- * pass a seeded `rng` for reproducible goldfish results in tests.
+ * Full Deck Doctor analysis. Deterministic apart from the opening-hands sub-object;
+ * pass a seeded `rng` for reproducible results in tests.
  */
 export function analyzeDeck(
   cards: Card[],
@@ -430,12 +431,12 @@ export function analyzeDeck(
   const colorSources = diagnoseColorSources(stats);
   const landOdds = computeLandOdds(stats.totalCards, stats.totalLands);
   const score = computeConsistencyScore(stats, colorSources);
-  const goldfish = simulateGoldfish(cards, { iterations: options.iterations, rng: options.rng });
+  const openingHands = simulateOpeningHands(cards, { iterations: options.iterations, rng: options.rng });
   const recommendations = buildRecommendations(stats, colorSources, landOdds.screwProb, landOdds.floodProb);
 
   // "Has data" once there is a real deck to reason about — a bare handful of
   // cards produces meaningless odds.
   const hasData = stats.totalNonBasicCards > 0 && cards.length >= OPENING_HAND_SIZE;
 
-  return { hasData, stats, score, colorSources, landOdds, goldfish, recommendations };
+  return { hasData, stats, score, colorSources, landOdds, openingHands, recommendations };
 }

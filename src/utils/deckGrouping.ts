@@ -15,6 +15,8 @@ export interface DeckCardGrouped {
   name: string;
   count: number;
   card: Card;
+  /** Stable React key: two printings of one card share a name but not this. */
+  key: string;
 }
 
 export const sortCards = (cardsList: Card[], sortCriteria: SortCriteria): Card[] => {
@@ -100,18 +102,24 @@ export const groupCards = (
   return orderedGroups.sort((a, b) => a.title.localeCompare(b.title));
 };
 
-/** Groups duplicate cards by name, returning unique counts. */
+/**
+ * Stacks copies by **printing**, not by name: four copies of a creature across four
+ * editions are four things in a deck, each with its own art and its own price. Grouping by
+ * name collapsed them into one pile wearing whichever art came first.
+ */
 export const groupCardsByUnique = (cardsList: Card[]): DeckCardGrouped[] => {
   const grouped: DeckCardGrouped[] = [];
-  const visited = new Set<string>();
+  const byPrinting = new Map<string, DeckCardGrouped>();
 
   cardsList.forEach((card) => {
-    if (visited.has(card.name)) {
-      const existing = grouped.find((g) => g.name === card.name);
-      if (existing) existing.count += 1;
+    const key = card.id;
+    const existing = byPrinting.get(key);
+    if (existing) {
+      existing.count += 1;
     } else {
-      visited.add(card.name);
-      grouped.push({ name: card.name, count: 1, card });
+      const entry = { name: card.name, count: 1, card, key };
+      byPrinting.set(key, entry);
+      grouped.push(entry);
     }
   });
 

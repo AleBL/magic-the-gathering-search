@@ -1,5 +1,60 @@
 import { describe, it, expect } from 'vitest';
-import { parseDeckText } from './deckImportService';
+import { parseDeckJson, parseDeckText } from './deckImportService';
+import { DeckFormatType } from '../types/enums';
+import { makeCard } from '../test/factories';
+
+describe('parseDeckJson', () => {
+  const aDeck = (name: string) => ({
+    id: 'original',
+    name,
+    format: DeckFormatType.COMMANDER,
+    cards: [makeCard()],
+    createdAt: '2026-01-01T00:00:00.000Z'
+  });
+
+  it('reads a single exported deck', () => {
+    const decks = parseDeckJson(JSON.stringify(aDeck('Atraxa')));
+    expect(decks).toHaveLength(1);
+    expect(decks?.[0]).toMatchObject({ name: 'Atraxa', format: DeckFormatType.COMMANDER });
+  });
+
+  // The regression: "export all decks" writes an array, and importing it used to fail
+  // as an invalid file, so the backup could be written but never read back.
+  it('reads the array written by "export all decks"', () => {
+    const decks = parseDeckJson(JSON.stringify([aDeck('Atraxa'), aDeck('Krenko'), aDeck('Yuriko')]));
+    expect(decks?.map((deck) => deck.name)).toEqual(['Atraxa', 'Krenko', 'Yuriko']);
+  });
+
+  // Shared ids would collapse the import to a single deck on `put`.
+  it('gives every deck in an array a distinct id', () => {
+    const decks = parseDeckJson(JSON.stringify([aDeck('One'), aDeck('Two'), aDeck('Three')]))!;
+    expect(new Set(decks.map((deck) => deck.id)).size).toBe(3);
+  });
+
+  it('reissues ids so an import cannot overwrite a deck already saved', () => {
+    const decks = parseDeckJson(JSON.stringify(aDeck('Atraxa')));
+    expect(decks?.[0].id).not.toBe('original');
+  });
+
+  it('defaults a deck with no format to freeform', () => {
+    const formatless = { ...aDeck('Atraxa'), format: undefined };
+    expect(parseDeckJson(JSON.stringify(formatless))?.[0].format).toBe(DeckFormatType.FREEFORM);
+  });
+
+  it('rejects the whole file when one deck in the array is malformed', () => {
+    expect(parseDeckJson(JSON.stringify([aDeck('Atraxa'), { name: 'No cards' }]))).toBeNull();
+  });
+
+  it.each([
+    ['not json', 'not json at all'],
+    ['an empty array', '[]'],
+    ['a deck with no name', JSON.stringify({ cards: [] })],
+    ['a deck whose cards are not a list', JSON.stringify({ name: 'Broken', cards: 'four' })],
+    ['null', 'null']
+  ])('refuses %s', (_label, content) => {
+    expect(parseDeckJson(content)).toBeNull();
+  });
+});
 
 describe('parseDeckText', () => {
   it('ignores Arena section headers instead of treating them as cards', () => {

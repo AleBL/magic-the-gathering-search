@@ -10,6 +10,8 @@ interface CardDetailEditControlsProps {
   copiesCount: number;
   hasArtChanged: boolean;
   prints: Card[];
+  /** Set when the lookup failed, which is not the same as a card having one printing. */
+  printsError?: string | null;
   showPrintsSidebar: boolean;
   setShowPrintsSidebar: React.Dispatch<React.SetStateAction<boolean>>;
   handleDecrementCopies: () => void;
@@ -25,6 +27,7 @@ export function CardDetailEditControls({
   copiesCount,
   hasArtChanged,
   prints,
+  printsError,
   showPrintsSidebar,
   setShowPrintsSidebar,
   handleDecrementCopies,
@@ -100,6 +103,13 @@ export function CardDetailEditControls({
 
       {!isToken && !hidePrintsSidebar && (
         <div className="flex flex-wrap gap-2.5">
+          {/* Said here rather than in a toast: with the lookup failed there is no editions
+              button, and an absent control looks like a card with a single printing. */}
+          {printsError ? (
+            <p className="w-full text-xs font-semibold text-amber-600 dark:text-amber-400">
+              {t('common.printsLoadError')}
+            </p>
+          ) : null}
           {prints.length > 1 && (
             <button
               type="button"

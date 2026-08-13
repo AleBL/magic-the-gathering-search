@@ -1,16 +1,17 @@
 import { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCrown, FaBan, FaExclamationTriangle, FaPlus, FaMinus, FaSync } from 'react-icons/fa';
+import { FaCrown, FaBan, FaExclamationTriangle, FaPlus, FaMinus, FaSync, FaTimesCircle } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
-import { DeckFormatType, DeckZone } from '../../types/enums';
+import { DeckZone } from '../../types/enums';
 import CardDetailModal from './CardDetailModal';
 import FlipCard from './FlipCard';
 import { CardCollectionControls } from './CardCollectionControls';
 import { getCardFaceImages } from '../../utils/cardFaces';
 import { useVisualEffects } from '../../hooks/useVisualEffects';
 import locales from '../../locales';
+import { cardFormatStatus } from '../../utils/deckValidator';
 
 const getGlowColor = (rarity: string | undefined): string => {
   switch (rarity?.toLowerCase()) {
@@ -153,15 +154,12 @@ function CardItem({
 
   const imageUrl = useMemo(() => getCardImageUrl(card, size), [card, size]);
 
-  const isBanned = useMemo(() => {
-    if (!activeFormat || activeFormat === DeckFormatType.FREEFORM) return false;
-    return card.legalities?.[activeFormat as keyof typeof card.legalities] === 'banned';
-  }, [card, activeFormat]);
-
-  const isRestricted = useMemo(() => {
-    if (!activeFormat || activeFormat === DeckFormatType.FREEFORM) return false;
-    return card.legalities?.[activeFormat as keyof typeof card.legalities] === 'restricted';
-  }, [card, activeFormat]);
+  // Shared with the deck list and the stack view: a rule that invalidates a deck has to mark
+  // the card everywhere the card is drawn, not in whichever surface remembered to check.
+  const formatStatus = useMemo(() => cardFormatStatus(card, activeFormat), [card, activeFormat]);
+  const isBanned = formatStatus === 'banned';
+  const isRestricted = formatStatus === 'restricted';
+  const isInvalid = formatStatus === 'invalid';
 
   const isDraggable = isDeckCard && isEditMode && !isToken;
   // A search result can be dragged to add it, but only when it isn't already a
@@ -233,6 +231,16 @@ function CardItem({
         </div>
       )}
 
+      {isInvalid && (
+        <div
+          title={t('cardDetails.invalidInFormatHint')}
+          className="absolute top-2 right-2 z-10 bg-violet-600/90 dark:bg-violet-700/90 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold shadow-lg border border-violet-500 flex items-center gap-1 select-none"
+        >
+          <FaTimesCircle className="text-white text-[9px] shrink-0" />
+          {t('cardDetails.invalidInFormat')}
+        </div>
+      )}
+
       {isToken && card.isActive === false && (
         <div className="absolute top-2 left-2 z-10 bg-slate-800/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-350 dark:text-slate-400 px-2 py-0.5 rounded-md text-[9px] font-extrabold shadow-md border border-slate-700/60 flex items-center gap-1 select-none">
           <span className="w-1 h-1 rounded-full bg-slate-400" />
@@ -293,7 +301,9 @@ function CardItem({
         </button>
       )}
 
-      {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="overlay" />}
+      {showCollectionControls && !isToken && (
+        <CardCollectionControls card={card} variant="overlay" revealOnHover={size === 'small' || size === 'medium'} />
+      )}
 
       {showPrintingBadge && card.set ? (
         <span className="absolute bottom-2 right-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">

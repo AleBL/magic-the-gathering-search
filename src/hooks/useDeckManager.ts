@@ -9,8 +9,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { useTranslation } from 'react-i18next';
 import { dispatchToast } from '../utils/toastHelper';
-import { parseDeckText, fetchCardsFromParsedList, ImportProgressData } from '../services/deckImportService';
+import {
+  parseDeckJson,
+  parseDeckText,
+  fetchCardsFromParsedList,
+  ImportProgressData
+} from '../services/deckImportService';
 import { saveDeckSnapshotIfChanged, saveDeckSnapshot } from '../services/deckVersionService';
+import { requestPersistenceOnce } from '../services/storagePersistence';
 import { DecodedShareDeck, decodeShareString, parseDeckFileContent } from '../services/deckShare';
 
 export default function useDeckManager(
@@ -87,6 +93,9 @@ export default function useDeckManager(
       return { success: false, errorKey: 'deck.saveError' };
     }
     await snapshotQuietly(newDeck);
+    // Asked here rather than on boot: the browser only grants persistent storage to an
+    // origin the user has engaged with, and there is nothing to protect until now.
+    void requestPersistenceOnce();
     setDeckName('');
     setShowSaveDialog(false);
     return { success: true, createdDeck: newDeck };
@@ -315,18 +324,21 @@ export default function useDeckManager(
           const content = event.target?.result as string;
 
           if (file.name.endsWith('.json')) {
-            const deck = JSON.parse(content) as Deck;
-            if (!deck.name || !Array.isArray(deck.cards)) {
+            const importedDecks = parseDeckJson(content);
+            if (!importedDecks) {
               setFileImportError(t('deck.invalidFile'));
               setImportProgress((prev) => ({ ...prev, isImporting: false }));
               resolve();
               return;
             }
-            deck.id = Date.now().toString();
-            if (!deck.format) deck.format = DeckFormatType.FREEFORM;
-            await db.decks.put(deck);
+            // bulkPut runs in one transaction, so a failure leaves nothing half-imported.
+            await db.decks.bulkPut(importedDecks);
             setImportProgress((prev) => ({ ...prev, isImporting: false, current: prev.total }));
-            dispatchToast(t('deck.deckImported'));
+            dispatchToast(
+              importedDecks.length > 1
+                ? t('deck.decksImported', { count: importedDecks.length })
+                : t('deck.deckImported')
+            );
             resolve();
           } else if (file.name.endsWith('.deck')) {
             const decoded = parseDeckFileContent(content);

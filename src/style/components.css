@@ -223,8 +223,12 @@ html.dark .import-export-dropdown {
   @apply bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border-blue-400 dark:border-blue-500/50 ring-2 ring-blue-500 shadow-md;
 }
 
+/* The 4:3 ratio sets the shape, the cap sets the limit: a wide lane would otherwise scale
+   the cover with the container and hand one deck most of the screen. 13rem matches what the
+   lg+ sidebar already produces, so nothing changes there. `object-cover` on the image keeps
+   the art from distorting once the cap bites. */
 .deck-box-art {
-  @apply relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
+  @apply relative aspect-[4/3] max-h-[13rem] w-full overflow-hidden rounded-t-xl bg-slate-200 dark:bg-slate-900;
 }
 
 .deck-box-art-image {
@@ -241,6 +245,26 @@ html.dark .import-export-dropdown {
 
 .deck-box-art-scrim {
   @apply pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent;
+}
+
+/* Below lg the title is an ordinary header row; from lg up it overlays the cover art. Same
+   element either way — duplicating it would repeat the deck name in the accessible name. */
+.deck-box-title-row-compact {
+  @apply flex items-center gap-2 px-3 pt-2.5 pb-1;
+}
+
+.deck-box-title-compact {
+  @apply truncate text-sm font-bold text-gray-900 dark:text-white;
+}
+
+@media (min-width: 1024px) {
+  .deck-box-title-row-compact {
+    @apply absolute inset-x-0 bottom-0 px-3 pt-0 pb-2;
+  }
+
+  .deck-box-title-compact {
+    @apply text-white drop-shadow;
+  }
 }
 
 .deck-box-title-row {

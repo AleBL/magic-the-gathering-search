@@ -20,12 +20,14 @@ vi.mock('scryfall-sdk', () => {
   return { Cards: { search: () => emitter } };
 });
 
+import { EMPTY_SEARCH_FILTERS } from '../constants';
+
 const { useCardSearch } = await import('./useCardSearch');
 
 const withFilters = async (overrides: Partial<SearchFilters>) => {
   const { result } = renderHook(() => useCardSearch('en'));
   await act(async () => {
-    result.current.setFilters({ colors: [], types: [], rarity: '', cmc: '', ...overrides });
+    result.current.setFilters({ ...EMPTY_SEARCH_FILTERS, ...overrides });
   });
   return result;
 };

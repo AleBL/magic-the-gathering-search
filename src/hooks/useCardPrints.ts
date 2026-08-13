@@ -17,12 +17,31 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
   const originalPower = isCardObject ? cardOrName?.power : undefined;
   const originalToughness = isCardObject ? cardOrName?.toughness : undefined;
   const originalColors = isCardObject ? cardOrName?.colors : undefined;
+  /**
+   * Arrays are compared by reference, so listing `originalColors` in the dependency array
+   * re-ran the lookup for any caller that built its card object during render — each run set
+   * state, which re-rendered, which built another array, forever. A caller passing a card held
+   * in state was fine, which is why nothing broke in the app; the fix removes the trap rather
+   * than relying on every future caller knowing about it.
+   */
+  const originalColorsKey = [...(originalColors ?? [])].sort().join(',');
   const originalTypeLine = isCardObject ? cardOrName?.type_line : undefined;
   const originalOracleText = isCardObject ? cardOrName?.oracle_text : undefined;
 
   useEffect(() => {
     if (!cardName && !targetOracleId) {
       setPrints([]);
+      return;
+    }
+
+    // With no connection the SDK's emitter is not dependable: an aborted request sometimes
+    // ends as `done` with zero results and sometimes emits nothing at all, so the sidebar
+    // either vanished — reading as "this card has one printing" — or waited forever.
+    // Knowing the answer up front removes the guesswork.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setPrints([]);
+      setIsLoading(false);
+      setError('offline');
       return;
     }
 
@@ -70,7 +89,8 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
         if (isToken && isCardObject) {
           const powerMatches = (printCard.power || '') === (originalPower || '');
           const toughnessMatches = (printCard.toughness || '') === (originalToughness || '');
-          const colorsMatches = (printCard.colors ?? []).sort().join(',') === (originalColors ?? []).sort().join(',');
+          // Spread before sorting: `.sort()` mutates, and these arrays belong to the cards.
+          const colorsMatches = [...(printCard.colors ?? [])].sort().join(',') === originalColorsKey;
           const typeLineMatches = (printCard.type_line || '') === (originalTypeLine || '');
           const oracleTextMatches =
             (printCard.oracle_text || '').trim().toLowerCase() === (originalOracleText || '').trim().toLowerCase();
@@ -90,7 +110,19 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
         const bLang = b.lang === cleanLang ? 0 : 1;
         return aLang - bLang;
       });
+      // A dropped connection ends this lookup the same way a card with a single printing
+      // does — zero results, no error event — so the editions control simply disappeared
+      // and the card looked like it had no other printings. Say which one it was.
+      if (sorted.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setError('offline');
+      }
+
       setPrints(sorted);
+      setIsLoading(false);
+    });
+
+    emitter.on('not_found', () => {
+      setPrints([]);
       setIsLoading(false);
     });
 
@@ -122,7 +154,7 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     isCardObject,
     originalPower,
     originalToughness,
-    originalColors,
+    originalColorsKey,
     originalTypeLine,
     originalOracleText,
     t

@@ -1,13 +1,12 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaFileAlt, FaLayerGroup, FaPencilAlt, FaBolt, FaExclamationTriangle, FaChartBar } from 'react-icons/fa';
+import { FaLayerGroup, FaPencilAlt, FaChartBar } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { Deck, DeckFormat, DeckRelatedToken } from '../../types/Deck';
 import { CardSize } from '../../types';
 import { validateDeck } from '../../utils/deckValidator';
 import { useDeckPreviewState } from '../../hooks/useDeckPreviewState';
 import { DeckFormatType, DeckZone } from '../../types/enums';
-import { formatLabelKey } from '../../utils/formatLabel';
 import { useTokenHandlers } from '../../hooks/useTokenHandlers';
 import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingAction';
 import EmptyState from '../ui/EmptyState';
@@ -18,6 +17,8 @@ import DeckActionBar from '../deck/DeckActionBar';
 import DeckNotesEditor from '../deck/DeckNotesEditor';
 import DeckCardList from '../deck/DeckCardList';
 import DeckStackView from '../deck/DeckStackView';
+import { DeckPreviewShell } from '../deck/DeckPreviewShell';
+import { SavedDeckHeader, WorkingDeckHeader } from '../deck/DeckPreviewHeaders';
 import DeckTokensTab from '../deck/DeckTokensTab';
 import { DeckDisplayOptions } from '../deck/DeckDisplayOptions';
 import { DeckStatsFilteredCards } from '../deck/DeckStatsFilteredCards';
@@ -256,189 +257,31 @@ function DeckPreview({
     </>
   );
 
-  if (selectedDeck) {
-    const validation = validateDeck(selectedDeck.cards, selectedDeck.format || DeckFormatType.FREEFORM);
-
-    return (
-      <div className="deck-preview-section relative">
-        <div className="panel-header relative z-50">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 flex items-center gap-2 min-w-0">
-                <FaFileAlt className="text-primary shrink-0" />
-                <span className="truncate">{selectedDeck.name}</span>
-              </h3>
-              {onEditInfo ? (
-                <button
-                  type="button"
-                  onClick={() => onEditInfo(selectedDeck)}
-                  className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                  title={t('deck.editDeckInfo')}
-                  aria-label={t('deck.editDeckInfo')}
-                >
-                  <FaPencilAlt className="text-xs" />
-                </button>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-muted">
-                {t('validation.format')}:{' '}
-                <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  {t(formatLabelKey(selectedDeck.format))}
-                </span>
-              </span>
-              <span className="text-muted">•</span>
-              <span className="text-muted">
-                {selectedDeck.cards.length} {t('common.cards')}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <DeckDisplayOptions
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              groupBy={groupBy}
-              setGroupBy={setGroupBy}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              cardSize={cardSize}
-              onCardSizeChange={onCardSizeChange}
-              isOpen={isDisplaySettingsOpen}
-              setIsOpen={setIsDisplaySettingsOpen}
-            />
-            <DeckActionBar
-              cards={activeCards}
-              selectedDeck={selectedDeck}
-              showToast={showToast}
-              onPlaytest={handleOpenPlaytest}
-              onPrintProxies={handleOpenProxyPrint}
-              onLoadDeckToEdit={handleLoadSelectedDeckToEdit}
-              onDeselectDeck={onDeselectDeck}
-            />
-          </div>
-        </div>
-
-        <div className="mb-4 flex flex-col gap-3">
-          <DeckValidationBadge validation={validation} formatKey={selectedDeck.format || DeckFormatType.FREEFORM} />
-          <DeckCollectionSummary cards={selectedDeck.cards} />
-        </div>
-
-        {noteTabHeader}
-
-        {activeNoteTab === 'notes' ? (
-          <DeckNotesEditor
-            initialNotes={selectedDeck.notes || ''}
-            isEditable={true}
-            onSave={(notes) => onSaveNotesDirectly?.(selectedDeck.id, notes)}
-          />
-        ) : activeNoteTab === 'stats' ? (
-          <Suspense
-            fallback={
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>
-            }
-          >
-            <DeckStats
-              currentDeck={activeCards}
-              renderFilteredCards={(filteredCards) => (
-                <DeckStatsFilteredCards
-                  filteredCards={filteredCards}
-                  selectedDeck={selectedDeck}
-                  activeFormat={activeFormat}
-                  viewMode={viewMode}
-                  groupBy={groupBy}
-                  sortBy={sortBy}
-                  cardSize={cardSize}
-                  commanders={commanders}
-                  onHoverEnter={handleHoverEnter}
-                  onHoverMove={handleHoverMove}
-                  onHoverLeave={handleHoverLeave}
-                  onRemoveFromDeck={onRemoveFromDeck}
-                  onAddToDeck={onAddToDeck}
-                  onAddTokenToDeck={handleAddTokenCardCopy}
-                  onToggleCommander={onToggleCommander}
-                  onUpdateCard={onUpdateCard}
-                  onUpdateCardZone={onUpdateCardZone}
-                />
-              )}
-            />
-          </Suspense>
-        ) : (
-          renderCards(false)
-        )}
-
-        {viewMode === 'list' && activeNoteTab === 'cards' && hoveredCard ? (
-          <DeckFloatingPreview card={hoveredCard} mousePos={mousePos} />
-        ) : null}
-
-        <DeckPreviewOverlays
-          cards={activeCards}
-          isPlaytestOpen={isPlaytestOpen}
-          onClosePlaytest={handleClosePlaytest}
-          isProxyPrintOpen={isProxyPrintOpen}
-          onCloseProxyPrint={handleCloseProxyPrint}
-          deckFormat={selectedDeck.format || DeckFormatType.FREEFORM}
-          deckName={selectedDeck.name}
-          deckRelatedTokens={deckRelatedTokens || selectedDeck?.relatedTokens}
-        />
-
-        {selectedTokenForView ? (
-          <CardDetailModal
-            card={selectedTokenForView}
-            imageUrl={
-              selectedTokenForView.image_uris?.normal || selectedTokenForView.card_faces?.[0]?.image_uris?.normal || ''
-            }
-            onClose={handleCloseTokenModal}
-            isDeckCard={true}
-            isToken={true}
-            deckCards={activeTokenCards}
-            isEditMode={false}
-            deckRelatedTokens={activeTokens}
-          />
-        ) : null}
-      </div>
-    );
-  }
+  /**
+   * One return for both cases. What actually differs between a saved deck and the working deck
+   * is the header, where stats are shown, whether cards can be removed, and the empty state —
+   * everything else was written out twice and had already started to drift.
+   */
+  const deckCards = selectedDeck ? selectedDeck.cards : currentDeck;
+  const deckFormat = selectedDeck
+    ? selectedDeck.format || DeckFormatType.FREEFORM
+    : activeFormat || DeckFormatType.FREEFORM;
+  // A saved deck always shows its summary; the working deck only once it holds something.
+  const showSummary = Boolean(selectedDeck) || currentDeck.length > 0;
 
   return (
-    <div
-      className={`deck-preview-section relative ${editingDeckId ? 'border-l-4 border-amber-400 dark:border-amber-500 pl-3' : ''}`}
-    >
-      <div className="panel-header relative z-50">
-        <div>
-          {editingDeckId ? (
-            <>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="editing-mode-badge">
-                  <FaBolt className="text-[9px] shrink-0" />
-                  {t('deck.activeEditingMode')}
-                </span>
-              </div>
-              {activeCards.length > 0 ? (
-                <h3 className="text-gray-900 dark:text-white text-xl font-bold transition-colors duration-300 text-left truncate">
-                  {activeCards.length} {t('common.cards')}
-                </h3>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-left leading-snug">
-                  {t('deck.addCardsMessage')}
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <h3 className="text-gray-900 dark:text-white text-xl font-serif font-semibold transition-colors duration-300 text-left">
-                {t('deck.currentDeck')}
-              </h3>
-              {currentDeck.length > 0 ? (
-                <span className="unsaved-deck-chip">
-                  <FaExclamationTriangle className="text-rose-500 dark:text-rose-400 text-[9px] shrink-0" />
-                  <span>{t('deck.temporaryUnsavedDeck')}</span>
-                </span>
-              ) : null}
-            </>
-          )}
-        </div>
-        {currentDeck.length > 0 ? (
-          <div className="flex flex-wrap gap-2 items-center">
+    <DeckPreviewShell
+      accent={!selectedDeck && Boolean(editingDeckId)}
+      header={
+        selectedDeck ? (
+          <SavedDeckHeader deck={selectedDeck} onEditInfo={onEditInfo} />
+        ) : (
+          <WorkingDeckHeader isEditing={Boolean(editingDeckId)} cardCount={activeCards.length} />
+        )
+      }
+      controls={
+        showSummary ? (
+          <>
             <DeckDisplayOptions
               viewMode={viewMode}
               setViewMode={setViewMode}
@@ -456,48 +299,84 @@ function DeckPreview({
               showToast={showToast}
               onPlaytest={handleOpenPlaytest}
               onPrintProxies={handleOpenProxyPrint}
+              {...(selectedDeck
+                ? { selectedDeck, onLoadDeckToEdit: handleLoadSelectedDeckToEdit, onDeselectDeck }
+                : {})}
             />
-          </div>
-        ) : null}
-      </div>
-
-      {currentDeck.length > 0 ? (
+          </>
+        ) : null
+      }
+    >
+      {showSummary ? (
         <div className="mb-4 flex flex-col gap-3">
-          <DeckValidationBadge
-            validation={validateDeck(currentDeck, activeFormat || DeckFormatType.FREEFORM)}
-            formatKey={activeFormat || DeckFormatType.FREEFORM}
-          />
-          <DeckCollectionSummary cards={currentDeck} />
+          <DeckValidationBadge validation={validateDeck(deckCards, deckFormat)} formatKey={deckFormat} />
+          <DeckCollectionSummary cards={deckCards} />
         </div>
       ) : null}
 
       {noteTabHeader}
 
       {activeNoteTab === 'notes' ? (
-        <DeckNotesEditor initialNotes={editingDeckNotes} isEditable={true} onSave={onUpdateNotes} />
+        selectedDeck ? (
+          <DeckNotesEditor
+            initialNotes={selectedDeck.notes || ''}
+            isEditable={true}
+            onSave={(notes) => onSaveNotesDirectly?.(selectedDeck.id, notes)}
+          />
+        ) : (
+          <DeckNotesEditor initialNotes={editingDeckNotes} isEditable={true} onSave={onUpdateNotes} />
+        )
+      ) : selectedDeck && activeNoteTab === 'stats' ? (
+        /* Inline for a saved deck. The working deck sends the same tab to a modal instead
+           (see noteTabHeader), which is why this branch is guarded by `selectedDeck`. */
+        <Suspense
+          fallback={<div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>}
+        >
+          <DeckStats
+            currentDeck={activeCards}
+            renderFilteredCards={(filteredCards) => (
+              <DeckStatsFilteredCards
+                filteredCards={filteredCards}
+                selectedDeck={selectedDeck}
+                activeFormat={activeFormat}
+                viewMode={viewMode}
+                groupBy={groupBy}
+                sortBy={sortBy}
+                cardSize={cardSize}
+                commanders={commanders}
+                onHoverEnter={handleHoverEnter}
+                onHoverMove={handleHoverMove}
+                onHoverLeave={handleHoverLeave}
+                onRemoveFromDeck={onRemoveFromDeck}
+                onAddToDeck={onAddToDeck}
+                onAddTokenToDeck={handleAddTokenCardCopy}
+                onToggleCommander={onToggleCommander}
+                onUpdateCard={onUpdateCard}
+                onUpdateCardZone={onUpdateCardZone}
+              />
+            )}
+          />
+        </Suspense>
+      ) : !selectedDeck && currentDeck.length === 0 ? (
+        <EmptyState
+          icon={<FaLayerGroup />}
+          title={t('deck.emptyDeck')}
+          description={t('deck.addCardsMessage')}
+          action={{
+            label: t('search.searchForCards'),
+            onClick: () => {
+              // In the two-pane editor the search is already on screen — just
+              // focus it rather than switching to the standalone search tab.
+              dispatchPendingAction('focus-search');
+            }
+          }}
+        />
       ) : (
-        <>
-          {currentDeck.length === 0 ? (
-            <EmptyState
-              icon={<FaLayerGroup />}
-              title={t('deck.emptyDeck')}
-              description={t('deck.addCardsMessage')}
-              action={{
-                label: t('search.searchForCards'),
-                onClick: () => {
-                  // In the two-pane editor the search is already on screen — just
-                  // focus it rather than switching to the standalone search tab.
-                  dispatchPendingAction('focus-search');
-                }
-              }}
-            />
-          ) : (
-            renderCards(true)
-          )}
-        </>
+        // Only the working deck's cards can be removed from here.
+        renderCards(!selectedDeck)
       )}
 
-      {isStatsModalOpen ? (
+      {!selectedDeck && isStatsModalOpen ? (
         <DeckStatsModal
           cards={activeCards}
           onApplySuggestedLands={onApplySuggestedLands}
@@ -536,8 +415,9 @@ function DeckPreview({
         onClosePlaytest={handleClosePlaytest}
         isProxyPrintOpen={isProxyPrintOpen}
         onCloseProxyPrint={handleCloseProxyPrint}
-        deckFormat={activeFormat}
-        deckRelatedTokens={deckRelatedTokens}
+        deckFormat={selectedDeck ? selectedDeck.format || DeckFormatType.FREEFORM : activeFormat}
+        deckName={selectedDeck?.name}
+        deckRelatedTokens={selectedDeck ? deckRelatedTokens || selectedDeck.relatedTokens : deckRelatedTokens}
       />
 
       {selectedTokenForView ? (
@@ -550,15 +430,20 @@ function DeckPreview({
           isDeckCard={true}
           isToken={true}
           deckCards={activeTokenCards}
-          onSelectPrint={handleUpdateTokenCard}
-          onRemoveFromDeck={handleDeleteTokenCard}
-          onAddToDeck={handleAddTokenCardCopy}
-          onAddTokenToDeck={handleAddTokenCardCopy}
-          isEditMode={true}
           deckRelatedTokens={activeTokens}
+          // A saved deck's tokens are read-only here; the working deck's can be edited.
+          isEditMode={!selectedDeck}
+          {...(selectedDeck
+            ? {}
+            : {
+                onSelectPrint: handleUpdateTokenCard,
+                onRemoveFromDeck: handleDeleteTokenCard,
+                onAddToDeck: handleAddTokenCardCopy,
+                onAddTokenToDeck: handleAddTokenCardCopy
+              })}
         />
       ) : null}
-    </div>
+    </DeckPreviewShell>
   );
 }
 

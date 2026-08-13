@@ -59,6 +59,7 @@
 .deck-card-status-chip,
 .deck-card-status-chip-commander,
 .deck-card-status-chip-banned,
+.deck-card-status-chip-invalid,
 .deck-card-status-chip-restricted {
   @apply ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded shrink-0 shadow-sm transition-all duration-200;
 }
@@ -69,6 +70,12 @@
 
 .deck-card-status-chip-banned {
   @apply text-[9px] font-extrabold bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900/50 animate-pulse;
+}
+
+/* Violet, not red or amber: "this card cannot be in this deck at all" is a different problem
+   from a ban list or a copy limit, and reading them as the same thing hides which is which. */
+.deck-card-status-chip-invalid {
+  @apply text-[9px] font-extrabold bg-violet-100 dark:bg-violet-950/40 text-violet-800 dark:text-violet-300 border border-violet-200 dark:border-violet-900/50;
 }
 
 .deck-card-status-chip-restricted {

@@ -12,8 +12,10 @@ import {
   FaGlobeAmericas,
   FaCheck,
   FaMagic,
-  FaDownload
+  FaDownload,
+  FaShieldAlt
 } from 'react-icons/fa';
+import BackupPanel from '../settings/BackupPanel';
 import enFlag from '../../assets/locales/en.svg';
 import ptFlag from '../../assets/locales/pt.svg';
 import esFlag from '../../assets/locales/es.svg';
@@ -32,7 +34,7 @@ function ProfileMenu({ isDarkMode, setIsDarkMode }: ProfileMenuProps) {
   const { effectsEnabled, setEffectsEnabled } = useVisualEffects();
   const { canInstall, promptInstall } = useInstallPrompt();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<'main' | 'about' | 'help' | 'language'>('main');
+  const [activeSection, setActiveSection] = useState<'main' | 'about' | 'help' | 'language' | 'backup'>('main');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -203,6 +205,19 @@ function ProfileMenu({ isDarkMode, setIsDarkMode }: ProfileMenuProps) {
               <button
                 type="button"
                 className="profile-menu-item"
+                onClick={() => setActiveSection('backup')}
+                role="menuitem"
+              >
+                <div className="flex items-center gap-2">
+                  <FaShieldAlt className="text-blue-500 text-sm shrink-0" />
+                  <span>{t('backup.title')}</span>
+                </div>
+                <FaChevronDown className="text-gray-400 text-xs -rotate-90" />
+              </button>
+
+              <button
+                type="button"
+                className="profile-menu-item"
                 onClick={() => setActiveSection('about')}
                 role="menuitem"
               >
@@ -278,6 +293,29 @@ function ProfileMenu({ isDarkMode, setIsDarkMode }: ProfileMenuProps) {
                   {currentLang.key === lang.key ? <FaCheck className="text-blue-500 text-xs" /> : null}
                 </button>
               ))}
+            </>
+          ) : null}
+
+          {activeSection === 'backup' ? (
+            <>
+              <div className="profile-menu-back-header">
+                <button type="button" onClick={() => setActiveSection('main')} className="profile-back-btn">
+                  <FaChevronDown className="rotate-90 text-xs" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{t('backup.title')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setActiveSection('main');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded"
+                >
+                  <FaTimes className="text-xs" />
+                </button>
+              </div>
+              <div className="profile-menu-divider" />
+              <BackupPanel />
             </>
           ) : null}
 

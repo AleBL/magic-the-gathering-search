@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECK_LIST_KEYS, validateDeck } from './deckValidator';
+import { CHECK_LIST_KEYS, cardFormatStatus, validateDeck } from './deckValidator';
 import { DeckFormatType, DeckZone } from '../types/enums';
 import { makeCard } from '../test/factories';
 import { Card } from '../types/Card';
@@ -376,5 +376,59 @@ describe('validateDeck — basic land detection', () => {
       ...uniqueCards(36, { rarity: 'common' })
     ];
     expect(errorKeys(deck, DeckFormatType.STANDARD)).not.toContain('validationMaxCopies');
+  });
+});
+
+describe('cardFormatStatus', () => {
+  /** Only the legality being exercised needs to be set; the rest default to legal. */
+  const card = (overrides: Omit<Partial<Card>, 'legalities'> & { legalities?: Record<string, string> } = {}): Card =>
+    ({
+      id: 'c',
+      name: 'Card',
+      type_line: 'Instant',
+      rarity: 'common',
+      ...overrides,
+      legalities: {
+        standard: 'legal',
+        modern: 'legal',
+        legacy: 'legal',
+        commander: 'legal',
+        pauper: 'legal',
+        vintage: 'legal',
+        pioneer: 'legal',
+        ...(overrides.legalities ?? {})
+      }
+    }) as Card;
+
+  it('treats everything as legal without a format, or in freeform', () => {
+    expect(cardFormatStatus(card({ rarity: 'mythic' }))).toBe('legal');
+    expect(cardFormatStatus(card({ rarity: 'mythic' }), DeckFormatType.FREEFORM)).toBe('legal');
+  });
+
+  it('reports banned and restricted from the format legality', () => {
+    expect(cardFormatStatus(card({ legalities: { modern: 'banned' } }), DeckFormatType.MODERN)).toBe('banned');
+    expect(cardFormatStatus(card({ legalities: { vintage: 'restricted' } }), DeckFormatType.VINTAGE)).toBe(
+      'restricted'
+    );
+  });
+
+  // The reported gap: an uncommon made a Pauper deck invalid with nothing marked on the card.
+  it('marks a non-common as invalid in Pauper', () => {
+    expect(cardFormatStatus(card({ rarity: 'uncommon', legalities: { pauper: 'legal' } }), DeckFormatType.PAUPER)).toBe(
+      'invalid'
+    );
+    expect(cardFormatStatus(card({ rarity: 'common', legalities: { pauper: 'legal' } }), DeckFormatType.PAUPER)).toBe(
+      'legal'
+    );
+  });
+
+  it('marks a card outside the format pool as invalid', () => {
+    expect(cardFormatStatus(card({ legalities: { standard: 'not_legal' } }), DeckFormatType.STANDARD)).toBe('invalid');
+  });
+
+  // Banned outranks the rarity rule: the more specific reason is the useful one.
+  it('prefers banned over the Pauper rarity rule', () => {
+    const banned = card({ rarity: 'uncommon', legalities: { pauper: 'banned' } });
+    expect(cardFormatStatus(banned, DeckFormatType.PAUPER)).toBe('banned');
   });
 });

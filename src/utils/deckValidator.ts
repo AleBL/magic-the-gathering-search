@@ -50,6 +50,31 @@ const matchesPhraseList = (text: string, key: CheckListKey): boolean => {
   return phrases.some((phrase) => lowerText.includes(phrase.trim()));
 };
 
+/**
+ * How a single card stands in a format, for the badges the card surfaces draw.
+ *
+ * One place on purpose. `banned` and `restricted` were derived independently in three
+ * components straight from `card.legalities`, while Pauper's "commons only" rule lived only in
+ * `validateDeck` — so an uncommon in a Pauper deck made the deck invalid with no marking on the
+ * card that caused it. Anything that can invalidate a deck has to be visible on the card.
+ */
+export type CardFormatStatus = 'legal' | 'banned' | 'restricted' | 'invalid';
+
+export function cardFormatStatus(card: Card, format?: DeckFormat): CardFormatStatus {
+  if (!format || format === DeckFormatType.FREEFORM) return 'legal';
+
+  const legality = card.legalities?.[format as keyof typeof card.legalities];
+  if (legality === 'banned') return 'banned';
+  if (legality === 'restricted') return 'restricted';
+
+  // Pauper allows commons only, whatever the ban list says.
+  if (format === DeckFormatType.PAUPER && card.rarity && card.rarity !== 'common') return 'invalid';
+  // The card simply does not exist in this format's card pool.
+  if (legality === 'not_legal') return 'invalid';
+
+  return 'legal';
+}
+
 export function validateDeck(cards: Card[], format: DeckFormat): ValidationResult {
   const errors: ValidationError[] = [];
 

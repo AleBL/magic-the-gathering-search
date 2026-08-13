@@ -30,10 +30,13 @@
 ## Core Layers
 
 ### **Presentation Layer (React Components)**
-- **Card**: Search, Grid, Details Modal, Printing Selector, Double-Faced Card Flip
-- **Deck**: DeckManager, DeckList, DeckPreview, DeckStats, DeckValidationBadge, EditingBanner
-- **Playtest**: PlaytestSimulator, Battlefield, Hand, TokenModal, Particles, DamageTracker
-- **UI**: Dialogs, Toasts, Command Palette, Shortcuts Overlay, Filters, Proxy Printer
+- **Card**: Search, Grid, VirtualizedCardGrid, Details Modal, Printing Selector, DFC Flip, SearchFilters, CollectionFilterSelector
+- **Collection**: CollectionManager — owned printings + wishlist, windowed grid
+- **Deck**: DeckManager, DeckEditWorkspace (two-pane editor), DeckList, SavedDecksPanel, AllDecksModal, DeckPreview, DeckCoverModal, DeckVersionHistoryModal, DeckSuggestionsModal, DeckValidationBadge
+- **Stats**: DeckStats + panels (ManaCurve, ColorDistribution, TypesBreakdown, ManaBaseOptimizer, ManaPipAnalysis, DeckDoctor, Playout, BudgetEstimator, Rarity)
+- **Playtest**: PlaytestSimulator, Battlefield, Hand, TokenModal, Particles, PileExplorer, ScrySurveil
+- **Settings**: BackupPanel — storage usage, persistence request, export/restore
+- **UI**: Dialogs, Toasts, Command Palette, Shortcuts Overlay, BottomSheet, ErrorBoundary
 - **Layout**: RootLayout, Header, ProfileMenu
 
 ### **State Management Layer (Zustand)**
@@ -41,23 +44,38 @@
 - Immutable updates: addCard, removeCard, updateCard, toggleCommander, clearDeck
 
 ### **Custom Hooks Layer**
-- **Deck ops**: useDeckManager, useDeckActions, useDeckTokens, useDeckTextImport
-- **Search/Cards**: useCardSearch, useCardPrints, useCardRelatedTokens
+- **Deck ops**: useDeckManager, useDeckActions, useDeckTokens, useDeckTextImport, useDeckInfoEditor, useSelectedDeckSync
+- **Search/Cards**: useCardSearch, useCardPrints, useCardRelatedTokens, useSearchFilters, useCardSizePreference
+- **Collection**: useCollection, useCardCollection (printing + all-printings totals), useCollectionOwnership
 - **Playtest**: usePlaytestSimulator, useProxyPrint, useTokenHandlers
-- **UI**: useShortcuts, useDialog, useToast, useDarkMode, useSearchFilters
+- **Cross-cutting**: usePendingAction (command channel), useProfileBackup, useEscapeKey, useFocusTrap, useAnimatedList
+- **UI**: useShortcuts, useDialog, useToast, useDarkMode
 
 ### **Services Layer**
-- **deckImportService** → Parse MTG Arena / .DEC imports, normalize card names
+- **deckImportService** → Parse MTG Arena / .DEC / JSON imports, normalize card names
+- **profileBackup** → Whole-profile export/restore (merge or replace) in one transaction
+- **deckVersionService** → Snapshot a deck on save; powers version history
+- **suggestionService** → Card suggestions for the deck being edited
+- **storagePersistence** → `navigator.storage.persist()` / `estimate()`
 - **fileDownload** → JSON export, proxy print download
 - **Scryfall API** (via scryfall-sdk) → Card search, legality checks, image fetching
 
-### **Persistence Layer (Dexie/IndexedDB)**
-- Deck schema: id, name, format, cards[], tokens[], notes, createdAt, updatedAt
-- Card schema: scryfall_id, name, set, foil, alternative_printing_index
-- Full offline support, automatic migrations
+### **Persistence Layer (Dexie/IndexedDB — `MagicDecksDB`, v3)**
+- `decks: 'id, name, format, createdAt'` — cards[] and tokens[] ride along as JSON
+- `collection: 'id, oracleId, name, set, rarity, updatedAt'` — one row per **printing**;
+  `oracleId` is indexed so all printings of a card come back in one query
+- `deckVersions: 'id, deckId, createdAt'` — point-in-time deck snapshots
+- Full offline support; Dexie version bumps migrate and leave unlisted stores untouched
 
 ### **Utilities & Helpers**
 - **deckValidator** → Commander rules, format legality, partner validation
+- **deckEntry** → Per-copy identity (`instanceId`), so copies can differ by printing
+- **searchQuery** → Builds the Scryfall query; `hasActiveFilters` is derived from it
+- **playoutSimulation** → Turn-by-turn Monte Carlo (distinct from deckDoctor's opening-hand one)
+- **deckDoctor** → Consistency score, opening-hand goldfish, color-source diagnosis
+- **deckVersions / deckVersionDiff** → Snapshot storage and change summaries
+- **deckImage / deckCover** → Shareable PNG render and deck-box art selection
+- **budgetPlanner / deckSuggestions** → Budget cut planning and card suggestions
 - **symbolHelper** → Scryfall symbol rendering (mana, loyalty, icons)
 - **deckStatistics** → Mana curve, color distribution, card type breakdown
 - **translationHelper** → Multi-language support (en, es, pt)

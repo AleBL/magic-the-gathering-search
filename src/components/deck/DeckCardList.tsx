@@ -5,6 +5,7 @@ import { CardSize } from '../../types';
 import { DeckFormat } from '../../types/Deck';
 import { DeckZone } from '../../types/enums';
 import { GroupedCards, DeckCardGrouped, groupCardsByUnique, getCardImageUrl } from '../../utils/deckGrouping';
+import { deckEntryId } from '../../utils/deckEntry';
 import CardGrid from '../card/CardGrid';
 import CardDetailModal from '../card/CardDetailModal';
 import DeckCommandersHeader from './DeckCommandersHeader';
@@ -27,7 +28,7 @@ interface AnimatedDeckCardGroupProps {
 }
 
 /** Stable key extractor — an inline arrow here would change identity every render. */
-const getGroupedCardKey = (entry: DeckCardGrouped) => entry.name;
+const getGroupedCardKey = (entry: DeckCardGrouped) => entry.key;
 
 /**
  * A dedicated component (not inlined in the groups.map below) because
@@ -106,11 +107,13 @@ const DeckCardList = memo(function DeckCardList({
   const [selectedModalCard, setSelectedModalCard] = useState<Card | null>(null);
   const [showPrintsOnOpen, setShowPrintsOnOpen] = useState(false);
 
-  // Sync selectedModalCard when groups change (e.g. after art update)
+  // Sync selectedModalCard when groups change (e.g. after art update). Matched by entry,
+  // not printing: after an art change other copies may now share the new printing id.
   useEffect(() => {
     if (!selectedModalCard) return;
     const allCards = groups.flatMap((g) => g.cards);
-    const updated = allCards.find((c) => c.id === selectedModalCard.id);
+    const target = deckEntryId(selectedModalCard);
+    const updated = allCards.find((c) => deckEntryId(c) === target);
     if (updated && updated !== selectedModalCard) {
       setSelectedModalCard(updated);
     }

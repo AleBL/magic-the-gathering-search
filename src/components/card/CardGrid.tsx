@@ -55,7 +55,7 @@ function CardGrid({
   const entries = useMemo(
     () =>
       stackDuplicates
-        ? groupCardsByUnique(cards).map(({ name, count, card }) => ({ key: name, count, card }))
+        ? groupCardsByUnique(cards).map(({ key, count, card }) => ({ key, count, card }))
         : cards.map((card, index) => ({ key: `${card.id}-${index}`, count: 1, card })),
     [cards, stackDuplicates]
   );

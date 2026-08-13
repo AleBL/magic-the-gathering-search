@@ -13,6 +13,7 @@ import { ManaPipAnalysisPanel } from '../stats/ManaPipAnalysisPanel';
 import { BudgetEstimatorPanel } from '../stats/BudgetEstimatorPanel';
 import { RarityPanel } from '../stats/RarityPanel';
 import { DeckDoctorPanel } from '../stats/DeckDoctorPanel';
+import { PlayoutPanel } from '../stats/PlayoutPanel';
 
 interface DeckStatsProps {
   currentDeck: Card[];
@@ -50,6 +51,12 @@ function DeckStats({ currentDeck, onApplySuggestedLands, renderFilteredCards }: 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6 text-left">
         <ManaBaseOptimizerPanel stats={stats} onApplySuggestedLands={onApplySuggestedLands} />
         <ManaPipAnalysisPanel stats={stats} colorLabels={colorLabels} />
+        {/* Sits beside the analytic mana panels. Distinct from the Deck Doctor above, which
+            scores opening hands: this one plays turns, takes mulligans and checks colors. */}
+        <PlayoutPanel currentDeck={currentDeck} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6 text-left">
         <BudgetEstimatorPanel stats={stats} />
       </div>
 

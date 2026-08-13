@@ -18,7 +18,41 @@ describe('useDeckStore', () => {
   it('adds a card to the current deck', () => {
     const card = makeCard({ name: 'Llanowar Elves' });
     useDeckStore.getState().addCard(card);
-    expect(useDeckStore.getState().currentDeck).toEqual([card]);
+    expect(useDeckStore.getState().currentDeck).toEqual([{ ...card, instanceId: expect.any(String) }]);
+  });
+
+  // Copies of one printing share `id`, so without a per-entry id there is no way to say
+  // "the second of these four".
+  it('gives every copy its own entry id, even copies of the same printing', () => {
+    const card = makeCard({ id: 'island-unf', name: 'Island' });
+    const { addCard } = useDeckStore.getState();
+    addCard(card);
+    addCard(card);
+    addCard(card);
+
+    const ids = useDeckStore.getState().currentDeck.map((entry) => entry.instanceId);
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it('updates one copy without touching the others', () => {
+    const { addCard } = useDeckStore.getState();
+    addCard(makeCard({ id: 'island-unf', name: 'Island', set: 'unf' }));
+    addCard(makeCard({ id: 'island-unf', name: 'Island', set: 'unf' }));
+
+    const [first] = useDeckStore.getState().currentDeck;
+    useDeckStore.getState().updateCard({ ...first, id: 'island-znr', set: 'znr' });
+
+    const sets = useDeckStore.getState().currentDeck.map((entry) => entry.set);
+    expect(sets).toEqual(['znr', 'unf']);
+  });
+
+  it('back fills entry ids for decks saved before they existed', () => {
+    const legacy = [makeCard({ id: 'island-unf', name: 'Island' }), makeCard({ id: 'island-unf', name: 'Island' })];
+    useDeckStore.getState().setCurrentDeck(legacy);
+
+    const ids = useDeckStore.getState().currentDeck.map((entry) => entry.instanceId);
+    expect(ids.every(Boolean)).toBe(true);
+    expect(new Set(ids).size).toBe(2);
   });
 
   it('removes a card by id and returns the removed card', () => {

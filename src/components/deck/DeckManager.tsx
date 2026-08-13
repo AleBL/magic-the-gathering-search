@@ -534,8 +534,15 @@ function DeckManager({ showToast }: DeckManagerProps) {
             deck={deckPreviewElement}
           />
         ) : (
+          /* At lg+ the two lanes scroll independently: one page-level scrollbar meant that
+             reading a long decklist dragged the saved-decks list along with it.
+
+             `h-full`, not a `100vh` calculation: `.workspace-body` is already `flex-1` and
+             knows its own height, so guessing it from the viewport overshot by a dozen pixels
+             and left the wrapper with a third, barely-moving scrollbar. Below lg the layout is
+             a single column in normal page flow, so none of this applies. */
           <div
-            className={`grid grid-cols-1 ${showDeckList ? 'lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]' : 'lg:grid-cols-1'} gap-4 p-4`}
+            className={`grid grid-cols-1 ${showDeckList ? 'lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]' : 'lg:grid-cols-1'} gap-4 p-4 lg:h-full lg:overflow-hidden`}
           >
             {showDeckList ? (
               <SavedDecksPanel
@@ -554,7 +561,9 @@ function DeckManager({ showToast }: DeckManagerProps) {
                 onChangeCover={setDeckForCover}
               />
             ) : null}
-            <div className="col-span-1 min-w-0">{deckPreviewElement}</div>
+            <div className="col-span-1 min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+              {deckPreviewElement}
+            </div>
           </div>
         )}
       </div>

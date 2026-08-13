@@ -11,11 +11,7 @@ function CardSizeSelector({ selectedSize, onSizeChange }: CardSizeSelectorProps)
   const { t } = useTranslation();
 
   return (
-    <div
-      className="flex flex-row items-center gap-2 sm:gap-4 w-auto"
-      role="radiogroup"
-      aria-label={t('search.cardSize')}
-    >
+    <div className="flex flex-row items-center gap-2 sm:gap-4 w-auto" role="radiogroup">
       <span
         className="hidden sm:inline text-gray-700 dark:text-gray-300 text-sm transition-colors duration-300 font-bold whitespace-nowrap"
         aria-hidden="true"

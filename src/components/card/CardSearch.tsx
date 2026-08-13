@@ -242,8 +242,9 @@ function CardSearch({
                 onAddToDeck={onAddToDeck}
                 onAddTokenToDeck={onAddTokenToDeck}
                 activeFormat={activeFormat}
-                // At S/M the overlay swallows most of an already-small card.
-                showCollectionControls={cardSize === 'large' || cardSize === 'xlarge'}
+                // Offered at every size: at S/M the overlay fades in on hover instead of
+                // covering the art, which is why it used to be withheld there entirely.
+                showCollectionControls
                 isAddDraggable={enableAddDrag}
               />
             </div>

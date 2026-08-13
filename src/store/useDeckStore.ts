@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Card } from '../types/Card';
 import { DeckFormat, DeckRelatedToken } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
+import { deckEntryId, newDeckEntryId, withDeckEntryIds } from '../utils/deckEntry';
 
 interface EditingDeckState {
   deckId: string | null;
@@ -117,7 +118,7 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
 
   setSavedDeckCount: (count) => set({ savedDeckCount: count }),
 
-  setCurrentDeck: (cards) => set({ currentDeck: cards }),
+  setCurrentDeck: (cards) => set({ currentDeck: withDeckEntryIds(cards) }),
 
   setCurrentDeckRelatedTokens: (tokens) =>
     set((state) => ({
@@ -126,7 +127,10 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
 
   setEditingDeck: (editingState) => set({ editingDeck: editingState }),
 
-  addCard: (card) => set((state) => ({ currentDeck: [...state.currentDeck, card] })),
+  // Always a fresh entry id, even when the card came from another entry in this deck
+  // ("add another copy" hands back the card it was called with).
+  addCard: (card) =>
+    set((state) => ({ currentDeck: [...state.currentDeck, { ...card, instanceId: newDeckEntryId() }] })),
 
   removeCard: (cardId) => {
     let removedCard: Card | null = null;
@@ -152,10 +156,13 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
     return removedCard;
   },
 
+  // Keyed on the entry, not the printing: every copy of an edition shares `id`, so this
+  // used to rewrite all four copies when one had its art changed.
   updateCard: (updatedCard) =>
-    set((state) => ({
-      currentDeck: state.currentDeck.map((card) => (card.id === updatedCard.id ? updatedCard : card))
-    })),
+    set((state) => {
+      const target = deckEntryId(updatedCard);
+      return { currentDeck: state.currentDeck.map((card) => (deckEntryId(card) === target ? updatedCard : card)) };
+    }),
 
   updateCardZone: (cardId, zone) =>
     set((state) => ({
@@ -208,7 +215,7 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
   loadDeckToEdit: (id, name, format, cards, notes, relatedTokens) =>
     set({
       editingDeck: { deckId: id, deckName: name, deckFormat: format, deckNotes: notes || '' },
-      currentDeck: cards,
+      currentDeck: withDeckEntryIds(cards),
       currentDeckRelatedTokens: relatedTokens || []
     })
 }));

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FaBoxOpen, FaCheckCircle, FaChevronDown } from 'react-icons/fa';
+import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaTimes } from 'react-icons/fa';
 import { db } from '../../db/database';
 import { Card } from '../../types/Card';
 import { CollectionEntry } from '../../types/Collection';
@@ -22,11 +22,16 @@ const NO_ENTRIES: CollectionEntry[] = [];
 export function DeckCollectionSummary({ cards }: DeckCollectionSummaryProps) {
   const { t } = useTranslation();
   const currency = useCollectionSettings((state) => state.currency);
+  const showDeckGap = useCollectionSettings((state) => state.showDeckGap);
+  const setShowDeckGap = useCollectionSettings((state) => state.setShowDeckGap);
   const entries = useLiveQuery(() => db.collection.toArray(), []) ?? NO_ENTRIES;
   const [expanded, setExpanded] = useState(false);
 
   const gap = useMemo(() => computeDeckCollectionGap(cards, entries, currency), [cards, entries, currency]);
 
+  // Dismissed for good, until switched back on in the deck's display options. Hooks above
+  // still run, so the rule of hooks holds and the preference can flip without a remount.
+  if (!showDeckGap) return null;
   if (gap.totalNeeded === 0) return null;
 
   const complete = gap.missingCopies === 0;
@@ -68,6 +73,15 @@ export function DeckCollectionSummary({ cards }: DeckCollectionSummaryProps) {
             <FaChevronDown className={`text-[10px] transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={() => setShowDeckGap(false)}
+          title={t('collection.deckGapHide')}
+          aria-label={t('collection.deckGapHide')}
+          className={`${complete || missingRows.length === 0 ? 'ml-auto' : 'ml-1'} shrink-0 p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors`}
+        >
+          <FaTimes className="text-[11px]" />
+        </button>
       </div>
 
       {expanded && !complete ? (

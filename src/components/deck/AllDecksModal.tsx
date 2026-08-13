@@ -11,6 +11,8 @@ interface AllDecksModalProps extends DeckListProps {
 /**
  * Every saved deck in a grid, with the sidebar's actions. The sidebar lane fits one deck
  * per row, which turns 30 decks into ~13 screens of scrolling; this is the wide view.
+ *
+ * Single click selects (the sidebar behind updates); double click selects and closes.
  */
 function AllDecksModal({ onClose, ...deckListProps }: AllDecksModalProps) {
   const { t } = useTranslation();
@@ -44,7 +46,17 @@ function AllDecksModal({ onClose, ...deckListProps }: AllDecksModalProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0 pr-1">
-          <DeckList {...deckListProps} layout="grid" hideHeading />
+          {/* Double-click picks the deck and closes: a single click only previews the choice,
+              which left the modal open on top of the deck you had just selected. */}
+          <DeckList
+            {...deckListProps}
+            layout="grid"
+            hideHeading
+            onActivateDeck={(deck) => {
+              deckListProps.onSelectDeck(deck);
+              onClose();
+            }}
+          />
         </div>
       </div>
     </div>

@@ -70,7 +70,7 @@ function CardDetailModal({
   const [card, setCard] = useState<Card>(initialCard);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl);
   const [isRotated, setIsRotated] = useState(false);
-  const { prints, isLoading: isPrintsLoading } = useCardPrints(card, undefined, isToken);
+  const { prints, isLoading: isPrintsLoading, error: printsError } = useCardPrints(card, undefined, isToken);
   const [hoveredImageUrl, setHoveredImageUrl] = useState<string | null>(null);
   const [showPrintsSidebar, setShowPrintsSidebar] = useState(
     defaultShowPrints !== undefined ? defaultShowPrints : !isDeckCard && !hidePrintsSidebar
@@ -215,10 +215,12 @@ function CardDetailModal({
   };
 
   const handleConfirmArtChange = () => {
-    // Keep the original card id so parent can find and update the right card in the deck
-    // but apply the new print's image_uris and metadata
+    // The entry becomes the printing that was chosen: `id` is the new print, while
+    // `instanceId` (carried over from initialCard) keeps this one copy addressable. Holding
+    // the old id here is what used to make every copy change art together.
     const confirmedCard: Card = {
-      ...initialCard, // keep original id (used to find in deck)
+      ...initialCard,
+      id: card.id,
       image_uris: card.image_uris, // new print art
       card_faces: card.card_faces, // new print faces if any
       set: card.set,
@@ -286,9 +288,12 @@ function CardDetailModal({
           >
             <FaTimes className="text-base" />
           </button>
-          <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
+          {/* One scroller on phones, two lanes from md up: reading a long rules text used to
+              scroll the card art and the edition list along with it. Each side gets its own
+              scroller so the image stays put while the text moves. */}
+          <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 overflow-y-auto md:overflow-hidden custom-scrollbar pr-2 pb-2">
             {/* ── Left: edition sidebar + card image ── */}
-            <div className="flex flex-col md:flex-row gap-4 items-center md:items-start shrink-0 animate-fadeIn">
+            <div className="flex flex-col md:flex-row gap-4 items-center md:items-start shrink-0 animate-fadeIn md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
               {showPrintsSidebar && !hidePrintsSidebar && (
                 <CardDetailPrintsSidebar
                   isLoading={isPrintsLoading}
@@ -361,11 +366,21 @@ function CardDetailModal({
                     <FaRedo className="text-xl" />
                   </button>
                 )}
+
+                {/* Ownership actions sit under the art rather than in the text column: on wide
+                    screens that space was empty, and the controls belong next to the card they
+                    act on. On phones the columns stack, so they land between art and text —
+                    still directly below the card. */}
+                {showCollectionControls && !isToken ? (
+                  <div className="w-full max-w-[300px]">
+                    <CardCollectionControls card={card} variant="panel" />
+                  </div>
+                ) : null}
               </div>
             </div>
 
             {/* ── Right: card info ── */}
-            <div className="card-detail-info">
+            <div className="card-detail-info md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
               <CardDetailData
                 card={card}
                 currentFace={currentFace}
@@ -377,8 +392,6 @@ function CardDetailModal({
               {/* Related tokens section */}
               <CardDetailRelatedTokens relatedTokens={relatedTokens} onCardClick={setSelectedToken} />
 
-              {showCollectionControls && !isToken && <CardCollectionControls card={card} variant="panel" />}
-
               {/* Edit and Copy controls for Deck Cards */}
               <div className="w-full mt-auto">
                 <CardDetailEditControls
@@ -389,6 +402,7 @@ function CardDetailModal({
                   copiesCount={copiesCount}
                   hasArtChanged={hasArtChanged}
                   prints={prints}
+                  printsError={printsError}
                   showPrintsSidebar={showPrintsSidebar}
                   setShowPrintsSidebar={setShowPrintsSidebar}
                   handleDecrementCopies={handleDecrementCopies}

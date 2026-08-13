@@ -8,6 +8,8 @@ export interface DeckListProps {
   selectedDeckId: string | null;
   editingDeckId: string | null;
   onSelectDeck: (deck: Deck) => void;
+  /** Double-click / Enter: select and commit. The all-decks modal closes itself with it. */
+  onActivateDeck?: (deck: Deck) => void;
   onEditDeck: (
     id: string,
     name: string,
@@ -32,6 +34,7 @@ function DeckList({
   selectedDeckId,
   editingDeckId,
   onSelectDeck,
+  onActivateDeck,
   onEditDeck,
   onExportDeck,
   onDuplicateDeck,
@@ -50,7 +53,17 @@ function DeckList({
           {t('deck.savedDecks')} ({decks.length})
         </h3>
       )}
-      <div className={layout === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : 'space-y-2.5'}>
+      {/* `column` is the sidebar lane at lg+, but below lg the same list expands to the full
+          page width behind the "Saved decks" toggle. One full-width column there made each
+          4:3 cover ~450-750px tall — most of the viewport for a single deck — so it pairs up
+          in the middle range and only returns to a single lane once it is a narrow sidebar. */}
+      <div
+        className={
+          layout === 'grid'
+            ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3'
+            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5'
+        }
+      >
         {decks.length === 0 ? (
           <div className="empty-deck-list-state group">
             <div className="empty-deck-list-state-bg" />
@@ -68,6 +81,7 @@ function DeckList({
               isSelected={selectedDeckId === deck.id}
               isEditing={editingDeckId === deck.id}
               onSelect={onSelectDeck}
+              onActivate={onActivateDeck}
               onEdit={onEditDeck}
               onExport={onExportDeck}
               onDuplicate={onDuplicateDeck}
