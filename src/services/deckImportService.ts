@@ -1,9 +1,10 @@
 import { Card } from '../types/Card';
 import { Deck } from '../types/Deck';
-import { DeckFormatType, DeckZone } from '../types/enums';
-import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
+import { DeckZone } from '../types/enums';
+import { ScryfallNotFoundIdentifier } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
 import { newId } from '../utils/id';
+import { readField, toCardList, toImportedDeck, toNotFoundIdentifiers } from '../utils/typeGuards';
 
 const MAX_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
@@ -56,9 +57,9 @@ export const parseDeckJson = (content: string): Deck[] | null => {
 
   return candidates.reduce<Deck[] | null>((decks, candidate) => {
     if (!decks) return null;
-    const deck = candidate as Deck | null;
-    if (!deck || typeof deck.name !== 'string' || !deck.name || !Array.isArray(deck.cards)) return null;
-    decks.push({ ...deck, id: newId(), format: deck.format || DeckFormatType.FREEFORM });
+    const deck = toImportedDeck(candidate);
+    if (!deck) return null;
+    decks.push({ ...deck, id: newId() });
     return decks;
   }, []);
 };
@@ -178,8 +179,8 @@ const resolveLocalizedName = async (name: string, lang: string): Promise<Card | 
     try {
       const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`);
       if (!res.ok) continue;
-      const json = (await res.json()) as { data?: Card[] };
-      if (json.data && json.data.length > 0) return json.data[0];
+      const cards = toCardList(readField(await res.json(), 'data'));
+      if (cards.length > 0) return cards[0];
     } catch {
       // Fall through to the next, less strict query.
     }
@@ -235,13 +236,9 @@ export const fetchCardsFromParsedList = async (
       throw new Error('Scryfall API error');
     }
 
-    const json = (await response.json()) as ScryfallCollectionResponse;
-    if (json.data && Array.isArray(json.data)) {
-      allResolvedCards.push(...json.data);
-    }
-    if (json.not_found && Array.isArray(json.not_found)) {
-      initialNotFound.push(...json.not_found);
-    }
+    const json: unknown = await response.json();
+    allResolvedCards.push(...toCardList(readField(json, 'data')));
+    initialNotFound.push(...toNotFoundIdentifiers(readField(json, 'not_found')));
   }
 
   // Retry logic for not_found items, stripping set and collector_number, just use name
@@ -291,10 +288,7 @@ export const fetchCardsFromParsedList = async (
       const response = await fetchCollectionWithRetry(chunk);
 
       if (response.ok) {
-        const json = (await response.json()) as ScryfallCollectionResponse;
-        if (json.data && Array.isArray(json.data)) {
-          allResolvedCards.push(...json.data);
-        }
+        allResolvedCards.push(...toCardList(readField(await response.json(), 'data')));
       }
     }
   }
@@ -382,7 +376,7 @@ export const fetchCardsFromParsedList = async (
       for (let copyIndex = 0; copyIndex < item.quantity; copyIndex++) {
         // Each copy is its own deck entry, so it needs an id of its own; the printing's
         // id stays as a prefix so the origin of the entry remains readable.
-        const copy = { ...foundCard, id: `${foundCard.id}-${newId()}` } as unknown as Card;
+        const copy: Card = { ...foundCard, id: `${foundCard.id}-${newId()}` };
         // Preserve zone / commander status when the source (e.g. a share link) carries it.
         if (item.zone) copy.zone = item.zone;
         if (item.isCommander) copy.isCommander = true;

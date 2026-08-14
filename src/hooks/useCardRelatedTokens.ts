@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Scry from 'scryfall-sdk';
 import { Card } from '../types/Card';
-import { CardWithScryfallMetadata, ScryfallCardPart } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
 import { dispatchToast } from '../utils/toastHelper';
+import { isCardLike, readField, ScryfallPartRef, toPartRefs } from '../utils/typeGuards';
 
 export interface RelatedToken {
   tokenCard: Card;
@@ -31,12 +31,13 @@ export function useCardRelatedTokensForCard(card: Card | null) {
 
     const fetchTokens = async () => {
       try {
-        let allParts = (card as CardWithScryfallMetadata).all_parts;
+        const localParts = readField(card, 'all_parts');
+        let allParts: ScryfallPartRef[] | null = Array.isArray(localParts) ? toPartRefs(localParts) : null;
         if (!allParts) {
           try {
             // Fetch by English name to ensure we get the English card which has all_parts
-            const fullCard = (await Scry.Cards.byName(card.name)) as CardWithScryfallMetadata;
-            allParts = fullCard.all_parts || [];
+            const fullCard = await Scry.Cards.byName(card.name);
+            allParts = toPartRefs(readField(fullCard, 'all_parts'));
           } catch (fetchAllPartsError) {
             // Swallowing this made "we could not ask" look exactly like "this card makes no
             // tokens": the list rendered empty with nothing to say otherwise. The outer
@@ -57,11 +58,11 @@ export function useCardRelatedTokensForCard(card: Card | null) {
 
         // Fetch each token by ID in parallel
         await Promise.all(
-          tokenParts.map(async (part: ScryfallCardPart) => {
+          tokenParts.map(async (part: ScryfallPartRef) => {
             try {
               const fetchedCard = await Scry.Cards.byId(part.id);
-              if (fetchedCard) {
-                fetched.push(fetchedCard as unknown as Card);
+              if (isCardLike(fetchedCard)) {
+                fetched.push(fetchedCard);
               }
             } catch (tokenFetchError) {
               logger.error('Failed to fetch related token:', tokenFetchError);

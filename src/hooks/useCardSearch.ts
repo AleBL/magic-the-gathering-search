@@ -7,6 +7,7 @@ import { buildFilterTerms } from '../utils/searchQuery';
 import { SearchFilters } from '../types';
 import { EMPTY_SEARCH_FILTERS } from '../constants';
 import { useTranslation } from 'react-i18next';
+import { isCardLike, readRequestError } from '../utils/typeGuards';
 
 const DEFAULT_QUERY = 'c>=1';
 const MIN_QUERY_LENGTH = 2;
@@ -17,15 +18,18 @@ const deduplicateCards = (combined: Card[], targetLang: string): Card[] => {
   const cleanLang = (targetLang || 'en').split('-')[0].toLowerCase();
 
   combined.forEach((card) => {
-    const existing = uniqueMap.get(card.oracle_id);
+    // A printing with no oracle_id (reversible cards, and anything Scryfall trims) would
+    // key every such card under the same `undefined` and collapse them into one result.
+    const key = card.oracle_id || card.id;
+    const existing = uniqueMap.get(key);
     if (!existing) {
-      uniqueMap.set(card.oracle_id, card);
+      uniqueMap.set(key, card);
     } else {
       // Prefer preferred language over English, but keep English if preferred doesn't exist
       const existingIsEnglish = existing.lang === 'en' || !existing.lang;
       const newIsPreferred = card.lang === cleanLang;
       if (existingIsEnglish && newIsPreferred) {
-        uniqueMap.set(card.oracle_id, card);
+        uniqueMap.set(key, card);
       }
     }
   });
@@ -83,13 +87,18 @@ export function useCardSearch(language: string) {
         emitter.cancelAfterPage();
 
         emitter.on('data', (card: Scry.Card) => {
+          // The SDK hands back whatever the endpoint sent. A result with no id or no name
+          // cannot be added to a deck or looked up later, so it is dropped here rather
+          // than rendered as a blank tile.
+          if (!isCardLike(card)) return;
+
           const multiverseId = card.multiverse_ids?.[0];
           const gathererUrl = multiverseId
             ? `https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${multiverseId}&type=card`
             : '';
 
           results.push({
-            ...(card as unknown as Card),
+            ...card,
             image_uris: card.image_uris
               ? {
                   ...card.image_uris,
@@ -191,9 +200,7 @@ export function useCardSearch(language: string) {
       } catch (err: unknown) {
         if (searchId !== latestSearchIdRef.current) return;
         logger.error('Failed to load first page of search results:', err);
-        const scryfallError = err as Partial<Error & { status: number }>;
-        const errMsg = scryfallError?.message || '';
-        const status = scryfallError?.status || 0;
+        const { status, message: errMsg } = readRequestError(err);
         if (status === 429 || errMsg.includes('429')) {
           setError(t('search.rateLimited'));
         } else if (
@@ -237,9 +244,7 @@ export function useCardSearch(language: string) {
     } catch (err: unknown) {
       if (searchId !== latestSearchIdRef.current) return;
       logger.error('Failed to load next page of search results:', err);
-      const scryfallError = err as Partial<Error & { status: number }>;
-      const errMsg = scryfallError?.message || '';
-      const status = scryfallError?.status || 0;
+      const { status, message: errMsg } = readRequestError(err);
       if (status === 429 || errMsg.includes('429')) {
         setError(t('search.rateLimited'));
       } else if (
