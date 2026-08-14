@@ -9,6 +9,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { useTranslation } from 'react-i18next';
 import { dispatchToast } from '../utils/toastHelper';
+import { newId } from '../utils/id';
 import {
   parseDeckJson,
   parseDeckText,
@@ -77,7 +78,7 @@ export default function useDeckManager(
     }
 
     const newDeck: Deck = {
-      id: Date.now().toString(),
+      id: newId(),
       name: name.trim(),
       cards,
       format,
@@ -256,7 +257,7 @@ export default function useDeckManager(
       }
 
       const newDeck: Deck = {
-        id: Date.now().toString(),
+        id: newId(),
         name: decoded.name || t('deck.importedDeckName'),
         cards,
         format: decoded.format || DeckFormatType.FREEFORM,
@@ -296,7 +297,7 @@ export default function useDeckManager(
     try {
       const copy: Deck = {
         ...deck,
-        id: Date.now().toString(),
+        id: newId(),
         name: `${deck.name} (${t('common.copy')})`,
         createdAt: new Date().toISOString()
       };
@@ -375,7 +376,7 @@ export default function useDeckManager(
               }
 
               const newDeck: Deck = {
-                id: Date.now().toString(),
+                id: newId(),
                 name: file.name.replace(/\.(dec|txt)$/i, ''),
                 cards,
                 format: DeckFormatType.FREEFORM,
