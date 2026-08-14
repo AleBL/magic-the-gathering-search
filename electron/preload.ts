@@ -108,17 +108,18 @@ function createLoading() {
   const oDiv = document.createElement('div');
 
   oStyle.id = 'app-loading-style';
-  oStyle.innerHTML = styleContent;
+  oStyle.textContent = styleContent;
   oDiv.id = 'loading-to-remove';
   oDiv.className = 'app-loading-wrap';
-  oDiv.innerHTML = `<div clas="sk-chase">
-  <div class="sk-chase-dot"></div>
-  <div class="sk-chase-dot"></div>
-  <div class="sk-chase-dot"></div>
-  <div class="sk-chase-dot"></div>
-  <div class="sk-chase-dot"></div>
-  <div class="sk-chase-dot"></div></div>
-`;
+
+  const spinner = document.createElement('div');
+  spinner.className = 'sk-chase';
+  for (let i = 0; i < 6; i += 1) {
+    const dot = document.createElement('div');
+    dot.className = 'sk-chase-dot';
+    spinner.appendChild(dot);
+  }
+  oDiv.appendChild(spinner);
 
   return {
     appendLoading() {
