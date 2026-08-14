@@ -1,18 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { SearchFilters } from '../types';
+
+/** Payload the stubbed emitter hands to the hook; empty means "no results". */
+const { emitted } = vi.hoisted(() => ({ emitted: [] as unknown[] }));
 
 /**
  * `useCardSearch` searches Scryfall on mount, so the SDK is stubbed: these tests are
- * about how filter state turns into a Scryfall query string, not about the network.
- * The emitter only needs the surface the hook actually drives.
+ * about how filter state turns into a Scryfall query string and what the hook accepts
+ * back, not about the network. The emitter only needs the surface the hook drives.
  */
 vi.mock('scryfall-sdk', () => {
   const emitter = {
     cancelAfterPage: () => emitter,
     cancel: () => emitter,
     on(event: string, callback: (...args: unknown[]) => void) {
-      // Resolve immediately with no cards so the hook settles instead of hanging.
+      // 'data' is registered before 'done', so its microtask drains first and every
+      // emitted card reaches the hook before the search resolves.
+      if (event === 'data') queueMicrotask(() => emitted.forEach((card) => callback(card)));
       if (event === 'done') queueMicrotask(() => callback());
       return emitter;
     }
@@ -32,8 +37,51 @@ const withFilters = async (overrides: Partial<SearchFilters>) => {
   return result;
 };
 
+/** Renders the hook and waits for the search it fires on mount to settle. */
+const withResults = async (payload: unknown[]) => {
+  emitted.push(...payload);
+  const { result } = renderHook(() => useCardSearch('en'));
+  await waitFor(() => expect(result.current.isLoadingInitial).toBe(false));
+  return result;
+};
+
+describe('useCardSearch results', () => {
+  beforeEach(() => {
+    emitted.length = 0;
+    vi.clearAllMocks();
+  });
+
+  // Scryfall's payload is unvalidated at this point: an entry with no id cannot be added
+  // to a deck or looked up again, so it must be dropped rather than rendered blank.
+  it('drops results that are not usable cards', async () => {
+    const result = await withResults([
+      { id: 'a', name: 'Lightning Bolt', oracle_id: 'o1' },
+      null,
+      { name: 'No id' },
+      'nope',
+      { id: 'b', name: 'Shock', oracle_id: 'o2' }
+    ]);
+
+    expect(result.current.cards.map((card) => card.name)).toEqual(['Lightning Bolt', 'Shock']);
+  });
+
+  // Deduplication keys on oracle_id; without a fallback, two printings that carry none
+  // both key on `undefined` and collapse into a single result.
+  it('keeps distinct printings that carry no oracle_id', async () => {
+    const result = await withResults([
+      { id: 'a', name: 'Lightning Bolt' },
+      { id: 'b', name: 'Shock' }
+    ]);
+
+    expect(result.current.cards.map((card) => card.name)).toEqual(['Lightning Bolt', 'Shock']);
+  });
+});
+
 describe('useCardSearch.buildQuery', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    emitted.length = 0;
+    vi.clearAllMocks();
+  });
 
   it('falls back to the default query when there is no text and no filter', async () => {
     const result = await withFilters({});

@@ -41,6 +41,23 @@ describe('parseDeckJson', () => {
     expect(parseDeckJson(JSON.stringify(formatless))?.[0].format).toBe(DeckFormatType.FREEFORM);
   });
 
+  // A format string the app does not know would fail every legality check downstream.
+  it('defaults an unknown format to freeform', () => {
+    const alien = { ...aDeck('Atraxa'), format: 'pioneer' };
+    expect(parseDeckJson(JSON.stringify(alien))?.[0].format).toBe(DeckFormatType.FREEFORM);
+  });
+
+  it('stamps a createdAt on a file that carries none', () => {
+    const undated = { ...aDeck('Atraxa'), createdAt: undefined };
+    expect(parseDeckJson(JSON.stringify(undated))?.[0].createdAt).toEqual(expect.any(String));
+  });
+
+  // Anything not on the Deck interface is dropped rather than persisted unchecked.
+  it('does not carry unknown fields from the file into the saved deck', () => {
+    const tampered = { ...aDeck('Atraxa'), injected: 'payload' };
+    expect(parseDeckJson(JSON.stringify(tampered))?.[0]).not.toHaveProperty('injected');
+  });
+
   it('rejects the whole file when one deck in the array is malformed', () => {
     expect(parseDeckJson(JSON.stringify([aDeck('Atraxa'), { name: 'No cards' }]))).toBeNull();
   });
@@ -50,7 +67,11 @@ describe('parseDeckJson', () => {
     ['an empty array', '[]'],
     ['a deck with no name', JSON.stringify({ cards: [] })],
     ['a deck whose cards are not a list', JSON.stringify({ name: 'Broken', cards: 'four' })],
-    ['null', 'null']
+    ['null', 'null'],
+    // An entry with no id has no way back to a printing: it would render as a blank slot
+    // and break every lookup keyed on it, so the file is refused instead.
+    ['a deck holding a card with no id', JSON.stringify({ ...aDeck('Atraxa'), cards: [{ name: 'Nameless' }] })],
+    ['a deck holding a null card', JSON.stringify({ ...aDeck('Atraxa'), cards: [makeCard(), null] })]
   ])('refuses %s', (_label, content) => {
     expect(parseDeckJson(content)).toBeNull();
   });

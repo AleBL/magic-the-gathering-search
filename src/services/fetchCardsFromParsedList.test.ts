@@ -135,6 +135,49 @@ describe('fetchCardsFromParsedList', () => {
     expect(calls[1].identifiers).toEqual([{ name: 'Delver of Secrets' }]);
   });
 
+  describe('malformed payloads', () => {
+    // A card with no id cannot be added to a deck or looked up again; keeping it would
+    // put a blank entry in the imported deck instead of reporting the name as missing.
+    it('drops entries that are not usable cards and reports them as missing', async () => {
+      stubFetch(() => reply(200, { data: [{ name: 'Lightning Bolt' }, card('Shock')], not_found: [] }));
+
+      const result = await fetchCardsFromParsedList([
+        { name: 'Lightning Bolt', quantity: 1 },
+        { name: 'Shock', quantity: 1 }
+      ]);
+
+      expect(result.cards.map((c) => c.name)).toEqual(['Shock']);
+      expect(result.missing).toEqual(['Lightning Bolt']);
+    });
+
+    it.each([
+      ['data is not a list', { data: 'Lightning Bolt', not_found: [] }],
+      ['data is missing entirely', { not_found: [] }],
+      ['the body is not an object', 'Lightning Bolt']
+    ])('treats a response where %s as nothing found', async (_label, body) => {
+      stubFetch(() => reply(200, body));
+
+      await expect(fetchCardsFromParsedList([{ name: 'Lightning Bolt', quantity: 1 }])).rejects.toThrow(
+        'No cards found'
+      );
+    });
+
+    // not_found drives the by-name retry; junk in there must not become a lookup for a
+    // card called "undefined".
+    it('ignores not_found entries that are not objects', async () => {
+      let call = 0;
+      stubFetch(() => {
+        call += 1;
+        if (call === 1) return reply(200, { data: [], not_found: [null, 'zzz', { name: 'Lightning Bolt' }] });
+        return reply(200, { data: [card('Lightning Bolt')], not_found: [] });
+      });
+
+      await fetchCardsFromParsedList([{ name: 'Lightning Bolt', quantity: 1 }]);
+
+      expect(calls[1].identifiers).toEqual([{ name: 'Lightning Bolt' }]);
+    });
+  });
+
   it('reports progress while it works', async () => {
     stubFetch(() => reply(200, { data: [card('Lightning Bolt')], not_found: [] }));
     const onProgress = vi.fn();
