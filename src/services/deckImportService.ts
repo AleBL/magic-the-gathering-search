@@ -3,6 +3,7 @@ import { Deck } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
 import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
+import { newId } from '../utils/id';
 
 const MAX_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
@@ -53,15 +54,11 @@ export const parseDeckJson = (content: string): Deck[] | null => {
   const candidates = Array.isArray(parsed) ? parsed : [parsed];
   if (candidates.length === 0) return null;
 
-  // Every deck in one file would otherwise share a millisecond, and `put` would leave only
-  // the last one standing. The offset keeps ids unique without changing their shape.
-  const baseId = Date.now();
-
-  return candidates.reduce<Deck[] | null>((decks, candidate, index) => {
+  return candidates.reduce<Deck[] | null>((decks, candidate) => {
     if (!decks) return null;
     const deck = candidate as Deck | null;
     if (!deck || typeof deck.name !== 'string' || !deck.name || !Array.isArray(deck.cards)) return null;
-    decks.push({ ...deck, id: String(baseId + index), format: deck.format || DeckFormatType.FREEFORM });
+    decks.push({ ...deck, id: newId(), format: deck.format || DeckFormatType.FREEFORM });
     return decks;
   }, []);
 };
@@ -383,8 +380,9 @@ export const fetchCardsFromParsedList = async (
 
     if (foundCard) {
       for (let copyIndex = 0; copyIndex < item.quantity; copyIndex++) {
-        // We append a timestamp so every imported copy has a unique id
-        const copy = { ...foundCard, id: `${foundCard.id}-${copyIndex}-${Date.now()}` } as unknown as Card;
+        // Each copy is its own deck entry, so it needs an id of its own; the printing's
+        // id stays as a prefix so the origin of the entry remains readable.
+        const copy = { ...foundCard, id: `${foundCard.id}-${newId()}` } as unknown as Card;
         // Preserve zone / commander status when the source (e.g. a share link) carries it.
         if (item.zone) copy.zone = item.zone;
         if (item.isCommander) copy.isCommander = true;
