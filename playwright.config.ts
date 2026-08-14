@@ -7,6 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 5199;
 const BASE_URL = `http://localhost:${PORT}`;
 
+// The Electron project drives the real main process over the built output instead of a
+// browser against the dev server. It costs an app boot, needs a display, and proves nothing
+// the web suite already proves — so it is opt-in: `ELECTRON_E2E=1 yarn test:e2e` runs it
+// *instead of* chromium, and a plain `yarn test:e2e` never pays for it.
+const ELECTRON_E2E = !!process.env.ELECTRON_E2E;
+
 export default defineConfig({
   testDir: './e2e',
   // `*.bench.ts` files measure rather than assert: slow by design, and a number that moved
@@ -39,28 +45,45 @@ export default defineConfig({
     serviceWorkers: 'block'
   },
 
-  projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        // Locally, drive the Chrome that is already installed rather than making every
-        // developer download a second browser. CI installs Playwright's own pinned
-        // chromium instead, so runs there do not drift with whatever Chrome the runner
-        // image happens to ship this week.
-        channel: process.env.CI ? undefined : 'chrome'
-      }
-    }
-  ],
+  projects: ELECTRON_E2E
+    ? [
+        {
+          name: 'electron',
+          testMatch: '**/*.electron.spec.ts',
+          // Booting Electron, loading the bundle from file:// and mounting React is a
+          // cold start, not a navigation on a warm dev server.
+          timeout: 60_000
+        }
+      ]
+    : [
+        {
+          name: 'chromium',
+          // `*.electron.spec.ts` files launch their own Electron app; running them through
+          // a browser project would fail on the first `_electron.launch`.
+          testIgnore: '**/*.electron.spec.ts',
+          use: {
+            ...devices['Desktop Chrome'],
+            // Locally, drive the Chrome that is already installed rather than making every
+            // developer download a second browser. CI installs Playwright's own pinned
+            // chromium instead, so runs there do not drift with whatever Chrome the runner
+            // image happens to ship this week.
+            channel: process.env.CI ? undefined : 'chrome'
+          }
+        }
+      ],
 
-  webServer: {
-    // Benchmarks against the dev server measure React's development build, which carries
-    // checks production strips. BENCH_PROD serves the real bundle instead.
-    command: process.env.BENCH_PROD
-      ? `yarn build:web && npx vite preview --config vite.config.web.ts --port ${PORT} --strictPort`
-      : `yarn dev:web --port ${PORT} --strictPort`,
-    url: BASE_URL,
-    reuseExistingServer: false,
-    timeout: 180_000
-  }
+  // The Electron project loads the built bundle from file://; starting a dev server for it
+  // would only slow the run down and, worse, flip the app to its development CSP.
+  webServer: ELECTRON_E2E
+    ? undefined
+    : {
+        // Benchmarks against the dev server measure React's development build, which carries
+        // checks production strips. BENCH_PROD serves the real bundle instead.
+        command: process.env.BENCH_PROD
+          ? `yarn build:web && npx vite preview --config vite.config.web.ts --port ${PORT} --strictPort`
+          : `yarn dev:web --port ${PORT} --strictPort`,
+        url: BASE_URL,
+        reuseExistingServer: false,
+        timeout: 180_000
+      }
 });
