@@ -2,6 +2,7 @@ import { db } from '../db/database';
 import { Deck, DeckVersion } from '../types/Deck';
 import { pruneVersions } from '../utils/deckVersions';
 import { diffDeckVersions } from '../utils/deckVersionDiff';
+import { newId } from '../utils/id';
 
 /** How many snapshots to retain per deck before the oldest are dropped. */
 const MAX_VERSIONS_PER_DECK = 20;
@@ -9,7 +10,7 @@ const MAX_VERSIONS_PER_DECK = 20;
 /** Snapshots the deck's current state, then trims old versions past the cap. */
 export async function saveDeckSnapshot(deck: Deck): Promise<DeckVersion> {
   const version: DeckVersion = {
-    id: `${deck.id}-${Date.now()}`,
+    id: newId(),
     deckId: deck.id,
     name: deck.name,
     format: deck.format,
