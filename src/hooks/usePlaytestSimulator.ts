@@ -4,6 +4,7 @@ import { PlaytestCard, LogEntry } from '../types/Playtest';
 import { useTranslation } from 'react-i18next';
 import { PlaytestZone, LibraryPlacement } from '../types/enums';
 import { cardWithFace, isDoubleFaced } from '../utils/cardFaces';
+import { newId } from '../utils/id';
 
 const getCardName = (item: PlaytestCard): string => item.card.printed_name || item.card.name;
 
@@ -77,8 +78,8 @@ export function usePlaytestSimulator(deckCards: Card[], deckFormat?: string, isO
   };
 
   const mapToPlaytestCards = (cards: Card[]): PlaytestCard[] => {
-    return cards.map((card, index) => ({
-      playtestId: `${card.id}-${index}-${Math.random().toString(36).substring(2, 9)}`,
+    return cards.map((card) => ({
+      playtestId: `${card.id}-${newId()}`,
       card,
       isTapped: false,
       counters: 0,
@@ -90,7 +91,7 @@ export function usePlaytestSimulator(deckCards: Card[], deckFormat?: string, isO
     setGameLog((prev) => [
       ...prev,
       {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        id: newId(),
         text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       }
@@ -491,7 +492,7 @@ export function usePlaytestSimulator(deckCards: Card[], deckFormat?: string, isO
 
   const handleSummonToken = useCallback(
     (tokenCard: Card) => {
-      const uniquePlaytestId = `${tokenCard.id}-${Math.random().toString(36).substring(2, 9)}`;
+      const uniquePlaytestId = `${tokenCard.id}-${newId()}`;
       setBattlefield((previousBattlefield) => [
         ...previousBattlefield,
         {
