@@ -63,8 +63,10 @@ Search Magic: The Gathering cards, build and manage decks with [Scryfall](https:
 ```bash
 node -v # 24.15.0
 yarn -v # 4.17.1
-npm  -v # 11.12.1
 ```
+
+Yarn 4 is pinned through `packageManager` in `package.json`; run `corepack enable` once so the
+right version is used. The repository ships a `yarn.lock` only, so use Yarn (not npm) to install.
 
 ### Linux dependencies (Electron)
 
@@ -75,8 +77,7 @@ sudo apt-get install -yq --no-install-recommends libasound2 libatk1.0-0 libc6 li
 ### Install dependencies
 
 ```bash
-npm install
-# OR
+corepack enable
 yarn install
 ```
 
@@ -84,32 +85,41 @@ yarn install
 
 ```bash
 # Electron app with hot reload
-npm run dev
+yarn dev
 
 # Browser only (no Electron)
-bash dev-web.sh
+yarn dev:web
 ```
 
 ### Build
 
 ```bash
-npm run build          # default build
-npm run build:win      # Windows target
-npm run build:mac      # macOS target
-npm run build:linux    # Linux target
+yarn build             # renderer + Electron main (dist-vite/ and dist-electron/)
+yarn build:web         # browser/PWA bundle
+yarn build:win         # Windows installer
+yarn build:mac         # macOS installer
+yarn build:linux       # Linux installer
+yarn run pack          # unpacked desktop app, no installer
 ```
 
-Distributable files are generated in `dist-vite/` and `dist-electron/`.
+`pack` needs the explicit `run`: plain `yarn pack` is Yarn's own tarball command, which shadows the
+script and silently builds nothing.
+
+`yarn build` compiles into `dist-vite/` and `dist-electron/`. The platform targets and `pack` run
+Electron Builder on top of that and write into `dist/`, which is also where `yarn build:web`
+publishes; each of them clears `dist/` first, so a desktop package and a web bundle never coexist
+there.
 See [Electron Builder CLI docs](https://www.electron.build/cli.html) for additional options.
 
 ### Tests
 
 ```bash
-npm run test           # unit + component tests (Vitest)
-npm run test:coverage  # same, enforcing the coverage thresholds in vitest.config.ts
-npm run test:e2e       # end-to-end journeys (Playwright)
-npm run test:e2e:ui    # the same journeys in Playwright's interactive runner
-npm run test:e2e:bench # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
+yarn test              # unit + component tests (Vitest)
+yarn test:watch        # the same suite in watch mode
+yarn test:coverage     # same, enforcing the coverage thresholds in vitest.config.ts
+yarn test:e2e          # end-to-end journeys (Playwright)
+yarn test:e2e:ui       # the same journeys in Playwright's interactive runner
+yarn test:e2e:bench    # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
 ```
 
 The E2E suite starts its own dev server on port 5199 and stubs every Scryfall request, so
@@ -119,13 +129,14 @@ drives Chrome locally; CI installs Playwright's own chromium.
 ### Other scripts
 
 ```bash
-npm run lint           # ESLint + Prettier auto-fix
-npm run type-check     # TypeScript type check only
-npm run i18n:check     # verify en/es/pt share the same key set
-npm run deadcode       # unused files/exports/dependencies (knip)
-npm run seed:profile   # generate a demo profile (7 decks + collection) to import via Backup
-npm run deps:update    # interactive major dependency updates (taze)
-npm run clean          # remove build output folders
+yarn lint:check        # ESLint + Prettier, report only (the gate CI runs)
+yarn lint:fix          # the same rules with auto-fix applied
+yarn type-check        # TypeScript type check only
+yarn i18n:check        # verify en/es/pt share the same key set
+yarn deadcode          # unused files/exports/dependencies (knip)
+yarn seed:profile      # generate a demo profile (7 decks + collection) to import via Backup
+yarn deps:update       # interactive major dependency updates (taze)
+yarn clean             # remove build output folders
 ```
 
 ## Project Structure
