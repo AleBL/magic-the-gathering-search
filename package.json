@@ -38,6 +38,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint . --fix",
+    "lint:fix": "eslint . --fix",
     "lint:check": "eslint .",
     "i18n:check": "node scripts/i18n-check.mjs --ci",
     "deps:update": "taze major -I",

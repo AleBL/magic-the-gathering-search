@@ -117,6 +117,16 @@ export default tseslint.config(
           selector: "CallExpression[callee.name='t'][arguments.1.type='Literal']",
           message:
             "Do not use translation fallbacks (e.g. t('key', 'Fallback text')). Add the translation to the locales files instead."
+        },
+
+        // Both member forms are covered: el.innerHTML and el['innerHTML'].
+        {
+          selector: "AssignmentExpression > MemberExpression.left[property.name='innerHTML']",
+          message: 'Do not assign to innerHTML. Build nodes with createElement/textContent instead.'
+        },
+        {
+          selector: "AssignmentExpression > MemberExpression.left[computed=true][property.value='innerHTML']",
+          message: 'Do not assign to innerHTML. Build nodes with createElement/textContent instead.'
         }
       ]
     }
