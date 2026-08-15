@@ -20,8 +20,8 @@ test.describe.configure({ mode: 'serial' });
 let app: ElectronApplication;
 let page: Page;
 
-/** What the loading overlay looked like at the first moment it existed. */
-let overlayAtBoot: { hasStyle: boolean; dots: number };
+/** What the document looked like at the first moment the loading overlay existed. */
+let overlayAtBoot: { background: string; dots: number; styleTags: number };
 
 const cspViolations: string[] = [];
 
@@ -72,8 +72,11 @@ test.beforeAll(async () => {
     const overlay = document.querySelector('#loading-to-remove');
     if (!overlay) return null;
     return {
-      hasStyle: !!document.querySelector('#app-loading-style'),
-      dots: overlay.querySelectorAll('.sk-chase .sk-chase-dot').length
+      // The stylesheet is a <link> in index.html now, so the evidence that it arrived
+      // before the overlay painted is the overlay's own computed background.
+      background: getComputedStyle(overlay).backgroundColor,
+      dots: overlay.querySelectorAll('.sk-chase .sk-chase-dot').length,
+      styleTags: document.querySelectorAll('style').length
     };
   });
   // The `null` above is the "keep polling" signal, so it cannot be the settled value; the
@@ -88,16 +91,23 @@ test.afterAll(async () => {
 });
 
 test('the preload paints the loading overlay before the app mounts', () => {
-  expect(overlayAtBoot.hasStyle).toBe(true);
+  // #282c34, the wrapper background from src/style/loader.css.
+  expect(overlayAtBoot.background).toBe('rgb(40, 44, 52)');
   expect(overlayAtBoot.dots).toBe(6);
 });
 
-test('the loading overlay and its stylesheet are gone once the app mounts', async () => {
+test('the preload styles the overlay without injecting a <style> element', () => {
+  // The whole point of moving the spinner CSS into src/style/loader.css: an injected
+  // <style> is inline style, and while style-src still carries 'unsafe-inline' for
+  // useProxyPrint, nothing else would fail if the injection came back. This assertion is
+  // the only thing standing between that and a silent regression.
+  expect(overlayAtBoot.styleTags).toBe(0);
+});
+
+test('the loading overlay is gone once the app mounts', async () => {
   // The renderer posts `removeLoading` from an effect after the first render, so the
   // overlay disappearing is also the evidence that React mounted at all.
-  await page.waitForFunction(
-    () => !document.querySelector('#loading-to-remove') && !document.querySelector('#app-loading-style')
-  );
+  await page.waitForFunction(() => !document.querySelector('#loading-to-remove'));
 
   await expect(page.getByRole('banner')).toBeVisible();
 });
