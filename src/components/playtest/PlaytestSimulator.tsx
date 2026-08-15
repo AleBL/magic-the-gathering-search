@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FaExclamationTriangle, FaCheck } from 'react-icons/fa';
@@ -19,6 +18,7 @@ import { PlaytestParticles } from './PlaytestParticles';
 import AmbientGlow from '../ui/AmbientGlow';
 import { useRipple } from '../../hooks/useRipple';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useShortcutHandler } from '../../hooks/useShortcutHandler';
 
 interface PlaytestSimulatorProps {
   isOpen: boolean;
@@ -57,19 +57,15 @@ function PlaytestSimulatorContent({
 
   const remainingToSelect = mulligans - selectedToBottom.size;
 
-  // Mark the playtest as active so app-level shortcuts (Ctrl+K, ?) stand down.
-  useEffect(() => {
-    document.body.dataset.playtestOpen = 'true';
-    return () => {
-      delete document.body.dataset.playtestOpen;
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  // `blocksLowerLayers` is what used to be a `data-playtest-open` flag read by RootLayout:
+  // this is a fullscreen mode, so app shortcuts must not fire on the UI hidden behind it —
+  // including the keys the simulator itself ignores. Dialogs opened from here register on
+  // the modal layer above and still get their key first.
+  useShortcutHandler(
+    (e) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
+        return false;
       }
 
       const ctrl = e.ctrlKey || e.metaKey;
@@ -79,33 +75,39 @@ function PlaytestSimulatorContent({
         e.preventDefault();
         if (e.shiftKey) handleRedo();
         else handleUndo();
-        return;
+        return true;
       }
       if (ctrl && key === 'y') {
         e.preventDefault();
         handleRedo();
-        return;
+        return true;
       }
-      if (ctrl) return; // don't fire single-key shortcuts alongside modifiers
+      if (ctrl) return false; // don't fire single-key shortcuts alongside modifiers
 
       if (e.key === '?') {
         e.preventDefault();
         setIsShortcutsOpen((prev) => !prev);
-      } else if (key === 'd') {
+        return true;
+      }
+      if (key === 'd') {
         e.preventDefault();
         handleDrawCard();
-      } else if (key === 's') {
+        return true;
+      }
+      if (key === 's') {
         e.preventDefault();
         handleShuffleLibrary();
-      } else if (key === 't') {
+        return true;
+      }
+      if (key === 't') {
         e.preventDefault();
         handleNextTurn();
+        return true;
       }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDrawCard, handleShuffleLibrary, handleNextTurn, handleUndo, handleRedo, setIsShortcutsOpen]);
+      return false;
+    },
+    { layer: 'playtest', blocksLowerLayers: true }
+  );
 
   return (
     <div className="modal-overlay p-2 sm:p-4 !z-[var(--z-playtest)]" style={{ zIndex: 'var(--z-playtest)' }}>
