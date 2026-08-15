@@ -21,9 +21,11 @@ app.commandLine.appendSwitch('log-level', '3');
 // Production (static bundle loaded from file://): `yarn build` emits only external
 // <script type="module"> and <link rel="stylesheet"> tags, so scripts need nothing beyond
 // 'self' and eval stays blocked. Network access is narrowed to Scryfall, the only host the
-// renderer ever calls. Trade-off: style-src keeps 'unsafe-inline' because the preload's
-// loading spinner appends a <style> element and Google Fonts is loaded as a stylesheet
-// link; dropping it would need those two moved into the bundle (out of scope here).
+// renderer ever calls. Trade-off: style-src still keeps 'unsafe-inline', now for a single
+// reason — useProxyPrint appends a <style id="proxy-print-override"> whose @page rule is
+// built from the chosen paper size, and Chromium refuses to apply it without the keyword.
+// The boot spinner no longer needs it (its CSS is bundled in src/style/loader.css), and
+// Google Fonts never did: a remote stylesheet link costs an origin here, not 'unsafe-inline'.
 const CSP_DEV = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
