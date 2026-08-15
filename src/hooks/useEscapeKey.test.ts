@@ -65,4 +65,18 @@ describe('useEscapeKey', () => {
 
     expect(onEscape).not.toHaveBeenCalled();
   });
+
+  // Arbitration lives in the registry (see keyboardRegistry.test.ts); this is the call
+  // site's half of it — two surfaces open at once, one Escape, one dismissal.
+  it('only the surface opened last hears Escape', () => {
+    const closeModal = vi.fn();
+    const closeContextMenu = vi.fn();
+    renderHook(() => useEscapeKey(closeModal, true));
+    renderHook(() => useEscapeKey(closeContextMenu, true));
+
+    pressEscape();
+
+    expect(closeContextMenu).toHaveBeenCalledTimes(1);
+    expect(closeModal, 'closing the menu must not also close the modal hosting it').not.toHaveBeenCalled();
+  });
 });
