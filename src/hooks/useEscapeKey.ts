@@ -1,31 +1,23 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useShortcutHandler } from './useShortcutHandler';
 
 /**
  * Calls `onEscape` when Escape is pressed anywhere in the window, while `active`.
  *
- * The callback is read from a ref so this effect depends on `active` alone. Keying it on
- * `onEscape` instead meant every call site passing an inline arrow re-registered its window
- * listener on each render — and Escape is a discrete event, so React flushes the resulting
- * state update *inside* the dispatch. One dialog's handler could therefore tear down another
- * dialog's listener while the same keypress was still travelling to it, and a listener removed
- * before the event reaches it is never invoked. The second dialog simply never heard Escape.
+ * Registers on the registry's modal layer and consumes the key, so Escape reaches the
+ * surface the user is actually looking at and stops there. Before that arbitration existed
+ * every active call site heard the same keypress: closing a context menu also closed the
+ * modal hosting it, and closing any dialog also blurred the search field behind it.
+ *
+ * Other keys deliberately fall through to the layers below — that is what still lets
+ * Ctrl+K toggle the command palette shut while the palette itself is open.
  */
 export function useEscapeKey(onEscape: () => void, active = true) {
-  const savedOnEscape = useRef(onEscape);
-  // Layout, not passive: a keypress landing between render and a passive effect would
-  // otherwise run the previous render's callback.
-  useLayoutEffect(() => {
-    savedOnEscape.current = onEscape;
-  });
-
-  useEffect(() => {
-    if (!active) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') savedOnEscape.current();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [active]);
+  useShortcutHandler(
+    (event) => {
+      if (event.key !== 'Escape') return false;
+      onEscape();
+      return true;
+    },
+    { layer: 'modal', active }
+  );
 }
