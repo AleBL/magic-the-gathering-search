@@ -66,9 +66,22 @@ function createLoading() {
 const { appendLoading, removeLoading } = createLoading();
 domReady().then(appendLoading);
 
-window.onmessage = (ev) => {
-  if (ev.data.payload === 'removeLoading') removeLoading();
-};
+// Only this window's own renderer may retract the boot overlay: a message from an iframe or
+// another window arrives with a different `source`, and one from a foreign document with a
+// different `origin`. `data` is untrusted input, so it is read defensively — the previous
+// `ev.data.payload` threw on a bare `postMessage(null, '*')`. `addEventListener` instead of
+// `window.onmessage` so this handler neither overwrites nor is overwritten by another one.
+window.addEventListener('message', (ev: MessageEvent<unknown>) => {
+  if (ev.source !== window) return;
+  // The packaged app loads the bundle from file://, and Chromium serializes that opaque
+  // origin as the string 'null' while `location.origin` reads 'file://' — equality alone
+  // would reject every legitimate message in production and leave the overlay covering the
+  // app. The `source` check above is what actually keeps foreign frames out.
+  if (ev.origin !== window.location.origin && ev.origin !== 'null') return;
+
+  const data = ev.data as { payload?: unknown } | null | undefined;
+  if (data?.payload === 'removeLoading') removeLoading();
+});
 
 // ── WHITELIST: Only expose specific channels ──
 const ALLOWED_SEND_CHANNELS = ['message', 'show-notification'] as const;
