@@ -2,6 +2,7 @@ import { db } from '../db/database';
 import { STORAGE_KEYS, StorageKey } from '../constants/storage';
 import { Deck, DeckVersion } from '../types/Deck';
 import { CollectionEntry } from '../types/Collection';
+import { newId } from '../utils/id';
 
 /**
  * Whole-profile backup. The app has no backend: decks, collection and version history
@@ -143,18 +144,20 @@ export async function restoreProfileBackup(backup: ProfileBackup, mode: RestoreM
       };
     }
 
-    const baseId = Date.now();
+    // `Date.now() + index` reissued ids in the same numeric space legacy decks were created
+    // in, so restoring could land on the id of a deck saved in that same millisecond and
+    // overwrite it on `put` — the merge mode exists precisely to never do that.
     const deckIdByOldId = new Map<string, string>();
-    const decks = backup.decks.map((deck, index) => {
-      const id = `${baseId + index}`;
+    const decks = backup.decks.map((deck) => {
+      const id = newId();
       deckIdByOldId.set(deck.id, id);
       return { ...deck, id };
     });
 
     // A snapshot pointing at the id it had in the old profile would be orphaned history.
-    const deckVersions = backup.deckVersions.map((version, index) => ({
+    const deckVersions = backup.deckVersions.map((version) => ({
       ...version,
-      id: `${baseId + index}-v`,
+      id: newId(),
       deckId: deckIdByOldId.get(version.deckId) ?? version.deckId
     }));
 
