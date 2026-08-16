@@ -242,6 +242,11 @@ export function useCardSearch(language: string) {
       if (searchId !== latestSearchIdRef.current) return;
 
       if (results.length === 0) {
+        // Same silent ending as the first page: with no connection the emitter completes
+        // empty, and the list simply stopped growing with nothing said about why.
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          setError(t('search.scryfallOffline'));
+        }
         setHasMore(false);
       } else {
         setCards((prev) => deduplicateCards([...prev, ...results], language));

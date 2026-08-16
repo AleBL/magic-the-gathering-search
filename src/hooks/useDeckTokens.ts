@@ -274,6 +274,9 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
           if (!allParts) {
             try {
               const resp = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(c.name)}`);
+              // A 404 is an answer: Scryfall has no such card, so it makes no tokens. Any
+              // other failed status is Scryfall not answering, which is not the same thing.
+              if (!resp.ok && resp.status !== 404) lookupFailed = true;
               allParts = resp.ok ? ((await resp.json()).all_parts as ScryfallCardPart[]) || [] : [];
             } catch (fetchAllPartsError) {
               logger.error('Failed to fetch full card during deck analysis:', fetchAllPartsError);

@@ -73,6 +73,41 @@ const parseCsvLine = (line: string): string[] => {
   return fields;
 };
 
+/**
+ * Splits CSV text into records. Not `text.split(/\r?\n/)`: `escapeCsv` quotes a value that
+ * contains a newline, and cutting on every newline tore such a record into two malformed
+ * ones — a file this module had just written did not survive its own round trip.
+ */
+const splitCsvRecords = (text: string): string[] => {
+  const records: string[] = [];
+  let record = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') {
+      // A doubled quote inside a quoted field is an escaped quote, not the end of it.
+      if (inQuotes && text[i + 1] === '"') {
+        record += '""';
+        i++;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      record += char;
+    } else if (!inQuotes && (char === '\n' || char === '\r')) {
+      // CRLF ends one record, not two.
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      records.push(record);
+      record = '';
+    } else {
+      record += char;
+    }
+  }
+
+  records.push(record);
+  return records;
+};
+
 const truthy = new Set(['true', '1', 'yes', 'y', 'x']);
 
 /**
@@ -82,14 +117,15 @@ const truthy = new Set(['true', '1', 'yes', 'y', 'x']);
  */
 export function parseCollectionCsv(text: string): CollectionCsvRow[] {
   const rows: CollectionCsvRow[] = [];
-  const lines = text.split(/\r?\n/);
 
-  for (const rawLine of lines) {
+  for (const rawLine of splitCsvRecords(text)) {
     const line = rawLine.trim();
     if (!line) continue;
 
     const fields = parseCsvLine(line).map((field) => field.trim());
-    const name = fields[0] ?? '';
+    // `parseCsvLine` always pushes at least one field, so there is no absent-name case
+    // distinct from the empty one.
+    const name = fields[0];
     if (!name) continue;
     // Skip the header row (matched case-insensitively on the first column).
     if (name.toLowerCase() === 'name') continue;
