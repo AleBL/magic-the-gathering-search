@@ -26,6 +26,11 @@ const fakeTable = <T extends { id: string }>(store: Map<string, T>) => ({
 
 const transaction = vi.hoisted(() => ({ fail: false }));
 
+const restoreInto = vi.hoisted(() => <T>(target: Map<string, T>, snapshot: Map<string, T>) => {
+  target.clear();
+  snapshot.forEach((value, key) => target.set(key, value));
+});
+
 vi.mock('../db/database', () => ({
   db: {
     decks: fakeTable(tables.decks),
@@ -44,9 +49,13 @@ vi.mock('../db/database', () => ({
         if (transaction.fail) throw new Error('write failed');
         return result;
       } catch (error) {
-        tables.decks = snapshot.decks;
-        tables.collection = snapshot.collection;
-        tables.deckVersions = snapshot.deckVersions;
+        // Restore *into* the same Map instances. Reassigning `tables.x` left the fake
+        // tables writing to the map they closed over at module load while assertions read
+        // a different one, so every test that happened to run after the rollback case saw
+        // an empty database — a failure that only showed up under `--sequence.shuffle`.
+        restoreInto(tables.decks, snapshot.decks);
+        restoreInto(tables.collection, snapshot.collection);
+        restoreInto(tables.deckVersions, snapshot.deckVersions);
         throw error;
       }
     }
@@ -170,6 +179,37 @@ describe('profile backup', () => {
       const [version] = [...tables.deckVersions.values()];
       expect(deck.id).not.toBe('old-id');
       expect(version.deckId).toBe(deck.id);
+    });
+
+    // The reissued ids used to be `Date.now() + index`, i.e. the same numeric space the
+    // legacy ids were minted in: a deck saved in that millisecond was overwritten by the
+    // restore, which is the one thing merge mode promises never to do.
+    it('reissues ids that cannot land on a deck already saved', async () => {
+      const file = serializeProfileBackup({
+        format: BACKUP_FORMAT,
+        version: 1,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        decks: [aDeck('d1', 'From backup'), aDeck('d2', 'Also from backup')],
+        collection: [],
+        deckVersions: [aVersion('v1', 'd1')],
+        settings: {}
+      });
+
+      const legacyId = String(Date.now());
+      tables.decks.set(legacyId, aDeck(legacyId, 'Legacy'));
+
+      await restoreProfileBackup(parseProfileBackup(file)!, 'merge');
+
+      expect([...tables.decks.values()].map((deck) => deck.name).sort()).toEqual([
+        'Also from backup',
+        'From backup',
+        'Legacy'
+      ]);
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+      [...tables.decks.values()]
+        .filter((deck) => deck.name !== 'Legacy')
+        .forEach((deck) => expect(deck.id).toMatch(uuid));
+      expect([...tables.deckVersions.values()][0].id).toMatch(uuid);
     });
 
     // Otherwise restoring the same file twice would double a collection.

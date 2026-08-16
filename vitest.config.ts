@@ -30,11 +30,18 @@ export default defineConfig({
       // Raised 2026-08-15 (was 61/54/60/62) after branch tests for collectionCsv's
       // Scryfall resolution, storagePersistence and useCollectionSettings took those
       // three modules to ~100%: 63.37/56.58/62.06/63.95 -> 65.36/59.04/62.99/65.80.
+      // Raised again 2026-08-15 (was 65/59/62/65) after the offline branches of
+      // useDeckTokens/useCardSearch and the CSV record splitter got tests:
+      // 68.17/61.27/64.56/68.95 measured. Note the change of rule: the floors now sit a
+      // full point under the measurement instead of hugging it. The previous style left
+      // 0,04 pp of slack, so an unrelated PR adding one untested conditional went red with
+      // nothing in the Vitest output naming the culprit. A ratchet is meant to stop
+      // backsliding, not to fail on noise.
       thresholds: {
-        statements: 65,
-        branches: 59,
-        functions: 62,
-        lines: 65
+        statements: 67,
+        branches: 60,
+        functions: 64,
+        lines: 67
       }
     }
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import i18n from '../plugins/i18n';
 import { SearchFilters } from '../types';
 
 /** Payload the stubbed emitter hands to the hook; empty means "no results". */
@@ -12,6 +13,9 @@ const { emitted } = vi.hoisted(() => ({ emitted: [] as unknown[] }));
  */
 vi.mock('scryfall-sdk', () => {
   const emitter = {
+    // The real emitter marks itself cancelled at the page boundary, which is what the hook
+    // reads as "there is a next page"; without it `loadNextPage` never runs.
+    cancelled: true,
     cancelAfterPage: () => emitter,
     cancel: () => emitter,
     on(event: string, callback: (...args: unknown[]) => void) {
@@ -74,6 +78,42 @@ describe('useCardSearch results', () => {
     ]);
 
     expect(result.current.cards.map((card) => card.name)).toEqual(['Lightning Bolt', 'Shock']);
+  });
+
+  // With no connection the emitter completes empty instead of erroring, which is the exact
+  // shape of a query nothing matches: the grid said "No cards found" and offered to adjust
+  // filters that were never the problem.
+  it('calls an empty result offline what it is, rather than no matches', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true, writable: true });
+    try {
+      const result = await withResults([]);
+      expect(result.current.cards).toEqual([]);
+      expect(result.current.error).toBe(i18n.t('search.scryfallOffline'));
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true, writable: true });
+    }
+  });
+
+  it('leaves an empty result unexplained when the connection is fine', async () => {
+    const result = await withResults([]);
+    expect(result.current.error).toBeNull();
+  });
+
+  // Losing the connection mid-scroll used to just stop the list growing, silently.
+  it('reports the dropped connection when the next page comes back empty', async () => {
+    const result = await withResults([{ id: 'a', name: 'Lightning Bolt', oracle_id: 'o1' }]);
+    emitted.length = 0;
+
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true, writable: true });
+    try {
+      await act(async () => {
+        await result.current.loadNextPage();
+      });
+      expect(result.current.error).toBe(i18n.t('search.scryfallOffline'));
+      expect(result.current.hasMore).toBe(false);
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true, writable: true });
+    }
   });
 });
 

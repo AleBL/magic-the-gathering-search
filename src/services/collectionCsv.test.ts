@@ -151,6 +151,30 @@ describe('parseCollectionCsv', () => {
   it('handles CRLF line endings', () => {
     expect(parseCollectionCsv('Sol Ring,c21,263,1,false\r\nMana Crypt,2xm,270,1,false')).toHaveLength(2);
   });
+
+  // The serializer quotes a value containing a newline; the parser used to cut the file on
+  // every newline regardless, so a file this module wrote did not survive its own round trip.
+  it('keeps a quoted newline inside its field instead of splitting the record', () => {
+    const card = makeCard({ name: 'Weird\nName', set: 'tst', collector_number: '1' });
+    const csv = serializeCollectionCsv([entry({ card, name: card.name, quantity: 2 })]);
+
+    const rows = parseCollectionCsv(csv);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].name).toBe('Weird\nName');
+    expect(rows[0].quantity).toBe(2);
+  });
+
+  it('does not split on a newline inside a quoted field when other rows follow', () => {
+    const csv = [
+      'Name,Set,Collector Number,Quantity,Wishlist',
+      '"Two\nLines",tst,1,1,false',
+      'Sol Ring,c21,263,4,false'
+    ].join('\n');
+
+    const rows = parseCollectionCsv(csv);
+    expect(rows.map((row) => row.name)).toEqual(['Two\nLines', 'Sol Ring']);
+    expect(rows[1].quantity).toBe(4);
+  });
 });
 
 /**
