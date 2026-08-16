@@ -43,6 +43,7 @@
     "i18n:check": "node scripts/i18n-check.mjs --ci",
     "deps:update": "taze major -I",
     "test:e2e": "playwright test",
+    "test:e2e:electron": "ELECTRON_E2E=1 playwright test",
     "test:e2e:bench": "BENCH=1 playwright test --workers=1 --reporter=list bench",
     "test:e2e:ui": "playwright test --ui",
     "deadcode": "knip",
