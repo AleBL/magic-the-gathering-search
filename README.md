@@ -99,6 +99,7 @@ yarn build:web         # browser/PWA bundle
 yarn build:win         # Windows installer
 yarn build:mac         # macOS installer
 yarn build:linux       # Linux installer
+yarn dist              # installer for the current platform
 yarn run pack          # unpacked desktop app, no installer
 ```
 
@@ -120,11 +121,16 @@ yarn test:coverage     # same, enforcing the coverage thresholds in vitest.confi
 yarn test:e2e          # end-to-end journeys (Playwright)
 yarn test:e2e:ui       # the same journeys in Playwright's interactive runner
 yarn test:e2e:bench    # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
+yarn test:e2e:electron # desktop boot journeys against the real Electron process
 ```
 
 The E2E suite starts its own dev server on port 5199 and stubs every Scryfall request, so
 it needs no network and will not collide with a dev server you already have running. It
 drives Chrome locally; CI installs Playwright's own chromium.
+
+`test:e2e:electron` is the exception: it runs the built desktop app instead of a browser, so
+it needs `yarn build` first and a display. Without one (Linux with no `DISPLAY` nor
+`WAYLAND_DISPLAY`) the project skips itself, and a skip is not evidence.
 
 ### Other scripts
 
@@ -133,8 +139,10 @@ yarn lint:check        # ESLint + Prettier, report only (the gate CI runs)
 yarn lint:fix          # the same rules with auto-fix applied
 yarn type-check        # TypeScript type check only
 yarn i18n:check        # verify en/es/pt share the same key set
+yarn readme:check      # verify this file's commands match package.json
 yarn deadcode          # unused files/exports/dependencies (knip)
 yarn seed:profile      # generate a demo profile (7 decks + collection) to import via Backup
+yarn collection:csv    # generate a large real collection CSV (--rows 10000) to import
 yarn deps:update       # interactive major dependency updates (taze)
 yarn clean             # remove build output folders
 ```
