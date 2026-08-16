@@ -194,6 +194,13 @@ export function useCardSearch(language: string) {
         const { cards: results, hasMore: more } = await fetchPage(query, 1);
         if (searchId !== latestSearchIdRef.current) return;
 
+        // With no connection the SDK's emitter ends as `done` with zero results instead of
+        // erroring, which is indistinguishable from a query nothing matches: the grid said
+        // "No cards found" and offered to adjust filters that were never the problem.
+        if (results.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
+          setError(t('search.scryfallOffline'));
+        }
+
         setCards(deduplicateCards(results, language));
         setHasMore(more);
         setCurrentPage(2);

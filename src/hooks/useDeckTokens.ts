@@ -175,7 +175,10 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
       }
     } catch (err: unknown) {
       logger.error('Failed to search tokens:', err);
-      if (err instanceof Error && err.message === 'ScryfallOffline') {
+      // A dropped connection rejects the fetch with a generic network error, and "Error
+      // searching tokens." next to an empty result list reads as a problem with the name.
+      const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (isOffline || (err instanceof Error && err.message === 'ScryfallOffline')) {
         setSearchError(t('search.scryfallOffline'));
       } else {
         setSearchError(t('tokens.searchError'));
@@ -264,6 +267,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
       // 1) Resolve each generator's related parts (fetching all_parts only when
       //    missing), collecting unique token printing ids and their generator.
       const partIdToGenerator = new Map<string, string>();
+      let lookupFailed = false;
       await Promise.all(
         generators.map(async (c) => {
           let allParts = (c as CardWithScryfallMetadata).all_parts;
@@ -273,6 +277,7 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
               allParts = resp.ok ? ((await resp.json()).all_parts as ScryfallCardPart[]) || [] : [];
             } catch (fetchAllPartsError) {
               logger.error('Failed to fetch full card during deck analysis:', fetchAllPartsError);
+              lookupFailed = true;
               allParts = [];
             }
           }
@@ -286,6 +291,14 @@ export function useDeckTokens({ cards, cachedTokens, onTokensLoaded }: UseDeckTo
             });
         })
       );
+
+      // A generator whose parts could not be fetched contributes nothing, so an analysis that
+      // reached no one ends exactly like a deck that makes no tokens — and the empty state
+      // then states that as fact. Say a lookup failed, whether none or only some got through.
+      if (lookupFailed) {
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        dispatchToast(isOffline ? t('search.scryfallOffline') : t('tokens.analysisError'), 'danger');
+      }
 
       const partIds = Array.from(partIdToGenerator.keys());
       if (partIds.length === 0) {
