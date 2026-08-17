@@ -3,48 +3,30 @@ import { Deck, DeckRelatedToken } from '../types/Deck';
 import { DeckFormatType } from '../types/enums';
 import { ScryfallCardPart, ScryfallNotFoundIdentifier } from '../types/Scryfall';
 
-/**
- * Boundary validation for everything that enters the app as an unknown value: Scryfall
- * responses, the Scryfall SDK's own loosely-typed cards, and `.json` deck files picked by
- * the user. Each helper either narrows or drops — nothing here asserts a shape it did not
- * check.
- */
+// Boundary validation for values that enter the app unknown: Scryfall responses, the SDK's own
+// loosely-typed cards, and `.json` deck files. Every helper narrows or drops, never asserts.
 
-/** Narrows an arbitrary JSON value to something whose keys can be read. */
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
-/** Reads one field off an unvalidated value without asserting anything about it. */
 export const readField = (value: unknown, key: string): unknown => (isRecord(value) ? value[key] : undefined);
 
-/**
- * `id` and `name` are the only two fields the app can never work without: they key every
- * lookup map, every deck entry and every rendered label. The rest of {@link Card} is
- * already read defensively (`printed_name || name`, `rarity || ''`), and requiring more
- * here would reject genuine Scryfall printings — English cards carry no `printed_name`,
- * tokens carry no `set`.
- */
+/** Requires only `id` and `name`: more rejects real printings (English cards lack `printed_name`, tokens lack `set`). */
 export const isCardLike = (value: unknown): value is Card =>
   isRecord(value) && isNonEmptyString(value.id) && isNonEmptyString(value.name);
 
-/** Keeps the usable cards out of an unknown list and drops the rest. */
 export const toCardList = (value: unknown): Card[] => (Array.isArray(value) ? value.filter(isCardLike) : []);
 
-/** The part of a Scryfall `all_parts` entry the token lookups actually need. */
 export type ScryfallPartRef = Pick<ScryfallCardPart, 'id' | 'name'>;
 
 const isPartRef = (value: unknown): value is ScryfallPartRef =>
   isRecord(value) && isNonEmptyString(value.id) && isNonEmptyString(value.name);
 
-/** Keeps the `all_parts` entries that can actually be fetched by id. */
 export const toPartRefs = (value: unknown): ScryfallPartRef[] => (Array.isArray(value) ? value.filter(isPartRef) : []);
 
-/**
- * `/cards/collection` echoes back the identifiers it could not resolve. Every field is
- * optional there, so an entry only has to be an object to be worth retrying.
- */
+/** `/cards/collection` echoes back unresolved identifiers with every field optional, so any object is worth keeping. */
 export const toNotFoundIdentifiers = (value: unknown): ScryfallNotFoundIdentifier[] => {
   if (!Array.isArray(value)) return [];
 
@@ -67,11 +49,8 @@ export interface RequestErrorInfo {
   message: string;
 }
 
-/**
- * Rejected promises are `unknown`, and the Scryfall SDK throws plain objects as often as
- * `Error`s. Reading `.message` off one of those with a non-string message used to throw a
- * second time inside the handler, which is how a rate limit surfaced as a generic failure.
- */
+// SDK rejections are plain objects as often as `Error`s, and reading a non-string `.message` off one
+// threw a second time inside the handler, which is how a rate limit surfaced as a generic failure.
 export const readRequestError = (error: unknown): RequestErrorInfo => {
   const status = readField(error, 'status');
   const message = readField(error, 'message');
@@ -102,15 +81,8 @@ const toDeckRelatedTokens = (value: unknown): DeckRelatedToken[] => {
   }, []);
 };
 
-/**
- * Validates one deck out of an imported `.json` file. Returns null for anything the app
- * could not render — a half-imported deck is worse than a refused file. Fields that have
- * a safe default (format, createdAt) fall back instead of rejecting, and fields outside
- * {@link Deck} are dropped rather than persisted unchecked.
- *
- * The `id` is left to the caller: an import always issues a fresh one so it cannot
- * overwrite a deck already in the profile.
- */
+// Returns null instead of a partial deck: a half-imported deck is worse than a refused file.
+// The caller issues the `id`, so an import can never overwrite a deck already in the profile.
 export const toImportedDeck = (value: unknown): Omit<Deck, 'id'> | null => {
   if (!isRecord(value)) return null;
   if (!isNonEmptyString(value.name) || !Array.isArray(value.cards)) return null;
