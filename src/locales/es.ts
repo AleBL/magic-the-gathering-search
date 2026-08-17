@@ -350,6 +350,14 @@ const es = {
       exported: '¡Colección exportada con éxito!',
       imported: '{{count}} cartas importadas a tu colección.',
       importedWithMissing: '{{count}} cartas importadas. {{missing}} no se encontraron.',
+      importedPartial:
+        '{{count}} cartas importadas, {{failed}} no se pudieron alcanzar. Importa el mismo archivo otra vez para continuar: lo que ya está en tu colección se omite.',
+      importSkippedNote: '{{count}} ya estaban en tu colección y se omitieron.',
+      importAllSkipped: 'Nada que hacer: las {{count}} filas ya están en tu colección.',
+      importingTitle: 'Importando colección',
+      importingProgress: '{{done}} de {{total}} filas procesadas',
+      importingHint:
+        'Las solicitudes se espacian para respetar el límite de Scryfall, así que un archivo grande tarda. Puedes dejar esta ventana abierta.',
       importEmpty: 'No se encontraron cartas en ese archivo.',
       importError: 'No se pudo importar la colección. Revisa el archivo.',
       deckComplete: 'Tienes todas las cartas de este mazo.',

@@ -349,6 +349,14 @@ const pt = {
       exported: 'Coleção exportada com sucesso!',
       imported: '{{count}} cartas importadas para a sua coleção.',
       importedWithMissing: '{{count}} cartas importadas. {{missing}} não foram encontradas.',
+      importedPartial:
+        '{{count}} cartas importadas, {{failed}} não foram alcançadas. Importe o mesmo arquivo de novo para continuar: o que já está na coleção é ignorado.',
+      importSkippedNote: '{{count}} já estavam na sua coleção e foram ignoradas.',
+      importAllSkipped: 'Nada a fazer: todas as {{count}} linhas já estão na sua coleção.',
+      importingTitle: 'Importando coleção',
+      importingProgress: '{{done}} de {{total}} linhas processadas',
+      importingHint:
+        'As requisições são espaçadas para respeitar o limite da Scryfall, então um arquivo grande demora. Você pode deixar esta janela aberta.',
       importEmpty: 'Nenhuma carta encontrada nesse arquivo.',
       importError: 'Falha ao importar a coleção. Verifique o arquivo.',
       deckComplete: 'Você possui todas as cartas deste deck.',

@@ -348,6 +348,14 @@ const en = {
       exported: 'Collection exported successfully!',
       imported: '{{count}} cards imported into your collection.',
       importedWithMissing: '{{count}} cards imported. {{missing}} could not be found.',
+      importedPartial:
+        '{{count}} cards imported, {{failed}} could not be reached. Import the same file again to resume: what is already in your collection is skipped.',
+      importSkippedNote: '{{count}} were already in your collection and were skipped.',
+      importAllSkipped: 'Nothing to do: all {{count}} rows are already in your collection.',
+      importingTitle: 'Importing collection',
+      importingProgress: '{{done}} of {{total}} rows processed',
+      importingHint:
+        'Requests are paced to stay inside Scryfall\u2019s rate limit, so a large file takes a while. You can leave this open.',
       importEmpty: 'No cards found in that file.',
       importError: 'Failed to import the collection. Please check the file.',
       deckComplete: 'You own every card in this deck.',
