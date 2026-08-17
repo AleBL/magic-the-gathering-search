@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt, FaChevronUp } from 'react-icons/fa';
+import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt, FaChevronUp, FaSpinner } from 'react-icons/fa';
 import { SearchFilters } from '../../types';
 import { EMPTY_SEARCH_FILTERS } from '../../constants';
 import { useCardSizePreference } from '../../hooks/useCardSizePreference';
@@ -70,7 +70,7 @@ function CollectionManager() {
   const currency = useCollectionSettings((state) => state.currency);
   const setCurrency = useCollectionSettings((state) => state.setCurrency);
   const { rarities } = useSearchFilters(filters, setFilters);
-  const { isImporting, exportCsv, importCsv } = useCollectionImportExport(entries);
+  const { isImporting, importProgress, exportCsv, importCsv } = useCollectionImportExport(entries);
   const { dialogState, showConfirm, closeDialog } = useDialog();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -216,6 +216,43 @@ function CollectionManager() {
             tabIndex={-1}
             aria-hidden="true"
           />
+
+          {/* A real collection file is thousands of rows and the requests are deliberately
+              paced, so the import takes tens of seconds. Without this the app looked frozen:
+              one disabled button and no sign that anything was happening. */}
+          {isImporting && (
+            <div className="modal-overlay" role="status" aria-live="polite">
+              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center gap-3 text-center">
+                <FaSpinner className="text-3xl text-indigo-500 animate-spin" />
+                <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wider">
+                  {t('collection.importingTitle')}
+                </h3>
+                {importProgress && importProgress.total > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-gray-600 dark:text-slate-300 tabular-nums">
+                      {t('collection.importingProgress', {
+                        done: importProgress.done,
+                        total: importProgress.total
+                      })}
+                    </p>
+                    <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 transition-[width] duration-300"
+                        style={{
+                          width: `${Math.round((importProgress.done / importProgress.total) * 100)}%`
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs font-semibold text-gray-600 dark:text-slate-300">{t('collection.importing')}</p>
+                )}
+                <p className="text-[11px] text-gray-400 dark:text-slate-500 leading-snug">
+                  {t('collection.importingHint')}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Summary and filters collapse together: they are the "set up what I am looking at"
               block, and the binder wants that height for pockets. */}
