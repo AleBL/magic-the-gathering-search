@@ -4,6 +4,7 @@ import { CollectionEntry } from '../types/Collection';
 import {
   CollectionCsvRow,
   parseCollectionCsv,
+  ResolveCollectionCsvOptions,
   resolveCollectionCsvRows,
   serializeCollectionCsv
 } from './collectionCsv';
@@ -211,13 +212,17 @@ describe('resolveCollectionCsvRows', () => {
     return batches;
   };
 
+  /** Pacing off: these cases are about resolution shape, not about the 150 ms spacing. */
+  const resolve = (rows: CollectionCsvRow[], options: ResolveCollectionCsvOptions = {}) =>
+    resolveCollectionCsvRows(rows, { chunkDelayMs: 0, retryBaseMs: 0, ...options });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('looks a row up by scryfall id when it has one', async () => {
     const card = makeCard({ id: 'abc-123', name: 'Sol Ring', set: 'c21', collector_number: '263' });
     const batches = stubFetch(() => reply(200, { data: [card] }));
 
-    const result = await resolveCollectionCsvRows([row({ scryfallId: 'abc-123', set: 'c21', collectorNumber: '263' })]);
+    const result = await resolve([row({ scryfallId: 'abc-123', set: 'c21', collectorNumber: '263' })]);
 
     expect(batches[0]).toEqual([{ id: 'abc-123' }]);
     expect(result.entries).toHaveLength(1);
@@ -229,7 +234,7 @@ describe('resolveCollectionCsvRows', () => {
     const card = makeCard({ name: 'Sol Ring', set: 'C21', collector_number: '263' });
     const batches = stubFetch(() => reply(200, { data: [card] }));
 
-    const result = await resolveCollectionCsvRows([row({ set: 'C21', collectorNumber: '263' })]);
+    const result = await resolve([row({ set: 'C21', collectorNumber: '263' })]);
 
     expect(batches[0]).toEqual([{ set: 'c21', collector_number: '263' }]);
     expect(result.entries[0].id).toBe(card.id);
@@ -238,7 +243,7 @@ describe('resolveCollectionCsvRows', () => {
   it('looks a row up by name and set when there is no collector number', async () => {
     const batches = stubFetch(() => reply(200, { data: [makeCard({ name: 'Sol Ring', set: 'c21' })] }));
 
-    await resolveCollectionCsvRows([row({ set: 'c21' })]);
+    await resolve([row({ set: 'c21' })]);
 
     expect(batches[0]).toEqual([{ name: 'Sol Ring', set: 'c21' }]);
   });
@@ -246,7 +251,7 @@ describe('resolveCollectionCsvRows', () => {
   it('falls back to the bare name when the row carries no printing information', async () => {
     const batches = stubFetch(() => reply(200, { data: [makeCard({ name: 'Sol Ring' })] }));
 
-    await resolveCollectionCsvRows([row()]);
+    await resolve([row()]);
 
     expect(batches[0]).toEqual([{ name: 'Sol Ring' }]);
   });
@@ -255,7 +260,7 @@ describe('resolveCollectionCsvRows', () => {
     const card = makeCard({ id: 'other-id', name: 'Sol Ring', set: 'lea', collector_number: '1' });
     stubFetch(() => reply(200, { data: [card] }));
 
-    const result = await resolveCollectionCsvRows([row({ scryfallId: 'abc-123', set: 'c21', collectorNumber: '263' })]);
+    const result = await resolve([row({ scryfallId: 'abc-123', set: 'c21', collectorNumber: '263' })]);
 
     expect(result.entries[0].id).toBe('other-id');
     expect(result.missing).toEqual([]);
@@ -264,7 +269,7 @@ describe('resolveCollectionCsvRows', () => {
   it('reports unresolved rows once, however many times they appear', async () => {
     stubFetch(() => reply(200, { data: [] }));
 
-    const result = await resolveCollectionCsvRows([row(), row({ quantity: 2 })]);
+    const result = await resolve([row(), row({ quantity: 2 })]);
 
     expect(result.entries).toEqual([]);
     expect(result.missing).toEqual(['Sol Ring']);
@@ -273,7 +278,7 @@ describe('resolveCollectionCsvRows', () => {
   it('tolerates a response whose data field is not an array', async () => {
     stubFetch(() => reply(200, { data: null }));
 
-    const result = await resolveCollectionCsvRows([row()]);
+    const result = await resolve([row()]);
 
     expect(result.missing).toEqual(['Sol Ring']);
   });
@@ -281,27 +286,135 @@ describe('resolveCollectionCsvRows', () => {
   it('splits requests into chunks of 75 identifiers', async () => {
     const batches = stubFetch(() => reply(200, { data: [] }));
 
-    await resolveCollectionCsvRows(Array.from({ length: 76 }, (_, index) => row({ name: `Card ${index}` })));
+    await resolve(Array.from({ length: 76 }, (_, index) => row({ name: `Card ${index}` })));
 
     expect(batches.map((batch) => batch.length)).toEqual([75, 1]);
   });
 
+  // Failure is reported, not thrown: a throw here discarded every chunk that had already
+  // come back, which for a 10k-row file meant losing thousands of resolved cards to one 429.
   it.each([
-    [503, 'ScryfallOffline'],
-    [504, 'ScryfallOffline'],
-    [429, 'ScryfallRateLimited'],
-    [500, 'Scryfall API error']
-  ])('maps HTTP %i to %s', async (status, message) => {
+    [503, 'offline'],
+    [504, 'offline'],
+    [429, 'rateLimited'],
+    [500, 'error']
+  ])('reports HTTP %i as %s without throwing', async (status, failure) => {
     stubFetch(() => reply(status));
 
-    await expect(resolveCollectionCsvRows([row()])).rejects.toThrow(message);
+    const result = await resolve([row()], { maxAttempts: 1 });
+
+    expect(result.failure).toBe(failure);
+    expect(result.entries).toEqual([]);
+    expect(result.unreached).toBe(1);
+    expect(result.missing).toEqual([]);
+  });
+
+  it('keeps the chunks that succeeded when a later one fails for good', async () => {
+    const card = (index: number) => makeCard({ id: `id-${index}`, name: `Card ${index}` });
+    let call = 0;
+    stubFetch((identifiers) => {
+      call += 1;
+      // Second chunk refuses every attempt; the run stops there instead of walking the file.
+      if (call > 1) return reply(429);
+      return reply(200, { data: identifiers.map((_, index) => card(index)) });
+    });
+
+    const rows = Array.from({ length: 160 }, (_, index) => row({ name: `Card ${index}`, scryfallId: `id-${index}` }));
+    const result = await resolve(rows, { maxAttempts: 2 });
+
+    expect(result.entries).toHaveLength(75);
+    expect(result.unreached).toBe(85);
+    expect(result.failure).toBe('rateLimited');
+    // Two attempts on the failing chunk, then stop: the third chunk is never requested.
+    expect(call).toBe(3);
+  });
+
+  it('retries a rate-limited chunk and carries on when it succeeds', async () => {
+    let call = 0;
+    stubFetch((identifiers) => {
+      call += 1;
+      if (call === 1) return reply(429);
+      return reply(200, { data: identifiers.map((_, index) => makeCard({ id: `id-${index}`, name: 'Sol Ring' })) });
+    });
+
+    const result = await resolve([row({ scryfallId: 'id-0' })], { maxAttempts: 3 });
+
+    expect(call).toBe(2);
+    expect(result.failure).toBeNull();
+    expect(result.entries).toHaveLength(1);
+  });
+
+  // `mergeEntries` sums quantities, so a row already in the collection must not be resolved
+  // again: that is what makes re-running a failed import a resume instead of a duplicate.
+  it('skips rows whose printing the collection already holds', async () => {
+    const batches = stubFetch((identifiers) =>
+      reply(200, { data: identifiers.map((_, index) => makeCard({ id: `new-${index}`, name: 'Mana Crypt' })) })
+    );
+
+    const known = { ids: new Set(['owned-id']), setNumbers: new Set(['c21|263']) };
+    const rows = [
+      row({ name: 'Sol Ring', scryfallId: 'owned-id' }),
+      row({ name: 'Arcane Signet', set: 'C21', collectorNumber: '263' }),
+      row({ name: 'Mana Crypt', scryfallId: 'new-0' })
+    ];
+
+    const result = await resolve(rows, { known });
+
+    expect(result.skipped).toBe(2);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toEqual([{ id: 'new-0' }]);
+    expect(result.entries).toHaveLength(1);
+  });
+
+  // A name-only row could be a different printing of a card already owned, so it is asked
+  // about rather than assumed.
+  it('does not skip a row that names no specific printing', async () => {
+    const batches = stubFetch(() => reply(200, { data: [] }));
+
+    const result = await resolve([row({ name: 'Sol Ring' })], {
+      known: { ids: new Set(['owned-id']), setNumbers: new Set(['c21|263']) }
+    });
+
+    expect(result.skipped).toBe(0);
+    expect(batches).toHaveLength(1);
+  });
+
+  it('reports progress over the whole file, skipped rows included', async () => {
+    stubFetch((identifiers) =>
+      reply(200, { data: identifiers.map((_, index) => makeCard({ id: `id-${index}`, name: `Card ${index}` })) })
+    );
+
+    const seen: Array<{ done: number; total: number }> = [];
+    const rows = Array.from({ length: 80 }, (_, index) => row({ name: `Card ${index}`, scryfallId: `id-${index}` }));
+
+    await resolve(rows, { known: { ids: new Set(['id-0']), setNumbers: new Set() }, onProgress: (p) => seen.push(p) });
+
+    // One skipped row, then two chunks of the remaining 79.
+    expect(seen).toEqual([
+      { done: 1, total: 80 },
+      { done: 76, total: 80 },
+      { done: 80, total: 80 }
+    ]);
+  });
+
+  it('spaces requests out instead of emptying the file at Scryfall at once', async () => {
+    stubFetch(() => reply(200, { data: [] }));
+
+    const rows = Array.from({ length: 151 }, (_, index) => row({ name: `Card ${index}` }));
+    const startedAt = Date.now();
+    // 20 ms rather than the production 150 ms: what is under test is that it waits between
+    // chunks at all, not the constant.
+    await resolveCollectionCsvRows(rows, { chunkDelayMs: 20, retryBaseMs: 0 });
+
+    // Three chunks, so two gaps.
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(40);
   });
 
   it('carries the row quantity and wishlist flag onto the resolved entry', async () => {
     const card = makeCard({ name: 'Sol Ring', set: 'c21', rarity: 'uncommon' });
     stubFetch(() => reply(200, { data: [card] }));
 
-    const result = await resolveCollectionCsvRows([row({ quantity: 4, wishlist: true })]);
+    const result = await resolve([row({ quantity: 4, wishlist: true })]);
 
     expect(result.entries[0]).toMatchObject({
       oracleId: card.oracle_id,

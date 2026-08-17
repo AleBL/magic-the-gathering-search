@@ -110,4 +110,80 @@ test.describe('collection tab', () => {
     await expect(appPage.getByText('15')).toBeVisible();
     await expect(appPage.getByText('$65.00')).toBeVisible();
   });
+  /**
+   * A real collection file is thousands of rows against a deliberately paced endpoint, so the
+   * import takes tens of seconds. It used to show nothing at all: one disabled button, no
+   * progress, no way to tell a slow import from a hung one.
+   */
+  test('the import reports progress while it runs, then what it did', async ({ appPage }) => {
+    // Held open long enough for the panel to be observable, the way a real chunk would.
+    await appPage.route('**/api.scryfall.com/cards/collection', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          object: 'list',
+          not_found: [],
+          data: [{ ...stubCard({ name: 'Sol Ring', id: 'sol-ring' }), set: 'c21', collector_number: '263' }]
+        })
+      });
+    });
+
+    await appPage.getByRole('button', { name: 'My Collection' }).click();
+    const input = appPage.locator('input[type="file"][accept*="csv"]');
+    await input.setInputFiles({
+      name: 'collection.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(
+        'Name,Set,Collector Number,Quantity,Wishlist,Scryfall ID\nSol Ring,c21,263,2,false,sol-ring\n'
+      )
+    });
+
+    // Named, counted and bounded: the three things the disabled button did not say.
+    await expect(appPage.getByText('Importing collection')).toBeVisible();
+    await expect(appPage.getByText(/of 1 rows processed/)).toBeVisible();
+
+    await expect(appPage.getByRole('alert')).toContainText(/cards imported/i);
+    await expect(appPage.getByText('Importing collection')).toBeHidden();
+  });
+
+  // Re-importing the same file must not add the copies again: `mergeEntries` sums quantities,
+  // so the rows already owned have to be skipped rather than resolved a second time.
+  test('a second import of the same file skips what is already owned', async ({ appPage }) => {
+    let requests = 0;
+    await appPage.route('**/api.scryfall.com/cards/collection', async (route) => {
+      requests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          object: 'list',
+          not_found: [],
+          data: [{ ...stubCard({ name: 'Sol Ring', id: 'sol-ring' }), set: 'c21', collector_number: '263' }]
+        })
+      });
+    });
+
+    const file = {
+      name: 'collection.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(
+        'Name,Set,Collector Number,Quantity,Wishlist,Scryfall ID\nSol Ring,c21,263,2,false,sol-ring\n'
+      )
+    };
+
+    await appPage.getByRole('button', { name: 'My Collection' }).click();
+    const input = appPage.locator('input[type="file"][accept*="csv"]');
+
+    await input.setInputFiles(file);
+    await expect(appPage.getByRole('alert')).toContainText(/1 cards imported/i);
+    await expect(appPage.getByText('2', { exact: true }).first()).toBeVisible();
+
+    await input.setInputFiles(file);
+    await expect(appPage.getByRole('alert')).toContainText(/already in your collection/i);
+    // The second run asked Scryfall nothing, and the count stayed at two copies.
+    expect(requests).toBe(1);
+    await expect(appPage.getByText('4', { exact: true })).toHaveCount(0);
+  });
 });

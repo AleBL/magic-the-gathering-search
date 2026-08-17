@@ -4,14 +4,15 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Measurement, not a test: what importing a real, large collection costs, and what the user
- * is left with when Scryfall stops answering half way. Run it with `yarn test:e2e:bench`.
+ * Measurement, not a test: what importing a real, large collection costs, what the user is
+ * left with when Scryfall stops answering half way, and what running the import again does
+ * after that. Run it with `yarn test:e2e:bench`.
  *
- * The file comes from `node scripts/generate-collection-csv.mjs`: 10k real printings, so the
- * identifiers resolve the way they do in production instead of exercising the miss path.
- * The *responses* are stubbed on purpose. The behaviour under measurement is the client's
- * fan-out, and measuring it by firing 134 uncapped POSTs at Scryfall would be committing the
- * very thing RR-18 is about.
+ * The file comes from `yarn collection:csv`: 10k real printings, so the identifiers resolve
+ * the way they do in production instead of exercising the miss path. The *responses* are
+ * stubbed on purpose. The behaviour under measurement is the client's pacing and recovery,
+ * and measuring it by firing uncapped POSTs at Scryfall would be committing the very thing
+ * RR-18 is about.
  */
 
 const CSV = join(process.cwd(), process.env.COLLECTION_CSV ?? 'collection-large.csv');
@@ -22,19 +23,30 @@ interface CollectionRequest {
 }
 
 /**
- * Answers `POST /cards/collection` with one card per identifier, counting the requests and
- * optionally failing from a given chunk onwards. Every row in the generated CSV carries a
- * Scryfall id, so resolution goes through `byId` exactly as it does with the real endpoint.
+ * Answers `POST /cards/collection` with one card per identifier, counting requests.
+ * `rateLimitFromChunk` is mutable so one journey can fail, then be allowed to finish.
  */
-function stubCollectionEndpoint(page: Page, options: { rateLimitFromChunk?: number } = {}) {
-  const state = { requests: 0, identifiers: 0, firstRequestAt: 0, lastRequestAt: 0 };
+function stubCollectionEndpoint(page: Page) {
+  const state = {
+    requests: 0,
+    identifiers: 0,
+    firstRequestAt: 0,
+    lastRequestAt: 0,
+    rateLimitFromChunk: 0 as number,
+    reset() {
+      state.requests = 0;
+      state.identifiers = 0;
+      state.firstRequestAt = 0;
+      state.lastRequestAt = 0;
+    }
+  };
 
   page.route('**/api.scryfall.com/cards/collection', async (route: Route) => {
     state.requests += 1;
     state.lastRequestAt = Date.now();
     if (state.firstRequestAt === 0) state.firstRequestAt = state.lastRequestAt;
 
-    if (options.rateLimitFromChunk && state.requests >= options.rateLimitFromChunk) {
+    if (state.rateLimitFromChunk > 0 && state.requests >= state.rateLimitFromChunk) {
       await route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ object: 'error' }) });
       return;
     }
@@ -89,32 +101,48 @@ async function countStoredEntries(page: Page) {
   });
 }
 
+/** Sum of every owned copy: what tells a resumed import apart from a duplicated one. */
+async function countStoredCopies(page: Page) {
+  return page.evaluate(async () => {
+    const database: IDBDatabase = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('MagicDecksDB');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return new Promise<number>((resolve, reject) => {
+      const store = database.transaction('collection', 'readonly').objectStore('collection');
+      const request = store.getAll();
+      request.onsuccess = () =>
+        resolve((request.result as Array<{ quantity: number }>).reduce((sum, entry) => sum + entry.quantity, 0));
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
 /** Opens the collection tab and hands back the (hidden) CSV input. */
 async function openImport(page: Page) {
-  await page.goto('/');
   await page.getByRole('button', { name: 'Collection' }).click();
-  // Dexie has to have created the database before anything can be counted in it.
   await expect(page.getByRole('button', { name: 'Import CSV' })).toBeVisible();
   return page.locator('input[type="file"][accept*="csv"]');
 }
 
 test.describe('collection CSV import at scale', () => {
-  test.skip(!existsSync(CSV), `missing ${CSV}. Run: node scripts/generate-collection-csv.mjs --rows 10000`);
+  test.skip(!existsSync(CSV), `missing ${CSV}. Run: yarn collection:csv --rows 10000`);
 
   test('a 10k-row import, all chunks answered', async ({ appPage }) => {
     test.setTimeout(600_000);
 
     const stub = stubCollectionEndpoint(appPage);
+    await appPage.goto('/');
     const input = await openImport(appPage);
 
     const startedAt = Date.now();
     await input.setInputFiles(CSV);
 
-    // The toast naming a count is the app's own statement that the import finished.
+    // The progress panel is the thing that was missing: a 10k import is tens of seconds long.
+    await expect(appPage.getByText(/rows processed/i)).toBeVisible({ timeout: 30_000 });
     await expect(appPage.getByRole('alert')).toContainText(/cards imported/i, { timeout: 570_000 });
     const totalMs = Date.now() - startedAt;
-
-    const stored = await countStoredEntries(appPage);
 
     // eslint-disable-next-line no-console
     console.log(
@@ -126,8 +154,10 @@ test.describe('collection CSV import at scale', () => {
           scryfallRequests: stub.requests,
           identifiersSent: stub.identifiers,
           requestWindowMs: stub.lastRequestAt - stub.firstRequestAt,
+          requestsPerSecond: +(stub.requests / ((stub.lastRequestAt - stub.firstRequestAt) / 1000)).toFixed(1),
           totalMs,
-          storedEntries: stored
+          storedEntries: await countStoredEntries(appPage),
+          storedCopies: await countStoredCopies(appPage)
         },
         null,
         2
@@ -135,32 +165,57 @@ test.describe('collection CSV import at scale', () => {
     );
   });
 
-  // The failure mode RR-18 describes: the resolve loop has no retry, so one 429 rejects the
-  // whole promise and every chunk already paid for is thrown away.
-  test('a 10k-row import that is rate limited at chunk 5', async ({ appPage }) => {
+  /**
+   * The two halves of RR-18's fix, measured in one journey: a rate limit part way through
+   * keeps what it had, and importing the same file again resolves only the rest.
+   */
+  test('rate limited at chunk 5, then resumed by importing the same file', async ({ appPage }) => {
     test.setTimeout(600_000);
 
-    const stub = stubCollectionEndpoint(appPage, { rateLimitFromChunk: 5 });
+    const stub = stubCollectionEndpoint(appPage);
+    stub.rateLimitFromChunk = 5;
+
+    await appPage.goto('/');
     const input = await openImport(appPage);
 
-    const startedAt = Date.now();
+    const failedAt = Date.now();
     await input.setInputFiles(CSV);
+    await expect(appPage.getByRole('alert')).toContainText(/could not be reached/i, { timeout: 570_000 });
 
-    await expect(appPage.getByRole('alert')).toContainText(/too many requests/i, { timeout: 570_000 });
-    const totalMs = Date.now() - startedAt;
+    const partial = {
+      scryfallRequests: stub.requests,
+      identifiersSent: stub.identifiers,
+      ms: Date.now() - failedAt,
+      storedEntries: await countStoredEntries(appPage),
+      storedCopies: await countStoredCopies(appPage)
+    };
 
-    const stored = await countStoredEntries(appPage);
+    // Now let it through and run the exact same file again.
+    stub.rateLimitFromChunk = 0;
+    stub.reset();
+    await appPage.reload();
+    const resumeInput = await openImport(appPage);
+
+    const resumedAt = Date.now();
+    await resumeInput.setInputFiles(CSV);
+    await expect(appPage.getByRole('alert')).toContainText(/cards imported/i, { timeout: 570_000 });
+
+    const resume = {
+      scryfallRequests: stub.requests,
+      identifiersSent: stub.identifiers,
+      ms: Date.now() - resumedAt,
+      storedEntries: await countStoredEntries(appPage),
+      storedCopies: await countStoredCopies(appPage)
+    };
 
     // eslint-disable-next-line no-console
     console.log(
       JSON.stringify(
         {
-          scenario: 'rate limited at chunk 5',
-          scryfallRequests: stub.requests,
-          identifiersSent: stub.identifiers,
-          totalMs,
-          storedEntries: stored,
-          note: 'entries resolved before the 429 are discarded: the import is all-or-nothing'
+          scenario: 'rate limited at chunk 5, then resumed',
+          partial,
+          resume,
+          note: 'identifiersSent on the resume excludes what the first run had already stored; storedCopies must not double'
         },
         null,
         2
