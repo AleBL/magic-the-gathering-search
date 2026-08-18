@@ -193,3 +193,97 @@ describe('usePlaytestSimulator — double-faced cards (DFC/MDFC)', () => {
     expect(result.current.battlefield.some((c) => c.playtestId === cardId)).toBe(true);
   });
 });
+
+describe('usePlaytestSimulator — undo/redo', () => {
+  it('undo puts back the card a play took out of the hand', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    const cardId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(cardId));
+    expect(result.current.battlefield).toHaveLength(1);
+
+    act(() => result.current.handleUndo());
+
+    expect(result.current.battlefield).toHaveLength(0);
+    expect(result.current.hand.some((item) => item.playtestId === cardId)).toBe(true);
+  });
+
+  it('redo replays what undo took back', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    const cardId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(cardId));
+    act(() => result.current.handleUndo());
+    act(() => result.current.handleRedo());
+
+    expect(result.current.battlefield.map((item) => item.playtestId)).toEqual([cardId]);
+    expect(result.current.hand.some((item) => item.playtestId === cardId)).toBe(false);
+  });
+
+  it('rewinds the life total without logging the rewind as a life change', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    act(() => result.current.setLifeTotal(17));
+    expect(result.current.lifeTotal).toBe(17);
+    const logAfterDamage = result.current.gameLog.length;
+
+    act(() => result.current.handleUndo());
+
+    expect(result.current.lifeTotal).toBe(20);
+    // The undo line itself is expected; a second "life changed" line would mean the
+    // restore flag never reached the life effect.
+    expect(result.current.gameLog.length).toBe(logAfterDamage + 1);
+    // Matched on the numbers, which every locale renders the same way in this line.
+    expect(result.current.gameLog.filter((entry) => entry.text.includes('20 -> 17'))).toHaveLength(1);
+  });
+
+  it('drops the redone future once a new move is made after an undo', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    act(() => result.current.handlePlayCard(result.current.hand[0].playtestId));
+    act(() => result.current.handleUndo());
+    act(() => result.current.handleDrawCard());
+
+    expect(result.current.canRedo).toBe(false);
+  });
+
+  it('refuses to redo when nothing was undone', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    const before = result.current.hand.map((item) => item.playtestId);
+    act(() => result.current.handleRedo());
+
+    expect(result.current.hand.map((item) => item.playtestId)).toEqual(before);
+    expect(result.current.canRedo).toBe(false);
+  });
+});
+
+describe('usePlaytestSimulator — opening a game', () => {
+  // The deck is hoisted on purpose: `startSimulation` depends on the array identity, so a
+  // caller that rebuilds the deck every render restarts the game on every render. The app
+  // passes the deck held in the store, and that is the shape these tests pin down.
+  it('deals the opening hand when the simulator is opened', () => {
+    const deck = deckOf(10);
+    const { result } = renderHook(() => usePlaytestSimulator(deck, undefined, true));
+
+    expect(result.current.hand).toHaveLength(7);
+  });
+
+  it('does not restart the game on a re-render, which would reshuffle mid-game', () => {
+    const deck = deckOf(10);
+    const { result, rerender } = renderHook(() => usePlaytestSimulator(deck, undefined, true));
+
+    const dealt = result.current.hand.map((item) => item.playtestId);
+    act(() => result.current.handleDrawCard());
+    rerender();
+    rerender();
+
+    expect(result.current.hand.map((item) => item.playtestId).slice(0, 7)).toEqual(dealt);
+    expect(result.current.hand).toHaveLength(8);
+  });
+});
