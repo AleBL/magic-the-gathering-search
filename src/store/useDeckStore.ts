@@ -168,29 +168,24 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
       const index = state.currentDeck.findIndex((card) => card.id === cardId);
       if (index === -1) return state;
 
-      const isCurrentlyCommander = !!state.currentDeck[index].isCommander;
-
-      if (isCurrentlyCommander) {
+      if (state.currentDeck[index].isCommander) {
         return {
           currentDeck: state.currentDeck.map((card, idx) => (idx === index ? { ...card, isCommander: false } : card))
         };
-      } else {
-        const currentCommanders = state.currentDeck.filter((card) => card.isCommander);
-        if (currentCommanders.length >= 2) {
-          const commanderToKeep = currentCommanders[currentCommanders.length - 1];
-          return {
-            currentDeck: state.currentDeck.map((card, idx) => {
-              if (idx === index) return { ...card, isCommander: true };
-              if (card.id === commanderToKeep.id) return { ...card, isCommander: true };
-              return { ...card, isCommander: false };
-            })
-          };
-        } else {
-          return {
-            currentDeck: state.currentDeck.map((card, idx) => (idx === index ? { ...card, isCommander: true } : card))
-          };
-        }
       }
+
+      // Two commanders are legal (partners), so promoting a third demotes every earlier one
+      // except the most recently marked, rather than refusing the click with no explanation.
+      const commanders = state.currentDeck.filter((card) => card.isCommander);
+      const keptCommanderId = commanders.length >= 2 ? commanders[commanders.length - 1].id : null;
+
+      return {
+        currentDeck: state.currentDeck.map((card, idx) => {
+          if (idx === index) return { ...card, isCommander: true };
+          if (keptCommanderId === null) return card;
+          return { ...card, isCommander: card.id === keptCommanderId };
+        })
+      };
     }),
 
   clearDeck: () => set({ currentDeck: [], currentDeckRelatedTokens: [] }),
