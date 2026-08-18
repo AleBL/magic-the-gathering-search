@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaLayerGroup, FaPencilAlt, FaChartBar } from 'react-icons/fa';
+import { FaLayerGroup } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { Deck, DeckFormat, DeckRelatedToken } from '../../types/Deck';
 import { CardSize } from '../../types';
@@ -12,20 +12,18 @@ import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingA
 import EmptyState from '../ui/EmptyState';
 import DeckValidationBadge from './DeckValidationBadge';
 import DeckFloatingPreview from '../deck/DeckFloatingPreview';
-import DeckZoneTabs from '../deck/DeckZoneTabs';
 import DeckActionBar from '../deck/DeckActionBar';
 import DeckNotesEditor from '../deck/DeckNotesEditor';
-import DeckCardList from '../deck/DeckCardList';
-import DeckStackView from '../deck/DeckStackView';
 import { DeckPreviewShell } from '../deck/DeckPreviewShell';
 import { SavedDeckHeader, WorkingDeckHeader } from '../deck/DeckPreviewHeaders';
-import DeckTokensTab from '../deck/DeckTokensTab';
 import { DeckDisplayOptions } from '../deck/DeckDisplayOptions';
 import { DeckStatsFilteredCards } from '../deck/DeckStatsFilteredCards';
 import { DeckCollectionSummary } from '../deck/DeckCollectionSummary';
 import CardDetailModal from '../card/CardDetailModal';
 import DeckPreviewOverlays from './DeckPreviewOverlays';
 import DeckStatsModal from './DeckStatsModal';
+import { DeckPreviewNoteTabs } from './DeckPreviewNoteTabs';
+import { DeckPreviewZoneCards } from './DeckPreviewZoneCards';
 
 const DeckStats = lazy(() => import('../stats/DeckStats'));
 
@@ -168,93 +166,54 @@ function DeckPreview({
     }
   }, [selectedDeck, onLoadDeckToEdit]);
 
-  const noteTabHeader = (
-    <div className="deck-content-tab-bar">
-      <button
-        type="button"
-        onClick={() => setActiveNoteTab('cards')}
-        className={`deck-content-tab ${activeNoteTab === 'cards' ? 'deck-content-tab-active' : ''}`}
-      >
-        <FaLayerGroup className="text-[11px]" /> {t('deck.currentDeck')}
-      </button>
-      <button
-        type="button"
-        onClick={() => (editingDeckId ? setIsStatsModalOpen(true) : setActiveNoteTab('stats'))}
-        className={`deck-content-tab ${!editingDeckId && activeNoteTab === 'stats' ? 'deck-content-tab-active' : ''}`}
-      >
-        <FaChartBar className="text-[11px]" /> {t('stats.deckStats')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setActiveNoteTab('notes')}
-        className={`deck-content-tab ${activeNoteTab === 'notes' ? 'deck-content-tab-active' : ''}`}
-      >
-        <FaPencilAlt className="text-[11px]" /> {t('strategy.strategyGuide')}
-      </button>
-    </div>
+  const renderStatsFilteredCards = (filteredCards: Card[]) => (
+    <DeckStatsFilteredCards
+      filteredCards={filteredCards}
+      selectedDeck={selectedDeck}
+      activeFormat={activeFormat}
+      viewMode={viewMode}
+      groupBy={groupBy}
+      sortBy={sortBy}
+      cardSize={cardSize}
+      commanders={commanders}
+      onHoverEnter={handleHoverEnter}
+      onHoverMove={handleHoverMove}
+      onHoverLeave={handleHoverLeave}
+      onRemoveFromDeck={onRemoveFromDeck}
+      onAddToDeck={onAddToDeck}
+      onAddTokenToDeck={handleAddTokenCardCopy}
+      onToggleCommander={onToggleCommander}
+      onUpdateCard={onUpdateCard}
+      onUpdateCardZone={onUpdateCardZone}
+    />
   );
 
   const renderCards = (isRemovable: boolean) => (
-    <>
-      {/* Display Options & Deck Navigation */}
-      <div className="deck-zone-row">
-        <DeckZoneTabs
-          mainCount={zoneCounts.main}
-          sideCount={zoneCounts.sideboard}
-          maybeCount={zoneCounts.maybeboard}
-          tokensCount={zoneCounts.tokens}
-          activeZone={activeZone}
-          onZoneChange={setActiveZone}
-          onUpdateCardZone={onUpdateCardZone}
-        />
-      </div>
-      {activeZone === 'tokens' ? (
-        <DeckTokensTab
-          cards={activeCards}
-          cachedTokens={deckRelatedTokens || selectedDeck?.relatedTokens}
-          onTokensLoaded={handleTokensLoaded}
-          onTokenClick={setSelectedTokenForView}
-          onlyHeader={true}
-          isEditMode={isRemovable}
-        />
-      ) : null}
-      {viewMode === 'stack' ? (
-        <DeckStackView
-          groups={groupedCards}
-          cardSize={cardSize}
-          isRemovable={isRemovable}
-          activeFormat={selectedDeck ? selectedDeck.format : activeFormat}
-          onHoverEnter={handleHoverEnter}
-          onHoverMove={handleHoverMove}
-          onHoverLeave={handleHoverLeave}
-          onRemoveFromDeck={activeZone === 'tokens' ? handleDeleteTokenCard : onRemoveFromDeck}
-          onAddToDeck={activeZone === 'tokens' ? handleAddTokenCardCopy : onAddToDeck}
-          onAddTokenToDeck={handleAddTokenCardCopy}
-          onUpdateCard={onUpdateCard}
-          isTokenZone={activeZone === 'tokens'}
-          onUpdateCardZone={onUpdateCardZone}
-        />
-      ) : (
-        <DeckCardList
-          groups={groupedCards}
-          commanders={commanders}
-          cardSize={cardSize}
-          viewMode={viewMode}
-          isRemovable={isRemovable}
-          isTokenZone={activeZone === 'tokens'}
-          activeFormat={selectedDeck ? selectedDeck.format : activeFormat}
-          onUpdateCardZone={onUpdateCardZone}
-          onAddToDeck={activeZone === 'tokens' ? handleAddTokenCardCopy : onAddToDeck}
-          onAddTokenToDeck={handleAddTokenCardCopy}
-          onRemoveFromDeck={activeZone === 'tokens' ? handleDeleteTokenCard : onRemoveFromDeck}
-          onToggleCommander={onToggleCommander}
-          onHoverEnter={handleHoverEnter}
-          onHoverMove={handleHoverMove}
-          onHoverLeave={handleHoverLeave}
-          onUpdateCard={activeZone === 'tokens' ? handleUpdateTokenCard : onUpdateCard}
-        />
-      )}
-    </>
+    <DeckPreviewZoneCards
+      zoneCounts={zoneCounts}
+      activeZone={activeZone}
+      onZoneChange={setActiveZone}
+      onUpdateCardZone={onUpdateCardZone}
+      activeCards={activeCards}
+      deckRelatedTokens={deckRelatedTokens}
+      selectedDeckRelatedTokens={selectedDeck?.relatedTokens}
+      onTokensLoaded={handleTokensLoaded}
+      onTokenClick={setSelectedTokenForView}
+      isRemovable={isRemovable}
+      viewMode={viewMode}
+      groupedCards={groupedCards}
+      cardSize={cardSize}
+      deckFormat={selectedDeck ? selectedDeck.format : activeFormat}
+      commanders={commanders}
+      onHoverEnter={handleHoverEnter}
+      onHoverMove={handleHoverMove}
+      onHoverLeave={handleHoverLeave}
+      onRemoveFromDeckTokenAware={activeZone === 'tokens' ? handleDeleteTokenCard : onRemoveFromDeck}
+      onAddToDeckTokenAware={activeZone === 'tokens' ? handleAddTokenCardCopy : onAddToDeck}
+      onAddTokenToDeck={handleAddTokenCardCopy}
+      onUpdateCardTokenAware={activeZone === 'tokens' ? handleUpdateTokenCard : onUpdateCard}
+      onToggleCommander={onToggleCommander}
+    />
   );
 
   /**
@@ -314,7 +273,13 @@ function DeckPreview({
         </div>
       ) : null}
 
-      {noteTabHeader}
+      <DeckPreviewNoteTabs
+        activeNoteTab={activeNoteTab}
+        isStatsTabActive={!editingDeckId && activeNoteTab === 'stats'}
+        onSelectCardsTab={() => setActiveNoteTab('cards')}
+        onSelectStatsTab={() => (editingDeckId ? setIsStatsModalOpen(true) : setActiveNoteTab('stats'))}
+        onSelectNotesTab={() => setActiveNoteTab('notes')}
+      />
 
       {activeNoteTab === 'notes' ? (
         selectedDeck ? (
@@ -332,30 +297,7 @@ function DeckPreview({
         <Suspense
           fallback={<div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}...</div>}
         >
-          <DeckStats
-            currentDeck={activeCards}
-            renderFilteredCards={(filteredCards) => (
-              <DeckStatsFilteredCards
-                filteredCards={filteredCards}
-                selectedDeck={selectedDeck}
-                activeFormat={activeFormat}
-                viewMode={viewMode}
-                groupBy={groupBy}
-                sortBy={sortBy}
-                cardSize={cardSize}
-                commanders={commanders}
-                onHoverEnter={handleHoverEnter}
-                onHoverMove={handleHoverMove}
-                onHoverLeave={handleHoverLeave}
-                onRemoveFromDeck={onRemoveFromDeck}
-                onAddToDeck={onAddToDeck}
-                onAddTokenToDeck={handleAddTokenCardCopy}
-                onToggleCommander={onToggleCommander}
-                onUpdateCard={onUpdateCard}
-                onUpdateCardZone={onUpdateCardZone}
-              />
-            )}
-          />
+          <DeckStats currentDeck={activeCards} renderFilteredCards={renderStatsFilteredCards} />
         </Suspense>
       ) : !selectedDeck && currentDeck.length === 0 ? (
         <EmptyState
@@ -381,27 +323,7 @@ function DeckPreview({
           cards={activeCards}
           onApplySuggestedLands={onApplySuggestedLands}
           onClose={() => setIsStatsModalOpen(false)}
-          renderFilteredCards={(filteredCards) => (
-            <DeckStatsFilteredCards
-              filteredCards={filteredCards}
-              selectedDeck={selectedDeck}
-              activeFormat={activeFormat}
-              viewMode={viewMode}
-              groupBy={groupBy}
-              sortBy={sortBy}
-              cardSize={cardSize}
-              commanders={commanders}
-              onHoverEnter={handleHoverEnter}
-              onHoverMove={handleHoverMove}
-              onHoverLeave={handleHoverLeave}
-              onRemoveFromDeck={onRemoveFromDeck}
-              onAddToDeck={onAddToDeck}
-              onAddTokenToDeck={handleAddTokenCardCopy}
-              onToggleCommander={onToggleCommander}
-              onUpdateCard={onUpdateCard}
-              onUpdateCardZone={onUpdateCardZone}
-            />
-          )}
+          renderFilteredCards={renderStatsFilteredCards}
         />
       ) : null}
 

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { FaSkull, FaBan } from 'react-icons/fa';
 import { usePlaytestContext } from './PlaytestContext';
+import { PlaytestBattlefieldContextMenu } from './PlaytestBattlefieldContextMenu';
 import PileExplorerModal from './PileExplorerModal';
 import ScrySurveilModal from './ScrySurveilModal';
 import { PlaytestTokenModal } from './PlaytestTokenModal';
@@ -31,19 +32,13 @@ export function PlaytestModals({ deckRelatedTokens }: { deckRelatedTokens: DeckR
     setIsTokenModalOpen,
     selectedDetailCard,
     setSelectedDetailCard,
-    handleAddCounter,
-    handleRemoveCounter,
-    handleToggleFaceDown,
     handleSendToLibraryPosition,
     handleDiscardFromHand,
-    handleReturnToHand,
-    handleSendToGraveyard,
     handleSendToExile,
     handleSummonToken,
     moveCard,
     library,
     graveyard,
-    battlefield,
     exile,
     setLibrary,
     setGraveyard,
@@ -75,74 +70,7 @@ export function PlaytestModals({ deckRelatedTokens }: { deckRelatedTokens: DeckR
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(event) => event.stopPropagation()}
         >
-          {contextMenu.zone === 'battlefield' && (
-            <>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleAddCounter(contextMenu.playtestId);
-                  setContextMenu(null);
-                }}
-              >
-                {t('playtest.addCounter')}
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleRemoveCounter(contextMenu.playtestId);
-                  setContextMenu(null);
-                }}
-              >
-                {t('playtest.removeCounter')}
-              </button>
-              <div className="h-px bg-slate-800 my-1"></div>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleToggleFaceDown(contextMenu.playtestId);
-                  setContextMenu(null);
-                }}
-              >
-                {battlefield.find((card: PlaytestCard) => card.playtestId === contextMenu.playtestId)?.isFaceDown
-                  ? t('playtest.toggleFaceUp')
-                  : t('playtest.toggleFaceDown')}
-              </button>
-              <div className="h-px bg-slate-800 my-1"></div>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleReturnToHand(contextMenu.playtestId, PlaytestZone.BATTLEFIELD);
-                  setContextMenu(null);
-                }}
-              >
-                {t('playtest.returnToHand')}
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleSendToGraveyard(contextMenu.playtestId);
-                  setContextMenu(null);
-                }}
-              >
-                {t('playtest.moveToGraveyard')}
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-slate-800 text-sm text-slate-200 font-medium transition-colors cursor-pointer"
-                onClick={() => {
-                  handleSendToExile(contextMenu.playtestId, PlaytestZone.BATTLEFIELD);
-                  setContextMenu(null);
-                }}
-              >
-                {t('playtest.moveToExile')}
-              </button>
-            </>
-          )}
+          {contextMenu.zone === 'battlefield' && <PlaytestBattlefieldContextMenu playtestId={contextMenu.playtestId} />}
 
           {contextMenu.zone === 'hand' && (
             <>
