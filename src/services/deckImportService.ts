@@ -98,7 +98,6 @@ const SECTION_HEADERS = new Set([
   'about'
 ]);
 
-/** Lowercases and strips accents/trailing colon so headers match across languages. */
 const normalizeHeader = (value: string): string =>
   value
     .replace(/:$/, '')
@@ -127,13 +126,13 @@ export const parseDeckText = (text: string): ParseResult[] => {
       cardName = match[2].trim();
     }
 
-    // Sometimes .dec or formats include tags like *F* or *CM* or *E*. Remove those too.
+    // .dec exports tag copies with markers like *F* (foil) or *CM* (commander).
     cardName = cardName.replace(/\s*\*[a-zA-Z0-9]+\*\s*$/, '').trim();
 
     let setCode: string | undefined;
     let collectorNumber: string | undefined;
 
-    // Extract set and collector number e.g. "(M10) 1" or "[M10] 1" or "(PLST) WOC-166"
+    // "(M10) 1", "[M10] 1" and "(PLST) WOC-166" are all in the wild.
     const setMatch = cardName.match(/\s*[([]([A-Za-z0-9]{3,5})[)\]]\s*([A-Za-z0-9-]*)$/);
     if (setMatch) {
       setCode = setMatch[1].toLowerCase();
@@ -146,7 +145,6 @@ export const parseDeckText = (text: string): ParseResult[] => {
       }
     }
 
-    // Remove collector number / set code from the end of the card name
     cardName = cardName.replace(/\s*[([][A-Za-z0-9]{3,5}[)\]]\s*[A-Za-z0-9-]*$/, '').trim();
     cardName = cardName.replace(/\s+[A-Za-z0-9]{3,5}\s+\d+[a-zA-Z]?$/, '').trim();
 
@@ -167,11 +165,9 @@ export interface ImportProgressData {
 /** Cap on extra per-name lookups so a malformed list can't fan out unbounded. */
 const LOCALIZED_LOOKUP_LIMIT = 40;
 
-/**
- * Scryfall's /cards/collection `name` identifier only matches English names, so
- * a deck exported in another language (e.g. Arena in pt) never resolves there.
- * The search endpoint does match localized printed names, so retry stragglers.
- */
+// Scryfall's /cards/collection `name` identifier matches English names only, so a deck
+// exported from Arena in pt never resolves there. The search endpoint does match localized
+// printed names, which is why the stragglers get a second pass through it.
 const resolveLocalizedName = async (name: string, lang: string): Promise<Card | null> => {
   const queries = lang && lang !== 'en' ? [`!"${name}" lang:${lang}`, `"${name}" lang:${lang}`] : [`!"${name}"`];
 
@@ -241,7 +237,8 @@ export const fetchCardsFromParsedList = async (
     initialNotFound.push(...toNotFoundIdentifiers(readField(json, 'not_found')));
   }
 
-  // Retry logic for not_found items, stripping set and collector_number, just use name
+  // Second pass on name alone: a printing this profile asked for by set and collector number
+  // may simply not exist, while the card does.
   if (initialNotFound.length > 0) {
     if (onProgress) {
       onProgress({
@@ -269,17 +266,15 @@ export const fetchCardsFromParsedList = async (
 
         if (!originalName) return null;
 
-        // For DFCs, sending just the front face is more reliable
+        // A double-faced card resolves by its front face far more often than by "Front // Back".
         let frontFace = originalName.split(/\s+\/?\/?\s+/)[0].trim();
 
-        // Aggressive fallback cleanup for names that STILL have set info attached
         frontFace = frontFace.replace(/\s*[([].*$/, '').trim();
 
         return { name: frontFace };
       })
       .filter(Boolean) as { name: string }[];
 
-    // Unique retries to avoid duplicate name lookups
     const uniqueRetries = Array.from(new Map(retryIdentifiers.map((r) => [r.name, r])).values());
 
     for (let chunkStartIndex = 0; chunkStartIndex < uniqueRetries.length; chunkStartIndex += CHUNK_SIZE) {
@@ -293,8 +288,7 @@ export const fetchCardsFromParsedList = async (
     }
   }
 
-  // Whatever /cards/collection still could not resolve is usually a localized
-  // name. Retry those through search before giving up on them.
+  // Whatever /cards/collection still could not resolve is usually a localized name.
   const resolvedNames = new Set<string>();
   for (const card of allResolvedCards) {
     if (card.name) resolvedNames.add(card.name.toLowerCase());
@@ -342,7 +336,7 @@ export const fetchCardsFromParsedList = async (
       nameLookup.set(originalCard.name.toLowerCase(), translatedCard);
       const namePart = originalCard.name.split('//')[0].trim().toLowerCase();
       nameLookup.set(namePart, translatedCard);
-      // Also index single slash if it's a DFC
+      // Some exports write a double-faced card as "Front / Back" instead of "Front // Back".
       if (originalCard.name.includes('//')) {
         const singleSlashName = originalCard.name.replace('//', '/').toLowerCase();
         nameLookup.set(singleSlashName, translatedCard);
@@ -366,7 +360,6 @@ export const fetchCardsFromParsedList = async (
       foundCard = nameLookup.get(normalizedName);
     }
 
-    // Additional fallback for DFC names in input like "Front / Back"
     if (!foundCard && normalizedName.includes('/')) {
       const frontFace = normalizedName.split(/\s+\/?\/?\s+/)[0].trim();
       foundCard = nameLookup.get(frontFace);
@@ -374,10 +367,9 @@ export const fetchCardsFromParsedList = async (
 
     if (foundCard) {
       for (let copyIndex = 0; copyIndex < item.quantity; copyIndex++) {
-        // Each copy is its own deck entry, so it needs an id of its own; the printing's
-        // id stays as a prefix so the origin of the entry remains readable.
+        // Each copy is its own deck entry and needs its own id; the printing's id stays as a
+        // prefix so the origin of the entry remains readable.
         const copy: Card = { ...foundCard, id: `${foundCard.id}-${newId()}` };
-        // Preserve zone / commander status when the source (e.g. a share link) carries it.
         if (item.zone) copy.zone = item.zone;
         if (item.isCommander) copy.isCommander = true;
         finalCards.push(copy);

@@ -44,7 +44,6 @@ export interface Card {
     uri: string;
   }[];
 
-  // Scryfall standard fields
   scryfall_uri?: string;
   related_uris?: {
     gatherer?: string;
@@ -79,21 +78,17 @@ export interface Card {
     pioneer: string;
   };
   card_faces?: CardFace[];
-  /** Scryfall frame layout: 'normal', 'split', 'aftermath', 'flip', 'transform',
-   *  'modal_dfc', 'adventure', 'meld', etc. Distinguishes same-side multi-face
-   *  cards (split/aftermath — read sideways) from genuine double-faced cards. */
+  /** Scryfall frame layout. Separates same-side multi-face cards (`split`, `aftermath`, read
+   *  sideways) from genuine double-faced ones (`transform`, `modal_dfc`). */
   layout?: string;
   colors?: string[];
   color_identity?: string[];
   isCommander?: boolean;
   zone?: DeckZone;
   /**
-   * Identifies one copy inside a deck. `id` is the printing, which every copy of the same
-   * edition shares — so without this there is no way to address the second of four copies,
-   * and changing one copy's art changed all of them.
-   *
-   * Absent on cards from search and on decks saved before this existed; those are back
-   * filled when the deck is loaded.
+   * Identifies one copy inside a deck, where `id` is the printing every copy shares: without
+   * it, changing one copy's art changed all four. Absent on search results and on decks saved
+   * before it existed, both back filled on load.
    */
   instanceId?: string;
   selectedPrintId?: string;

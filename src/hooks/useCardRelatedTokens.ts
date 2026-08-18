@@ -13,7 +13,6 @@ export interface RelatedToken {
   isActive?: boolean;
 }
 
-// Hook to fetch related tokens for a single card (Improvement 9)
 export function useCardRelatedTokensForCard(card: Card | null) {
   const [tokens, setTokens] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +34,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
         let allParts: ScryfallPartRef[] | null = Array.isArray(localParts) ? toPartRefs(localParts) : null;
         if (!allParts) {
           try {
-            // Fetch by English name to ensure we get the English card which has all_parts
+            // By English name: only the English card carries `all_parts`.
             const fullCard = await Scry.Cards.byName(card.name);
             allParts = toPartRefs(readField(fullCard, 'all_parts'));
           } catch (fetchAllPartsError) {
@@ -56,7 +55,6 @@ export function useCardRelatedTokensForCard(card: Card | null) {
 
         const fetched: Card[] = [];
 
-        // Fetch each token by ID in parallel
         await Promise.all(
           tokenParts.map(async (part: ScryfallPartRef) => {
             try {
@@ -70,7 +68,6 @@ export function useCardRelatedTokensForCard(card: Card | null) {
           })
         );
 
-        // Translate the fetched tokens to the selected language if available
         const currentLang = i18n.language || 'en';
         const translated = await translateCards(fetched, currentLang);
         setTokens(translated);

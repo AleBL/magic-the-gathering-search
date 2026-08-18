@@ -61,11 +61,8 @@ export const SortCriteria = {
 
 export type SortCriteria = (typeof SortCriteria)[keyof typeof SortCriteria];
 
-/**
- * The five physical zones a card can occupy during a playtest. Library positioning
- * (top/bottom/index) is expressed through {@link LibraryPlacement} rather than as
- * separate zones, so every move is `from` one zone `to` another.
- */
+// Position inside the library is {@link LibraryPlacement}, not a zone of its own, so every
+// move stays a plain `from` one zone `to` another.
 export const PlaytestZone = {
   LIBRARY: 'library',
   HAND: 'hand',

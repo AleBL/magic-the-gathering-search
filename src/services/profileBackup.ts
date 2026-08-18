@@ -4,14 +4,9 @@ import { Deck, DeckVersion } from '../types/Deck';
 import { CollectionEntry } from '../types/Collection';
 import { newId } from '../utils/id';
 
-/**
- * Whole-profile backup. The app has no backend: decks, collection and version history
- * exist in one IndexedDB on one machine, and the per-deck JSON / collection CSV exports
- * are partial — neither carries settings or version history.
- *
- * The envelope is versioned so a future schema can migrate an older file instead of
- * rejecting it.
- */
+// There is no backend: decks, collection and version history live in one IndexedDB on one
+// machine, and the per-deck JSON and collection CSV exports carry neither settings nor
+// history. The envelope is versioned so a future schema can migrate an old file, not reject it.
 
 export const BACKUP_FORMAT = 'mtg-deckforge-backup';
 export const BACKUP_VERSION = 1;
@@ -119,14 +114,10 @@ function applySettings(settings: Partial<Record<StorageKey, string>>): number {
   return applied;
 }
 
-/**
- * Restores in a single Dexie transaction across all three tables, so a failure part-way
- * rolls the whole thing back instead of leaving a half-written profile.
- *
- * `merge` reissues deck ids so nothing already saved is overwritten, remaps version
- * snapshots onto the new ids, and takes the higher quantity for a printing already owned —
- * which makes restoring the same file twice a no-op instead of doubling a collection.
- */
+// One Dexie transaction across all three tables, so a failure part-way rolls back instead of
+// leaving a half-written profile. `merge` reissues deck ids so nothing saved is overwritten,
+// remaps snapshots onto the new ids, and keeps the higher quantity for a printing already
+// owned, which is what makes restoring the same file twice a no-op.
 export async function restoreProfileBackup(backup: ProfileBackup, mode: RestoreMode): Promise<RestoreSummary> {
   const summary = await db.transaction('rw', db.decks, db.collection, db.deckVersions, async () => {
     if (mode === 'replace') {

@@ -4,52 +4,39 @@ import { Deck, DeckFormat } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
 import { ParseResult } from './deckImportService';
 
-/**
- * Compact, backend-free deck sharing. A deck is reduced to the minimum needed to
- * rebuild it (name, format and a list of name + quantity + printing + zone +
- * commander flag), serialized to JSON with short keys, then base64url-encoded so
- * it survives inside a URL query param or a `.deck` file. Importing resolves the
- * card names back through Scryfall (see fetchCardsFromParsedList), so only the
- * lightweight identity of each card travels in the link — never the full objects.
- */
+// Sharing without a backend: only each card's identity travels, base64url-encoded so it
+// survives a URL query param or a `.deck` file, and the importer resolves the names back
+// through Scryfall (see fetchCardsFromParsedList) instead of carrying whole card objects.
 
-/** Query-string parameter that carries an encoded deck on a shareable link. */
 export const SHARE_PARAM = 'deck';
 
 /** Bumped only if the serialized shape changes in a backward-incompatible way. */
 const SHARE_VERSION = 1;
 
-/** One deck entry as it travels in a share payload (short keys keep links small). */
+// The keys are one or two letters because every one of them is repeated per card inside a
+// URL. These payloads are already out in shared links, so a key can never be renamed.
 interface ShareEntry {
-  /** quantity */
-  q: number;
-  /** card name */
-  n: string;
-  /** set code (optional — pins an exact printing) */
-  s?: string;
-  /** collector number (optional — pins an exact printing) */
-  cn?: string;
-  /** zone (omitted when the default `main`) */
-  z?: DeckZone;
-  /** commander flag (omitted when false) */
-  c?: 1;
+  q: number; // quantity
+  n: string; // card name
+  s?: string; // set code, pins an exact printing
+  cn?: string; // collector number, pins an exact printing
+  z?: DeckZone; // zone, omitted when `main`
+  c?: 1; // commander flag, omitted when false
 }
 
 interface SharePayload {
-  v: number;
-  n: string;
-  f: DeckFormat;
-  c: ShareEntry[];
+  v: number; // share version
+  n: string; // deck name
+  f: DeckFormat; // format
+  c: ShareEntry[]; // cards
 }
 
-/** Decoded, validated deck ready to be resolved into real cards. */
 export interface DecodedShareDeck {
   name: string;
   format: DeckFormat;
   entries: ParseResult[];
 }
 
-/** Encodes raw bytes as an URL-safe base64 string (no padding). */
 function toBase64Url(input: string): string {
   const bytes = new TextEncoder().encode(input);
   let binary = '';
@@ -57,7 +44,7 @@ function toBase64Url(input: string): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** Reverses {@link toBase64Url}. Throws if the input is not valid base64url. */
+/** Throws when the input is not valid base64url. */
 function fromBase64Url(input: string): string {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
@@ -67,11 +54,7 @@ function fromBase64Url(input: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-/**
- * Collapses a deck's individual card copies into share entries, grouping by the
- * combination of name, printing, zone and commander status. Order of first
- * appearance is preserved so re-imports read predictably.
- */
+/** Groups by name, printing, zone and commander status, in order of first appearance. */
 export function deckToShareEntries(cards: Card[]): ShareEntry[] {
   const groups = new Map<string, ShareEntry>();
 
@@ -97,7 +80,6 @@ export function deckToShareEntries(cards: Card[]): ShareEntry[] {
   return Array.from(groups.values());
 }
 
-/** Converts share entries back into the parse results the importer resolves. */
 export function shareEntriesToParseResults(entries: ShareEntry[]): ParseResult[] {
   return entries.map((entry) => ({
     name: entry.n,
@@ -109,7 +91,6 @@ export function shareEntriesToParseResults(entries: ShareEntry[]): ParseResult[]
   }));
 }
 
-/** Serializes a deck into a compact, URL-safe share string. */
 export function encodeDeckToShareString(deck: Deck): string {
   const payload: SharePayload = {
     v: SHARE_VERSION,
@@ -120,18 +101,13 @@ export function encodeDeckToShareString(deck: Deck): string {
   return toBase64Url(JSON.stringify(payload));
 }
 
-/** Type guard: does this look like a share payload we can safely read? */
 function isSharePayload(value: unknown): value is SharePayload {
   if (!value || typeof value !== 'object') return false;
   const payload = value as Partial<SharePayload>;
   return typeof payload.n === 'string' && Array.isArray(payload.c);
 }
 
-/**
- * Parses a share string back into a deck description. Returns null when the
- * input is missing, malformed or of an unsupported version rather than throwing,
- * so callers can show a friendly "invalid link" message.
- */
+/** Null instead of a throw on anything malformed, so a bad link is a message and not a crash. */
 export function decodeShareString(encoded: string): DecodedShareDeck | null {
   if (!encoded) return null;
   try {
@@ -154,7 +130,6 @@ export function decodeShareString(encoded: string): DecodedShareDeck | null {
   }
 }
 
-/** Builds a full shareable URL for a deck, based on the current location. */
 export function buildShareUrl(deck: Deck, origin?: string): string {
   const encoded = encodeDeckToShareString(deck);
   const base = origin ?? (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
@@ -162,10 +137,7 @@ export function buildShareUrl(deck: Deck, origin?: string): string {
   return `${base}${separator}${SHARE_PARAM}=${encoded}`;
 }
 
-/**
- * Extracts an encoded deck from a URL's query string (or a raw `?...`/`#...`
- * fragment). Returns the encoded string, or null when no share param is present.
- */
+/** Accepts a full query string or a bare `?...` / `#...` fragment, since routing uses both. */
 export function extractShareParam(search: string): string | null {
   if (!search) return null;
   const query = search.startsWith('#') ? search.slice(search.indexOf('?') + 1) : search;
@@ -177,16 +149,12 @@ export function extractShareParam(search: string): string | null {
   }
 }
 
-/** Wraps an encoded deck as the textual body of a `.deck` file. */
 export function buildDeckFileContent(deck: Deck): string {
   return `# DeckForge shareable deck — import this file or open the link below\n# ${deck.name}\n${buildShareUrl(deck)}\n${encodeDeckToShareString(deck)}\n`;
 }
 
-/**
- * Reads a `.deck` file body, tolerating comment lines and a leading share URL:
- * the encoded payload is the last non-comment token, whether bare or embedded in
- * a `?deck=` link.
- */
+// The payload is the last non-comment token of the file, bare or inside a `?deck=` link, so a
+// hand-edited file with extra header lines still imports.
 export function parseDeckFileContent(content: string): DecodedShareDeck | null {
   const lines = content
     .split('\n')

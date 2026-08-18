@@ -2,7 +2,6 @@ import { Card } from '../types/Card';
 import { CollectionEntry } from '../types/Collection';
 import { ScryfallCollectionResponse } from '../types/Scryfall';
 
-/** A single decoded CSV line, before Scryfall resolution. */
 export interface CollectionCsvRow {
   name: string;
   set?: string;
@@ -14,7 +13,7 @@ export interface CollectionCsvRow {
 
 const HEADER = ['Name', 'Set', 'Collector Number', 'Quantity', 'Wishlist', 'Scryfall ID'];
 
-/** Wraps a value in quotes and escapes embedded quotes when needed (RFC 4180). */
+/** RFC 4180 quoting. */
 const escapeCsv = (value: string): string => {
   if (/[",\r\n]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -22,7 +21,6 @@ const escapeCsv = (value: string): string => {
   return value;
 };
 
-/** Serializes owned/wishlisted entries to CSV text. Entries with quantity 0 and no wishlist are skipped. */
 export function serializeCollectionCsv(entries: CollectionEntry[]): string {
   const lines = [HEADER.join(',')];
   for (const entry of entries) {
@@ -41,7 +39,6 @@ export function serializeCollectionCsv(entries: CollectionEntry[]): string {
   return lines.join('\n');
 }
 
-/** Splits one CSV line into fields, honoring quoted fields with embedded commas/quotes. */
 const parseCsvLine = (line: string): string[] => {
   const fields: string[] = [];
   let field = '';
@@ -73,11 +70,9 @@ const parseCsvLine = (line: string): string[] => {
   return fields;
 };
 
-/**
- * Splits CSV text into records. Not `text.split(/\r?\n/)`: `escapeCsv` quotes a value that
- * contains a newline, and cutting on every newline tore such a record into two malformed
- * ones — a file this module had just written did not survive its own round trip.
- */
+// Not `text.split(/\r?\n/)`: `escapeCsv` quotes a value containing a newline, and cutting on
+// every newline tore such a record in two. A file this module had just written did not
+// survive its own round trip.
 const splitCsvRecords = (text: string): string[] => {
   const records: string[] = [];
   let record = '';
@@ -110,11 +105,7 @@ const splitCsvRecords = (text: string): string[] => {
 
 const truthy = new Set(['true', '1', 'yes', 'y', 'x']);
 
-/**
- * Parses collection CSV text into rows. Tolerant of an optional header, blank
- * lines, missing trailing columns and either `,`-separated column order shown
- * in {@link HEADER}. Rows without a name are dropped.
- */
+/** Tolerates an optional header, blank lines and missing trailing columns; column order is {@link HEADER}. */
 export function parseCollectionCsv(text: string): CollectionCsvRow[] {
   const rows: CollectionCsvRow[] = [];
 
@@ -123,16 +114,13 @@ export function parseCollectionCsv(text: string): CollectionCsvRow[] {
     if (!line) continue;
 
     const fields = parseCsvLine(line).map((field) => field.trim());
-    // `parseCsvLine` always pushes at least one field, so there is no absent-name case
-    // distinct from the empty one.
     const name = fields[0];
     if (!name) continue;
-    // Skip the header row (matched case-insensitively on the first column).
     if (name.toLowerCase() === 'name') continue;
 
     const quantity = Math.max(0, Math.floor(Number(fields[3]) || 0));
     const wishlist = truthy.has((fields[4] ?? '').toLowerCase());
-    // A row with neither owned copies nor a wishlist flag carries no information.
+    // Neither owned copies nor a wishlist flag: the row says nothing worth importing.
     if (quantity === 0 && !wishlist) continue;
 
     rows.push({
@@ -150,12 +138,9 @@ export function parseCollectionCsv(text: string): CollectionCsvRow[] {
 
 const CHUNK_SIZE = 75;
 
-/**
- * Scryfall's documentation asks for 50 to 100 ms between requests. Without a pause this loop
- * measured ~107 requests per second (134 chunks in 1,25 s for a 10k-row file), which is not a
- * borderline case of their rate limit, it is a collision. 150 ms leaves room for a slow hop
- * and still imports 10k rows in about 20 s of waiting.
- */
+// Scryfall asks for 50 to 100 ms between requests. Unpaced, this loop measured ~107 requests
+// per second (134 chunks in 1,25 s for a 10k-row file): not a borderline case of their rate
+// limit, a collision. 150 ms leaves room for a slow hop and still imports 10k rows in ~20 s.
 const CHUNK_DELAY_MS = 150;
 const RETRY_BASE_MS = 1000;
 const MAX_ATTEMPTS = 3;
@@ -167,7 +152,6 @@ interface ChunkError extends Error {
   retryAfterMs?: number;
 }
 
-/** POSTs identifiers to Scryfall's collection endpoint in one chunk. */
 const fetchChunk = async (identifiers: Array<Record<string, string>>): Promise<ScryfallCollectionResponse> => {
   const response = await fetch('https://api.scryfall.com/cards/collection', {
     method: 'POST',
@@ -189,7 +173,6 @@ const fetchChunk = async (identifiers: Array<Record<string, string>>): Promise<S
 
 /** Printings the collection already holds, so their rows never reach the network. */
 export interface KnownPrintings {
-  /** Scryfall ids of owned printings. */
   ids: Set<string>;
   /** `set|collector_number`, lowercased, for rows that carry no id. */
   setNumbers: Set<string>;
@@ -241,14 +224,10 @@ const fetchChunkWithRetry = async (
   }
 };
 
-/**
- * A row for a printing already in the collection is skipped entirely, which is what makes a
- * failed import resumable: `mergeEntries` *sums* quantities, so re-importing the same file
- * would otherwise double every copy that had already landed.
- *
- * Only rows that name a specific printing count as known. A name-only row could mean a
- * different edition of a card already owned, and skipping it would silently drop it.
- */
+// Skipping these rows is what makes a failed import resumable: `mergeEntries` *sums*
+// quantities, so re-importing the same file would double every copy that had already landed.
+// Only a row naming a specific printing counts as known, because a name-only row may be a
+// different edition of a card already owned and skipping it would drop it silently.
 const isAlreadyOwned = (row: CollectionCsvRow, known: KnownPrintings): boolean => {
   if (row.scryfallId && known.ids.has(row.scryfallId)) return true;
   if (row.set && row.collectorNumber) {
@@ -276,20 +255,11 @@ const toEntry = (card: Card, row: CollectionCsvRow): CollectionEntry => ({
   updatedAt: new Date().toISOString()
 });
 
-/**
- * Resolves parsed CSV rows into full {@link CollectionEntry} records by looking
- * up card data on Scryfall. Rows are matched back to results by id, then by
- * set+number, then by name. Unresolved names are returned in `missing`.
- *
- * Three properties matter as much as the resolution itself, all of them learned from
- * importing a real 10k-row file (RR-18 in docs/issues-roadmap/16-RESIDUAL-RISK-REGISTER.md):
- *
- * - It paces itself, instead of emptying the file at Scryfall as fast as the loop can run.
- * - A chunk that keeps failing stops the run rather than dragging the whole file through
- *   the same wall; everything already resolved is still returned.
- * - Rows already in the collection never leave the machine, which is what makes running the
- *   import again a resume instead of a duplicate.
- */
+// Rows are matched back to Scryfall results by id, then set+number, then name.
+//
+// The pacing, the stop-on-failure and the skipping of owned rows below are not polish: they
+// come from importing a real 10k-row file (RR-18 in
+// docs/issues-roadmap/16-RESIDUAL-RISK-REGISTER.md).
 export async function resolveCollectionCsvRows(
   rows: CollectionCsvRow[],
   options: ResolveCollectionCsvOptions = {}

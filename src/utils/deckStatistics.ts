@@ -3,11 +3,9 @@ import { BASIC_LAND_NAMES, MIN_DECK_SIZE, COMMANDER_DECK_SIZE } from '../constan
 
 type StatFilterType = 'cmc' | 'color' | 'type';
 
-/** The five castable colors plus true colorless ({C}) mana. */
 export type ManaColor = 'W' | 'U' | 'B' | 'R' | 'G' | 'C';
 export const MANA_COLORS: readonly ManaColor[] = ['W', 'U', 'B', 'R', 'G', 'C'];
 
-/** Which basic land produces each kind of mana (Wastes covers {C}). */
 export const MANA_COLOR_TO_BASIC_LAND: Record<ManaColor, string> = {
   W: 'Plains',
   U: 'Island',
@@ -22,29 +20,17 @@ export interface StatFilter {
   value: string | number;
 }
 
-/**
- * Whether a card counts as a land for stats purposes. Scryfall's top-level
- * `type_line` for a double-faced card (transform, modal DFC, ...) joins both
- * faces with "//", so a card that transforms into a land — e.g. a creature
- * god whose back face is a Temple — would read as "Creature ... // Land" and
- * match `includes('land')` even though it sits in hand and gets cast as a
- * plain nonland creature. Only the front face is what's actually cast, so
- * that's the face that determines land-ness here.
- */
+// Front face only: Scryfall joins both faces of a double-faced card into one top-level
+// `type_line` with "//", so a creature that transforms into a land reads as
+// "Creature ... // Land" and would count as a land while it is still cast as a creature.
 export function isLandCard(card: Card): boolean {
   const typeLine = (card.card_faces?.[0]?.type_line ?? card.type_line ?? '').toLowerCase();
   return typeLine.includes('land');
 }
 
-/**
- * Which colors a land produces. Basics are matched by name (localized decks keep their
- * printed names), everything else falls back to color identity and then to the reminder-free
- * "{T}: Add {X}" line. Returns an empty list for non-lands.
- *
- * Approximate by construction: a fetchland reads as its own identity rather than what it
- * finds, and a land that only produces conditionally still counts. Good enough to answer
- * "can I cast this on curve", not a rules engine.
- */
+// Basics are matched by printed name because a localized deck never says "Plains".
+// Approximate by construction: a fetchland reads as its own identity rather than what it
+// finds, and a conditional producer still counts. Enough for "can I cast this on curve".
 export function landProducedColors(card: Card): ManaColor[] {
   if (!isLandCard(card)) return [];
 
@@ -65,14 +51,9 @@ export function landProducedColors(card: Card): ManaColor[] {
   return MANA_COLORS.filter((color) => oracleText.includes(`{t}: add {${color.toLowerCase()}}`));
 }
 
-/**
- * Every non-land face's mana cost, combined into one string. Scryfall leaves
- * the top-level `mana_cost` empty for double-faced cards — it only lives per
- * face — so color/pip requirements have to be read from `card_faces`. Both
- * castable faces are included (e.g. a split card's two halves), but a face
- * that's actually a land (a transform card's back side) never contributes:
- * lands don't have color requirements, they produce mana.
- */
+// Scryfall leaves the top-level `mana_cost` empty for double-faced cards, so pip
+// requirements have to be read per face. A land face never contributes: lands produce
+// mana, they don't require it.
 function combinedNonLandManaCost(card: Card): string {
   if (card.mana_cost) return card.mana_cost;
   if (!card.card_faces?.length) return '';
@@ -95,10 +76,8 @@ export interface DeckStatistics {
   neededBasicLands: number;
   targetTotalLands: number;
   /**
-   * Every land in the deck (basic + non-basic), classified by type_line alone.
-   * Use this — not cardTypeCounts.land, whose else-if chain files "Artifact
-   * Land"/"Creature — Land" under artifact/creature — wherever a number must
-   * reconcile with targetTotalLands and neededBasicLands.
+   * Basic + non-basic. Reconcile against this, never against `cardTypeCounts.land`, whose
+   * else-if chain files "Artifact Land" under artifact and "Creature — Land" under creature.
    */
   totalLands: number;
   totalNonBasicCards: number;
@@ -112,7 +91,6 @@ export interface DeckStatistics {
   landColorCounts: Record<ManaColor, number>;
 }
 
-/** Returns the cards matching the currently active stat filter (excluding commanders). */
 export function filterCardsByStat(currentDeck: Card[], activeFilter: StatFilter | null): Card[] {
   if (!activeFilter) return [];
   return currentDeck
@@ -143,12 +121,7 @@ export function filterCardsByStat(currentDeck: Card[], activeFilter: StatFilter 
     .filter((c) => !c.isCommander);
 }
 
-/**
- * Splits `landsToAllocate` basic lands across the colors actually used, proportional
- * to their pip counts (largest-remainder rounding so the total is exact), while
- * guaranteeing every used color gets at least one source whenever there are enough
- * land slots. With fewer slots than colors, the most-demanded colors are covered first.
- */
+// Largest-remainder (Hamilton) apportionment, so the parts add up to the whole exactly.
 function allocateLandsByPips(
   pipCounts: Record<ManaColor, number>,
   activeColors: readonly ManaColor[],
@@ -157,7 +130,6 @@ function allocateLandsByPips(
   const allocations: Partial<Record<ManaColor, number>> = {};
   if (landsToAllocate <= 0 || activeColors.length === 0) return allocations;
 
-  // Not enough slots for every color: give one land each to the most-demanded colors.
   if (landsToAllocate < activeColors.length) {
     [...activeColors]
       .sort((a, b) => pipCounts[b] - pipCounts[a])
@@ -170,8 +142,6 @@ function allocateLandsByPips(
 
   const totalPips = activeColors.reduce((sum, color) => sum + pipCounts[color], 0);
 
-  // Largest-remainder (Hamilton) apportionment: floor each proportional quota,
-  // then hand out the leftover lands to the largest fractional remainders.
   const quotas = activeColors.map((color) => {
     const quota = (pipCounts[color] / totalPips) * landsToAllocate;
     return { color, quota, lands: Math.floor(quota) };
@@ -186,8 +156,7 @@ function allocateLandsByPips(
       }
     });
 
-  // Minimum floor: a used color can never end at zero sources — without one the
-  // spell is uncastable. Feasible because landsToAllocate >= activeColors.length.
+  // A used color can never end at zero sources: without one, its spells are uncastable.
   quotas.forEach((zeroed) => {
     if (zeroed.lands > 0) return;
     const donor = quotas.reduce((max, q) => (q.lands > max.lands ? q : max), quotas[0]);
@@ -203,17 +172,18 @@ function allocateLandsByPips(
   return allocations;
 }
 
-/** Computes the full statistics summary (mana curve, colors, types, mana base, prices) for a deck. */
+function isBasicLandCard(card: Card): boolean {
+  const typeLine = card.type_line?.toLowerCase() || '';
+  return typeLine.includes('basic land') || BASIC_LAND_NAMES.includes(card.name);
+}
+
 export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
-  // 1. Filter out land cards and commanders to analyze non-land spells in the 99
   const nonLandCards = currentDeck.filter((card) => !isLandCard(card) && !card.isCommander);
 
-  // 2. Average Converted Mana Cost (CMC)
   const totalConvertedManaCost = nonLandCards.reduce((sum, card) => sum + (card.cmc || 0), 0);
   const averageConvertedManaCost =
     nonLandCards.length > 0 ? (totalConvertedManaCost / nonLandCards.length).toFixed(2) : '0.00';
 
-  // 3. Mana Curve (Converted Mana Cost distribution for non-land cards)
   const convertedManaCostCounts: Record<number | string, number> = {
     0: 0,
     1: 0,
@@ -238,14 +208,13 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
 
   const maximumConvertedManaCostCount = Math.max(...Object.values(convertedManaCostCounts), 1);
 
-  // 4. Color Distribution Counts
   const colorDistributionCounts: Record<string, number> = {
     W: 0,
     U: 0,
     B: 0,
     R: 0,
     G: 0,
-    C: 0 // Colorless
+    C: 0
   };
 
   currentDeck.forEach((card) => {
@@ -259,8 +228,7 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
       return;
     }
 
-    // Double-faced cards don't set top-level `colors` either — combine every
-    // non-land face's cost, same as the mana base calculation below.
+    // Double-faced cards leave top-level `colors` empty too, so fall back to the faces.
     const manaCostForColors = combinedNonLandManaCost(card);
     if (manaCostForColors) {
       let hasColorSymbol = false;
@@ -280,7 +248,6 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
 
   const totalColorsOccurrenceCount = Object.values(colorDistributionCounts).reduce((sum, count) => sum + count, 0) || 1;
 
-  // 5. Card Type Breakdown Counts
   const cardTypeCounts = {
     creature: 0,
     instant: 0,
@@ -302,17 +269,14 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
     else if (cardTypeLine.includes('land')) cardTypeCounts.land += 1;
   });
 
-  // Rarity breakdown
   const rarityCounts: Record<string, number> = { common: 0, uncommon: 0, rare: 0, mythic: 0 };
   currentDeck.forEach((card) => {
     const rarity = (card.rarity || '').toLowerCase();
     if (rarity in rarityCounts) rarityCounts[rarity] += 1;
   });
 
-  // 6. Mana Base Suggester Calculations
-  // Counts colored pips plus true colorless ({C}) requirements — Wastes is the
-  // basic land that satisfies {C}. Generic ({2}, {X}) and snow ({S}) costs are
-  // intentionally excluded: any land pays them.
+  // Generic ({2}, {X}) and snow ({S}) costs are excluded on purpose: any land pays them,
+  // so counting them would skew the colors the mana base is built for.
   const manaColorSymbolCounts: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   nonLandCards.forEach((card) => {
     const manaCostSymbolMatches = combinedNonLandManaCost(card).match(/\{[WUBRGC](\/[WUBRGC])?\}/g) || [];
@@ -333,31 +297,15 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
   const targetTotalLands =
     nonLandCards.length === 0 ? 0 : Math.max(Math.floor(nonLandCards.length * (2 / 3)), activeManaColors.length, 1);
 
-  // Count existing non-basic lands (don't replace them, only add basics)
-  const existingNonBasicLandCount = currentDeck.filter((card) => {
-    const typeLine = card.type_line?.toLowerCase() || '';
-    const isBasic = typeLine.includes('basic land') || BASIC_LAND_NAMES.includes(card.name);
-    return isLandCard(card) && !isBasic;
-  }).length;
+  const existingNonBasicLandCount = currentDeck.filter((card) => isLandCard(card) && !isBasicLandCard(card)).length;
+  const existingBasicLandCount = currentDeck.filter(isBasicLandCard).length;
 
-  const existingBasicLandCount = currentDeck.filter((card) => {
-    const typeLine = card.type_line?.toLowerCase() || '';
-    return typeLine.includes('basic land') || BASIC_LAND_NAMES.includes(card.name);
-  }).length;
-
-  // How many basic lands we actually need to ADD on top of what's already
-  // there (applying is additive — see useSuggestedLands). Counting existing
-  // basics here is what makes a second "apply" a no-op AND the panel flip to
-  // the "lands already sufficient" state instead of offering the same +N.
+  // Applying the suggestion adds to the deck instead of replacing it (see useSuggestedLands),
+  // so discounting the basics already there is what makes a second apply a no-op and flips
+  // the panel to "lands already sufficient" instead of offering the same +N again.
   const neededBasicLands = Math.max(0, targetTotalLands - existingNonBasicLandCount - existingBasicLandCount);
 
-  // Calculate limit warnings
-  const nonBasicCardsList = currentDeck.filter((card) => {
-    const typeLine = card.type_line?.toLowerCase() || '';
-    const isBasic = typeLine.includes('basic land') || BASIC_LAND_NAMES.includes(card.name);
-    return !isBasic;
-  });
-  const totalNonBasicCards = nonBasicCardsList.length;
+  const totalNonBasicCards = currentDeck.filter((card) => !isBasicLandCard(card)).length;
   const finalDeckSize = currentDeck.length + neededBasicLands;
   const targetDeckLimit = currentDeck.length >= 80 ? COMMANDER_DECK_SIZE : MIN_DECK_SIZE;
   const removeCount = Math.max(0, finalDeckSize - targetDeckLimit);
@@ -377,14 +325,10 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
       suggestedBasicLandCounts[MANA_COLOR_TO_BASIC_LAND[color]] = allocations[color] ?? 0;
     });
   } else if (neededBasicLands > 0) {
-    // Spells exist but demand no colored/colorless pips (pure generic costs):
-    // any land works, so default to Wastes.
+    // Every spell costs pure generic, so any land works and Wastes is the neutral pick.
     suggestedBasicLandCounts['Wastes'] = neededBasicLands;
   }
 
-  const targetLandCount = neededBasicLands;
-
-  // 7. Land Color Counter for Mana Pip Analysis
   const landColorCounts: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   currentDeck.forEach((card) => {
     landProducedColors(card).forEach((color) => {
@@ -392,7 +336,6 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
     });
   });
 
-  // 8. Budget Price Estimator Calculations
   let totalUsdPrice = 0;
   let totalEurPrice = 0;
   currentDeck.forEach((card) => {
@@ -402,12 +345,16 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
     totalEurPrice += eurPriceValue;
   });
 
-  // Dedupe by name so a playset of one expensive card doesn't fill every slot.
+  // Deduped by name so a playset of one expensive card doesn't fill every slot.
   const seenExpensiveNames = new Set<string>();
   const mostExpensiveCards = [...currentDeck]
     .filter((card) => card.prices?.usd)
     .sort((a, b) => parseFloat(b.prices!.usd!) - parseFloat(a.prices!.usd!))
-    .filter((card) => (seenExpensiveNames.has(card.name) ? false : (seenExpensiveNames.add(card.name), true)))
+    .filter((card) => {
+      if (seenExpensiveNames.has(card.name)) return false;
+      seenExpensiveNames.add(card.name);
+      return true;
+    })
     .slice(0, 3);
 
   return {
@@ -420,7 +367,7 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
     rarityCounts,
     totalCards: currentDeck.length,
     suggestedBasicLandCounts,
-    neededBasicLands: targetLandCount,
+    neededBasicLands,
     targetTotalLands,
     totalLands: existingNonBasicLandCount + existingBasicLandCount,
     totalNonBasicCards,
@@ -435,7 +382,8 @@ export function computeDeckStatistics(currentDeck: Card[]): DeckStatistics {
   };
 }
 
-/** Binomial coefficient "n choose r", computed multiplicatively to avoid factorial overflow. */
+// Binomial coefficient "n choose r", multiplicative so a 100-card deck never hits
+// the overflow a factorial version would.
 function combinations(n: number, r: number): number {
   if (r < 0 || r > n) return 0;
   const k = Math.min(r, n - r);
@@ -446,10 +394,7 @@ function combinations(n: number, r: number): number {
   return result;
 }
 
-/**
- * Hypergeometric distribution of how many lands appear in an opening hand.
- * Returns P(exactly k lands) for k from 0 up to min(handSize, landCount).
- */
+/** One entry per land count from 0 to min(handSize, landCount), each holding P(exactly that many). */
 export function landDrawProbabilities(
   deckSize: number,
   landCount: number,
@@ -468,11 +413,6 @@ export function landDrawProbabilities(
   return distribution;
 }
 
-/**
- * Hypergeometric P(exactly k successes) when drawing `draws` cards from a
- * `population` of which `successes` are the sought-after kind (e.g. lands, or
- * sources of one color). Returns 0 for impossible / degenerate inputs.
- */
 export function hypergeometricExactly(population: number, successes: number, draws: number, k: number): number {
   if (population <= 0 || draws <= 0 || draws > population) return 0;
   if (successes < 0 || successes > population) return 0;
@@ -482,10 +422,6 @@ export function hypergeometricExactly(population: number, successes: number, dra
   return (combinations(successes, k) * combinations(population - successes, draws - k)) / denominator;
 }
 
-/**
- * Hypergeometric P(at least k successes) — the complement-friendly cumulative
- * used for "chance of drawing ≥1 source of color X" and "≥N lands by turn T".
- */
 export function hypergeometricAtLeast(population: number, successes: number, draws: number, k: number): number {
   if (k <= 0) return population > 0 && draws > 0 && draws <= population ? 1 : 0;
   const upper = Math.min(draws, successes);
@@ -496,11 +432,8 @@ export function hypergeometricAtLeast(population: number, successes: number, dra
   return Math.min(1, cumulative);
 }
 
-/**
- * How many cards a player has seen by the start of turn `turn`. On the play the
- * opening 7 gains one card per turn after the first (no turn-1 draw); on the
- * draw every turn including the first draws, so one extra card overall.
- */
+// Opening 7 plus one card per draw step. On the play there is no turn-1 draw, which is
+// the whole difference between the two curves.
 export function cardsSeenByTurn(turn: number, onPlay = true): number {
   const safeTurn = Math.max(1, Math.floor(turn));
   return 7 + (onPlay ? safeTurn - 1 : safeTurn);

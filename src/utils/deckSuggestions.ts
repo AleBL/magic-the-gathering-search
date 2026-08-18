@@ -2,21 +2,18 @@ import { Card } from '../types/Card';
 
 const WUBRG = ['W', 'U', 'B', 'R', 'G'];
 
-/** Union of the deck's color identity, returned in canonical WUBRG order. */
+const THEME_MIN_CREATURES = 3;
+const THEME_MIN_SHARE = 0.25;
+
+/** In canonical WUBRG order, which is what Scryfall's `id<=` expects. */
 export function deckColorIdentity(cards: Card[]): string[] {
   const set = new Set<string>();
   for (const card of cards) for (const c of card.color_identity ?? []) set.add(c);
   return WUBRG.filter((c) => set.has(c));
 }
 
-/**
- * The creature subtype that dominates the deck (e.g. "Elf", "Zombie"), or null
- * when the deck has no clear tribal theme. Used to bias suggestions toward
- * cards that actually synergize instead of generically popular ones.
- *
- * A theme qualifies only when its subtype covers at least a quarter of the
- * deck's creatures and appears on 3+ of them.
- */
+// Null unless the theme is strong enough to be worth biasing suggestions toward: a handful of
+// Elves in a deck about something else would drag every suggestion off-topic.
 export function dominantCreatureType(cards: Card[]): string | null {
   const counts = new Map<string, number>();
   let creatureCount = 0;
@@ -32,7 +29,7 @@ export function dominantCreatureType(cards: Card[]): string | null {
     }
   }
 
-  if (creatureCount < 3) return null;
+  if (creatureCount < THEME_MIN_CREATURES) return null;
 
   let best: string | null = null;
   let bestCount = 0;
@@ -43,21 +40,16 @@ export function dominantCreatureType(cards: Card[]): string | null {
     }
   }
 
-  return best && bestCount >= 3 && bestCount / creatureCount >= 0.25 ? best : null;
+  return best && bestCount >= THEME_MIN_CREATURES && bestCount / creatureCount >= THEME_MIN_SHARE ? best : null;
 }
 
-/**
- * Builds a Scryfall query for cards that fit the deck: within its color
- * identity, (optionally) legal in its format, biased toward its tribal theme
- * when it has one, excluding basic lands.
- */
 export function buildSuggestionQuery(cards: Card[], format?: string): string {
   const colors = deckColorIdentity(cards);
   const identity = colors.length > 0 ? `id<=${colors.join('').toLowerCase()}` : 'id:c';
   const legal = format ? ` legal:${format.toLowerCase()}` : '';
 
-  // Members of the theme type plus its payoffs (cards that name the type in
-  // their text — lords, tutors, tribal spells).
+  // The `o:` half is what brings in the payoffs (lords, tutors, tribal spells): they name the
+  // type in their text without being of it.
   const theme = dominantCreatureType(cards);
   const themeFilter = theme ? ` (t:${theme.toLowerCase()} or o:"${theme.toLowerCase()}")` : '';
 

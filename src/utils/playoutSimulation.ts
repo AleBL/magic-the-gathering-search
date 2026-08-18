@@ -2,49 +2,41 @@ import { Card } from '../types/Card';
 import { ManaColor, MANA_COLORS, isLandCard, landProducedColors } from './deckStatistics';
 import { mulberry32 } from './deckDoctor';
 
-/**
- * Plays the deck out alone for several turns, many times.
- *
- * Distinct from `deckDoctor.simulateOpeningHands`, which scores the **opening hand** only: no
- * mulligan, no colors, no turns. This one takes London mulligans, tracks which colors are on
- * the battlefield and plays a land per turn, so it answers what happens *after* the keep.
- *
- * `hypergeometricAtLeast` already gives exact odds of N lands among the cards seen by turn T,
- * and a simulation would only add noise to a number that has a formula. What has no formula is
- * anything path-dependent: London mulligans change which hands are kept, and casting on curve
- * depends on the order cards arrive and on which colors are already down. That is what this
- * measures.
- *
- * Deliberately not a rules engine. It does not read card text, so rituals, ramp, card draw,
- * cost reduction and lands that enter tapped all behave like plain cards. Read the output as
- * "how does the mana behave", not "how does the deck play".
- */
+// Simulated rather than derived because only the path-dependent part needs it:
+// `hypergeometricAtLeast` already gives exact odds of N lands by turn T, and simulating that
+// would only add noise. London mulligans changing which hands are kept, and casting on curve
+// depending on the order cards arrive in, have no such formula.
+//
+// Deliberately not a rules engine: card text is never read, so rituals, ramp, draw, cost
+// reduction and lands that enter tapped all behave like plain cards. The output answers "how
+// does the mana behave", not "how does the deck play".
+
+const OPENING_HAND_SIZE = 7;
+const MAX_MULLIGANS = 3;
+const STALL_CHECK_TURN = 4;
+const STALL_MAX_LANDS = 2;
 
 export interface PlayoutOptions {
-  /** Games to play. Higher is steadier and slower; the panel's default is 1,000. */
   runs?: number;
-  /** On the play skips the first-turn draw. */
+  /** On the play there is no first-turn draw. */
   onPlay?: boolean;
-  /** How many turns to play each game. */
   turns?: number;
-  /** Fixed seed keeps a run reproducible; omit for a fresh shuffle each time. */
   seed?: number;
 }
 
 export interface LandMilestone {
   lands: number;
-  /** Median turn the land count is first reached, or null if most games never got there. */
+  /** Null when no game ever reached this land count. */
   medianTurn: number | null;
   reachedShare: number;
 }
 
 export interface PlayoutResult {
   runs: number;
-  /** Share of games kept at each hand size, after London mulligans. */
   keptHandSizes: { size: number; share: number }[];
   mulliganRate: number;
   landMilestones: LandMilestone[];
-  /** Share of games still on two or fewer lands entering turn four. */
+  /** Share of games still on `STALL_MAX_LANDS` or fewer lands at `STALL_CHECK_TURN`. */
   stalledRate: number;
   /** Mean share of turns that had something castable with the mana available. */
   onCurveShare: number;
@@ -60,10 +52,7 @@ interface SimCard {
 
 const COLOR_SYMBOLS = new Set<string>(MANA_COLORS);
 
-/**
- * Colored requirements from a mana cost. Hybrid and Phyrexian symbols keep every color that
- * could pay them; generic, X and snow contribute to `cmc` only.
- */
+/** Generic, X and snow are skipped: they contribute to `cmc` and demand no color. */
 function parsePips(manaCost: string): ManaColor[][] {
   const symbols = manaCost.match(/\{[^}]+\}/g) ?? [];
   const pips: ManaColor[][] = [];
@@ -88,11 +77,8 @@ function toSimCard(card: Card): SimCard {
   };
 }
 
-/**
- * Can `card` be cast with these lands? Colored pips are assigned before generic, and the most
- * constrained pip goes first — a greedy pass in that order settles the dual-land cases that a
- * naive left-to-right assignment would fail.
- */
+// Scarcest pip first, then generic from whatever is left: a naive left-to-right assignment
+// spends a dual on a pip a basic could have paid and reports castable spells as uncastable.
 function isCastable(card: SimCard, lands: SimCard[]): boolean {
   if (card.cmc > lands.length) return false;
   if (card.pips.length === 0) return true;
@@ -112,7 +98,6 @@ function isCastable(card: SimCard, lands: SimCard[]): boolean {
     used[index] = true;
   }
 
-  // Generic can come from anything still untapped.
   const remaining = used.filter((isUsed) => !isUsed).length;
   return card.cmc - card.pips.length <= remaining;
 }
@@ -126,11 +111,8 @@ function shuffle(cards: SimCard[], random: () => number): SimCard[] {
   return copy;
 }
 
-/**
- * Keep a hand of `size` if its land count is playable. The window tightens as the hand shrinks
- * because a mulligan to five cannot afford to be picky — this is the common heuristic, not a
- * claim about optimal play.
- */
+// The window tightens as the hand shrinks because a mulligan to five cannot afford to be
+// picky. Common heuristic, not a claim about optimal play.
 function shouldKeep(landsInHand: number, size: number): boolean {
   if (size <= 5) return true;
   if (size === 6) return landsInHand >= 2 && landsInHand <= 4;
@@ -152,35 +134,38 @@ export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): Pla
   const onPlay = options.onPlay ?? true;
 
   const library = deck.map(toSimCard);
-  // Nothing to report from a deck too small to deal an opening hand.
-  if (library.length < 7) return null;
+  if (library.length < OPENING_HAND_SIZE) return null;
 
   const random = mulberry32(options.seed ?? Math.floor(Math.random() * 2 ** 31));
 
   const keptSizes: number[] = [];
   let mulliganed = 0;
-  let screwed = 0;
+  let stalled = 0;
   let onCurveTotal = 0;
   const milestoneTurns: Record<number, number[]> = { 3: [], 4: [], 5: [] };
   const milestoneReached: Record<number, number> = { 3: 0, 4: 0, 5: 0 };
 
   for (let run = 0; run < runs; run += 1) {
     let deckOrder = shuffle(library, random);
-    let hand = deckOrder.slice(0, 7);
+    let hand = deckOrder.slice(0, OPENING_HAND_SIZE);
     let mulligans = 0;
 
-    // London: always draw seven, then bottom one card per mulligan taken.
-    while (mulligans < 3 && !shouldKeep(hand.filter((c) => c.isLand).length, 7 - mulligans)) {
+    // London mulligan: every hand is drawn at seven, and the cost is paid afterwards by
+    // bottoming one card per mulligan taken.
+    while (
+      mulligans < MAX_MULLIGANS &&
+      !shouldKeep(hand.filter((c) => c.isLand).length, OPENING_HAND_SIZE - mulligans)
+    ) {
       mulligans += 1;
       deckOrder = shuffle(library, random);
-      hand = deckOrder.slice(0, 7);
+      hand = deckOrder.slice(0, OPENING_HAND_SIZE);
     }
 
-    const keptSize = 7 - mulligans;
+    const keptSize = OPENING_HAND_SIZE - mulligans;
     keptSizes.push(keptSize);
     if (mulligans > 0) mulliganed += 1;
 
-    // Bottom the surplus: excess lands when flooded, otherwise the costliest spells.
+    // A flooded hand bottoms lands, any other hand bottoms its costliest spells.
     if (mulligans > 0) {
       const landsInHand = hand.filter((c) => c.isLand).length;
       const bottomLands = landsInHand > 3;
@@ -192,7 +177,7 @@ export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): Pla
         .slice(mulligans);
     }
 
-    let libraryIndex = 7;
+    let libraryIndex = OPENING_HAND_SIZE;
     const battlefieldLands: SimCard[] = [];
     let castableTurns = 0;
     const reachedAt: Record<number, number> = {};
@@ -204,7 +189,6 @@ export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): Pla
         libraryIndex += 1;
       }
 
-      // One land per turn, preferring a color not already on the battlefield.
       const landIndex = hand.findIndex((card) => card.isLand);
       if (landIndex !== -1) {
         const haveColors = new Set(battlefieldLands.flatMap((land) => land.produces));
@@ -222,9 +206,9 @@ export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): Pla
         }
       });
 
-      if (turn === 4 && battlefieldLands.length <= 2) screwed += 1;
+      if (turn === STALL_CHECK_TURN && battlefieldLands.length <= STALL_MAX_LANDS) stalled += 1;
 
-      // Cast the most expensive thing affordable, so the hand develops instead of piling up.
+      // Casting the most expensive affordable spell, so the hand develops instead of piling up.
       const affordable = hand
         .map((card, index) => ({ card, index }))
         .filter(({ card }) => !card.isLand && isCastable(card, battlefieldLands))
@@ -260,7 +244,7 @@ export function simulatePlayout(deck: Card[], options: PlayoutOptions = {}): Pla
       medianTurn: median(milestoneTurns[lands]),
       reachedShare: milestoneReached[lands] / runs
     })),
-    stalledRate: screwed / runs,
+    stalledRate: stalled / runs,
     onCurveShare: onCurveTotal / runs
   };
 }

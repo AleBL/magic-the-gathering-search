@@ -9,12 +9,9 @@ interface UseShortcutHandlerOptions {
 }
 
 /**
- * Binds a component's shortcut handler to the keyboard registry for as long as it is active.
- *
- * The handler is read from a ref, so call sites can pass an inline arrow without churning
- * their registration: re-registering on every render would both reorder the stack and, since
- * Escape is a discrete event, let one surface's re-render pull another's handler out of a
- * dispatch that was still travelling to it.
+ * Binds a shortcut handler to the keyboard registry while it is active. The handler is read
+ * from a ref so an inline arrow does not churn the registration: re-registering every render
+ * reorders the stack and can pull a handler out of a dispatch still travelling to it.
  */
 export function useShortcutHandler(
   handle: ShortcutHandler,

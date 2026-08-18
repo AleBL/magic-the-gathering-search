@@ -44,10 +44,7 @@ function toCard(json: ScryfallCardJson): Card {
   };
 }
 
-/**
- * Fetches cards from Scryfall that fit the deck's colors, ordered by popularity
- * (EDHREC), excluding cards already in the deck. Returns up to `limit` cards.
- */
+/** Ordered by EDHREC popularity, and never a card the deck already holds. */
 export async function fetchDeckSuggestions(cards: Card[], format?: string, limit = 12): Promise<Card[]> {
   const query = buildSuggestionQuery(cards, format);
   const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=edhrec&unique=cards`;

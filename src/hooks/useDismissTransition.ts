@@ -2,11 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 /**
- * Delays an unmount just long enough for a CSS exit transition to play.
- * Call `requestClose()` instead of `onClose()` directly: it flips
- * `isClosing` (drive an exit class off it) and only fires the real
- * `onClose` once `durationMs` has elapsed. Reduced-motion users skip the
- * wait entirely — `onClose` fires on the same tick.
+ * Delays an unmount long enough for a CSS exit transition to play. Call `requestClose()`
+ * rather than `onClose()`: it flips `isClosing` (drive an exit class off it) and fires the
+ * real `onClose` after `durationMs`. Reduced-motion users skip the wait.
  */
 export function useDismissTransition(onClose: () => void, durationMs = 150) {
   const [isClosing, setIsClosing] = useState(false);

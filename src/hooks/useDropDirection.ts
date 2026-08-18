@@ -1,13 +1,10 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
 /**
- * Which way a dropdown should open. Inside a scrollable modal, a menu anchored below its
- * trigger grows the scroll area instead of overlaying it, so items near the bottom push the
- * dialog taller and the menu ends up off-screen. Flipping to `up` when the space below is
- * short keeps it inside the viewport without a portal.
- *
- * Measured against the viewport rather than the scroll container: the menu is positioned in
- * the container's coordinate space, but what it must not escape is the window.
+ * Which way a dropdown should open. Inside a scrollable modal a menu anchored below its
+ * trigger grows the scroll area instead of overlaying it, pushing itself off-screen, so it
+ * flips up when the space below is short. Measured against the viewport, not the scroll
+ * container: the menu is positioned in the container's space but must not escape the window.
  */
 export function useDropDirection(
   triggerRef: RefObject<HTMLElement | null>,

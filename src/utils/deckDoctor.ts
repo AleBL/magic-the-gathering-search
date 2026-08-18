@@ -10,29 +10,18 @@ import {
   cardsSeenByTurn
 } from './deckStatistics';
 
-/**
- * Deck Doctor — a higher-level synthesis on top of {@link computeDeckStatistics}.
- * It never invents card data Scryfall doesn't provide: every number here derives
- * from the deck's own type lines, mana costs and pip/source counts.
- *
- * The math (hypergeometric odds, opening-hand simulation, source counting) lives in
- * pure functions so it can be unit-tested without React. The UI turns the
- * structured {@link DeckRecommendation}s into localized natural-language advice.
- */
+// Every number here derives from the deck's own type lines, mana costs and pip counts:
+// nothing is inferred from card data Scryfall does not provide.
 
 const OPENING_HAND_SIZE = 7;
-/** A hand with 2–5 lands is generally keepable (same band as ConsistencyPanel). */
 export const KEEPABLE_MIN_LANDS = 2;
 export const KEEPABLE_MAX_LANDS = 5;
-/** ≥6 lands in the opener is a flood; <2 is a mana screw; 0 is a true no-lander. */
 const FLOOD_MIN_LANDS = 6;
 const SCREW_MAX_LANDS = 1;
 
 const DEFAULT_GOLDFISH_ITERATIONS = 1000;
 
-// --- Deterministic RNG (for reproducible simulation tests) -----------------
-
-/** mulberry32 — a tiny seedable PRNG. Same seed ⇒ same hand sequence. */
+/** Seedable PRNG: same seed, same sequence, which is what makes the simulation testable. */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -58,9 +47,6 @@ const clamp = (value: number, min: number, max: number): number => Math.min(max,
 const bandScore = (value: number, lo: number, hi: number): number =>
   hi <= lo ? 0 : clamp((value - lo) / (hi - lo), 0, 1);
 
-// --- Goldfish simulation ----------------------------------------------------
-
-/** A minimal per-card model — the only fields the simulation actually reads. */
 interface DeckCardModel {
   isLand: boolean;
   cmc: number;
@@ -68,30 +54,21 @@ interface DeckCardModel {
 
 export interface OpeningHandsResult {
   iterations: number;
-  /** Fraction of hands with 2–5 lands. */
   playableRate: number;
-  /** Fraction of hands with 0 lands (true no-lander). */
   noLandRate: number;
-  /** Fraction of hands with <2 lands (mana screw). */
   screwRate: number;
-  /** Fraction of hands with ≥6 lands (flood). */
   floodRate: number;
   avgLandsInHand: number;
-  /** Average CMC of the non-land cards drawn — a read on the curve you actually see. */
+  /** Average mana value of the non-land cards drawn: the curve you actually see. */
   avgCurve: number;
 }
 
-/** Non-commander cards, reduced to the {@link DeckCardModel} the simulation needs. */
 function toDeckModel(cards: Card[]): DeckCardModel[] {
   return cards.filter((card) => !card.isCommander).map((card) => ({ isLand: isLandCard(card), cmc: card.cmc || 0 }));
 }
 
-/**
- * Monte-Carlo over **opening hands only**: shuffle (Fisher–Yates, mirroring
- * usePlaytestSimulator) and deal `handSize`, `iterations` times. No mulligans, no colors and
- * no turns — for those, see `playoutSimulation.simulatePlayout`, which plays the game out.
- * Pass a seeded `rng` for reproducible results.
- */
+// Opening hands only: no mulligans, no colors, no turns. Anything that needs the game
+// played out belongs in `playoutSimulation.simulatePlayout` instead.
 export function simulateOpeningHands(
   cards: Card[],
   options: { iterations?: number; handSize?: number; rng?: () => number } = {}
@@ -149,27 +126,17 @@ export function simulateOpeningHands(
   };
 }
 
-// --- Color source diagnosis -------------------------------------------------
-
 export interface ColorSourceDiagnosis {
   color: ManaColor;
-  /** Colored pips this color's spells demand across the deck. */
   pips: number;
-  /** Lands that can produce this color. */
   sources: number;
-  /** Proportional target sources for the deck's land count and pip mix. */
+  /** Target sources for this color, proportional to its share of the deck's pips. */
   idealSources: number;
-  /** Hypergeometric P(≥1 source of this color in the opening hand). */
+  /** P(at least one source of this color in the opening hand). */
   openingHandProb: number;
-  /** idealSources − sources, floored at 0. */
   deficit: number;
 }
 
-/**
- * For every color the deck actually demands, compares available sources against
- * a target proportional to that color's share of the pips, and computes the
- * concrete odds of seeing a source in the opening hand.
- */
 export function diagnoseColorSources(stats: DeckStatistics): ColorSourceDiagnosis[] {
   const { manaColorSymbolCounts, landColorCounts, targetTotalLands, totalCards } = stats;
   const activeColors = MANA_COLORS.filter((color) => manaColorSymbolCounts[color] > 0);
@@ -191,8 +158,6 @@ export function diagnoseColorSources(stats: DeckStatistics): ColorSourceDiagnosi
     };
   });
 }
-
-// --- Consistency score ------------------------------------------------------
 
 export interface ScoreComponent {
   key: 'manaRatio' | 'keepableHands' | 'colorSources';
@@ -219,15 +184,12 @@ function ratingFor(total: number): ConsistencyScore['rating'] {
   return 'poor';
 }
 
-/**
- * A transparent 0–100 consistency score. Every point is attributable to one of
- * three components (mana ratio, keepable openers, color sources) so the UI can
- * show the breakdown rather than a black-box number.
- */
+// Scored 0–100 in three attributable components rather than one opaque number, because the
+// panel shows the breakdown and a player has to be able to act on it.
 export function computeConsistencyScore(stats: DeckStatistics, colorSources: ColorSourceDiagnosis[]): ConsistencyScore {
   const { totalLands, targetTotalLands, totalCards } = stats;
 
-  // 1. Mana ratio — how close the land count sits to the curve-derived target.
+  // How close the land count sits to the curve-derived target, as a 0–1 closeness.
   const ratioValue =
     targetTotalLands > 0 ? 1 - Math.min(1, Math.abs(totalLands - targetTotalLands) / targetTotalLands) : 0;
   const manaRatio: ScoreComponent = {
@@ -237,7 +199,6 @@ export function computeConsistencyScore(stats: DeckStatistics, colorSources: Col
     value: ratioValue
   };
 
-  // 2. Keepable openers — hypergeometric P(2–5 lands in the opening 7).
   const distribution = landDrawProbabilities(totalCards, totalLands, OPENING_HAND_SIZE);
   const keepable = distribution
     .filter((d) => d.lands >= KEEPABLE_MIN_LANDS && d.lands <= KEEPABLE_MAX_LANDS)
@@ -249,7 +210,6 @@ export function computeConsistencyScore(stats: DeckStatistics, colorSources: Col
     value: keepable
   };
 
-  // 3. Color sources — average odds of seeing a source of each demanded color.
   const colorValue =
     colorSources.length === 0
       ? 1 // no colored requirement ⇒ no color risk
@@ -265,8 +225,6 @@ export function computeConsistencyScore(stats: DeckStatistics, colorSources: Col
   const total = Math.round(components.reduce((sum, c) => sum + c.score, 0));
   return { total, rating: ratingFor(total), components };
 }
-
-// --- Recommendations --------------------------------------------------------
 
 export type RecommendationKind =
   | 'add-lands'
@@ -284,19 +242,22 @@ export interface DeckRecommendation {
   kind: RecommendationKind;
   severity: RecommendationSeverity;
   color?: ManaColor;
-  /** Suggested amount, or the low end of a range. */
+  /** Suggested amount, or the low end of the range ending at `countHigh`. */
   count?: number;
-  /** High end of a suggested range (e.g. "1–2 sources"). */
   countHigh?: number;
-  /** The heavy mana-value slot, for curve advice. */
   cmc?: number;
-  /** A percentage, for screw/flood risk. */
+  /** Whole percentage points, for screw and flood risk. */
   percent?: number;
 }
 
 const SEVERITY_ORDER: Record<RecommendationSeverity, number> = { critical: 0, warning: 1, info: 2, good: 3 };
 
-/** Numeric key of the heaviest mana-value slot, treating "7+" as 7. */
+const TOP_HEAVY_MIN_CMC = 4;
+const TOP_HEAVY_MIN_SHARE = 0.2;
+const SCREW_RISK_THRESHOLD = 0.22;
+const FLOOD_RISK_THRESHOLD = 0.18;
+
+/** The most populated mana-value slot, with the "7+" bucket read as 7. */
 function heaviestCurveSlot(counts: Record<number | string, number>): { cmc: number; count: number } {
   let best = { cmc: 0, count: -1 };
   for (const [key, count] of Object.entries(counts)) {
@@ -306,11 +267,8 @@ function heaviestCurveSlot(counts: Record<number | string, number>): { cmc: numb
   return best;
 }
 
-/**
- * Turns the analysis into a ranked list of structured recommendations. The
- * descriptors are i18n-free on purpose — the UI composes the localized sentence
- * (including color names) so this stays unit-testable.
- */
+// The recommendations carry no text on purpose: the UI composes the localized sentence from
+// `kind` and the numbers, which is what keeps this function unit-testable in one language.
 export function buildRecommendations(
   stats: DeckStatistics,
   colorSources: ColorSourceDiagnosis[],
@@ -321,7 +279,6 @@ export function buildRecommendations(
   const { totalLands, targetTotalLands, convertedManaCostCounts, totalNonBasicCards } = stats;
   const nonLandSpells = Object.values(convertedManaCostCounts).reduce((sum, count) => sum + count, 0);
 
-  // Land count vs. curve-derived target.
   const landDelta = targetTotalLands - totalLands;
   if (landDelta >= 2) {
     recs.push({
@@ -334,7 +291,6 @@ export function buildRecommendations(
     recs.push({ id: 'cut-lands', kind: 'cut-lands', severity: 'warning', count: -landDelta });
   }
 
-  // Per-color source deficits.
   for (const diag of colorSources) {
     if (diag.deficit >= 1) {
       recs.push({
@@ -348,19 +304,17 @@ export function buildRecommendations(
     }
   }
 
-  // Curve shape — flag a heavy top-end slot.
   if (nonLandSpells > 0) {
     const peak = heaviestCurveSlot(convertedManaCostCounts);
-    if (peak.cmc >= 4 && peak.count / nonLandSpells >= 0.2) {
+    if (peak.cmc >= TOP_HEAVY_MIN_CMC && peak.count / nonLandSpells >= TOP_HEAVY_MIN_SHARE) {
       recs.push({ id: 'curve-heavy', kind: 'curve-heavy', severity: 'info', cmc: peak.cmc });
     }
   }
 
-  // Opening-hand risk from exact hypergeometric odds.
-  if (screwProb >= 0.22) {
+  if (screwProb >= SCREW_RISK_THRESHOLD) {
     recs.push({ id: 'screw-risk', kind: 'screw-risk', severity: 'warning', percent: Math.round(screwProb * 100) });
   }
-  if (floodProb >= 0.18) {
+  if (floodProb >= FLOOD_RISK_THRESHOLD) {
     recs.push({ id: 'flood-risk', kind: 'flood-risk', severity: 'warning', percent: Math.round(floodProb * 100) });
   }
 
@@ -372,15 +326,13 @@ export function buildRecommendations(
   return recs.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }
 
-// --- Top-level report -------------------------------------------------------
-
 export interface LandOdds {
   keepableProb: number;
   expectedLands: number;
   noLandProb: number;
   screwProb: number;
   floodProb: number;
-  /** P(≥`lands` lands) after the opening hand plus a few draws, per milestone turn. */
+  /** Per milestone turn, P(at least `lands` lands) among everything seen by then. */
   byTurn: { turn: number; lands: number; prob: number }[];
 }
 
@@ -394,7 +346,6 @@ export interface DeckDoctorReport {
   recommendations: DeckRecommendation[];
 }
 
-/** Milestone turns whose land odds the panel surfaces (on the play). */
 const TURN_MILESTONES = [
   { turn: 3, lands: 3 },
   { turn: 5, lands: 4 }
@@ -419,10 +370,7 @@ function computeLandOdds(deckSize: number, landCount: number): LandOdds {
   };
 }
 
-/**
- * Full Deck Doctor analysis. Deterministic apart from the opening-hands sub-object;
- * pass a seeded `rng` for reproducible results in tests.
- */
+/** Deterministic except for `openingHands`, which needs a seeded `rng` to be reproducible. */
 export function analyzeDeck(
   cards: Card[],
   options: { iterations?: number; rng?: () => number } = {}
@@ -434,8 +382,8 @@ export function analyzeDeck(
   const openingHands = simulateOpeningHands(cards, { iterations: options.iterations, rng: options.rng });
   const recommendations = buildRecommendations(stats, colorSources, landOdds.screwProb, landOdds.floodProb);
 
-  // "Has data" once there is a real deck to reason about — a bare handful of
-  // cards produces meaningless odds.
+  // Fewer cards than an opening hand makes every probability here meaningless, so the panel
+  // is told there is nothing to show rather than shown numbers that read as real.
   const hasData = stats.totalNonBasicCards > 0 && cards.length >= OPENING_HAND_SIZE;
 
   return { hasData, stats, score, colorSources, landOdds, openingHands, recommendations };

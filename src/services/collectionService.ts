@@ -3,7 +3,6 @@ import { db } from '../db/database';
 import { Card } from '../types/Card';
 import { CollectionEntry } from '../types/Collection';
 
-/** Builds a fresh entry snapshot for a card, defaulting to not-owned / not-wishlisted. */
 const buildEntry = (card: Card, overrides: Partial<CollectionEntry> = {}): CollectionEntry => ({
   id: card.id,
   oracleId: card.oracle_id,
@@ -17,7 +16,7 @@ const buildEntry = (card: Card, overrides: Partial<CollectionEntry> = {}): Colle
   ...overrides
 });
 
-/** Deletes rows that carry no information (no copies and not wishlisted). */
+/** A row with no copies and no wishlist flag is deleted rather than stored as zeroes. */
 const persist = async (entry: CollectionEntry): Promise<void> => {
   if (entry.quantity <= 0 && !entry.wishlist) {
     await db.collection.delete(entry.id);
@@ -26,16 +25,12 @@ const persist = async (entry: CollectionEntry): Promise<void> => {
   await db.collection.put({ ...entry, updatedAt: new Date().toISOString() });
 };
 
-/** Does this snapshot need to borrow prices from its English counterpart? */
 const needsPriceFallback = (card: Card): boolean =>
   !card.prices?.usd && !card.prices?.eur && !!card.set && !!card.collector_number && (card.lang ?? 'en') !== 'en';
 
-/**
- * Non-English printings usually have no Scryfall prices. Fetch the same
- * set/collector-number printing in English once and store its prices on the
- * entry as a ballpark estimate. Fire-and-forget: failures leave the entry
- * untouched (`fallbackPrices` stays undefined and may be retried later).
- */
+// Non-English printings usually carry no Scryfall price, so the English printing of the same
+// set and collector number is fetched once as an estimate. Fire-and-forget on purpose: a
+// failure leaves `fallbackPrices` undefined, which is what allows a later retry.
 const enrichPriceFallback = async (cardId: string): Promise<void> => {
   try {
     const entry = await db.collection.get(cardId);
@@ -55,7 +50,6 @@ const enrichPriceFallback = async (cardId: string): Promise<void> => {
   }
 };
 
-/** Sets the owned quantity for a printing, keeping any existing wishlist flag. */
 export const setOwnedQuantity = async (card: Card, quantity: number): Promise<void> => {
   const existing = await db.collection.get(card.id);
   const base = existing ?? buildEntry(card);
@@ -74,7 +68,6 @@ export const decrementOwned = async (card: Card): Promise<void> => {
   await setOwnedQuantity(card, (existing?.quantity ?? 0) - 1);
 };
 
-/** Flips the wishlist flag for a printing, creating a wishlist-only entry when new. */
 export const toggleWishlist = async (card: Card): Promise<void> => {
   const existing = await db.collection.get(card.id);
   const base = existing ?? buildEntry(card);
@@ -82,10 +75,8 @@ export const toggleWishlist = async (card: Card): Promise<void> => {
   void enrichPriceFallback(card.id);
 };
 
-/**
- * Merges imported entries into the collection: owned quantities are summed and
- * wishlist flags OR-ed, so re-importing never silently discards local copies.
- */
+// Quantities are summed and wishlist flags OR-ed, so an import can never silently discard
+// copies the collection already had.
 export const mergeEntries = async (entries: CollectionEntry[]): Promise<void> => {
   await db.transaction('rw', db.collection, async () => {
     for (const incoming of entries) {

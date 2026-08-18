@@ -4,9 +4,8 @@ const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Traps Tab/Shift+Tab focus cycling inside the returned ref while `active`,
- * autofocuses the first focusable element on activation, and restores focus
- * to whatever was focused before on deactivation/unmount.
+ * Cycles Tab/Shift+Tab inside the returned ref while `active`, autofocuses its first
+ * focusable element, and restores the previously focused element on deactivation.
  */
 export function useFocusTrap<T extends HTMLElement>(active: boolean) {
   const containerRef = useRef<T>(null);

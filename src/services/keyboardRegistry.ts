@@ -1,21 +1,11 @@
-/**
- * Single `keydown` dispatcher for every global shortcut in the app.
- *
- * Each surface used to own its own `window.addEventListener('keydown')`, so a keypress
- * reached all of them at once, in whatever order they happened to mount: one Escape closed
- * the dialog *and* the surface underneath it, and the playtest had to flag itself on
- * `<body>` so the app-level bindings would stand down. Arbitration is explicit here
- * instead — the key walks a layer stack from the top down and stops at the first handler
- * that claims it.
- */
+// One `keydown` listener for the whole app. Each surface used to add its own, so a keypress
+// reached all of them in mount order: one Escape closed the dialog *and* the surface under it,
+// and the playtest had to flag itself on `<body>` to make app bindings stand down. Here the
+// key walks the layer stack from the top and stops at the first handler that claims it.
 
-/** Where a handler sits in the stack. */
 export type ShortcutLayer = 'app' | 'playtest' | 'modal';
 
-/**
- * Higher wins. A modal outranks the playtest it was opened from, which outranks the app
- * behind it.
- */
+/** Higher wins: a modal outranks the playtest it opened from, which outranks the app behind it. */
 const LAYER_PRIORITY: Record<ShortcutLayer, number> = {
   app: 0,
   playtest: 1,
@@ -28,9 +18,8 @@ export type ShortcutHandler = (event: KeyboardEvent) => boolean | void;
 export interface ShortcutHandlerOptions {
   layer: ShortcutLayer;
   /**
-   * Hides every lower layer while registered, including for keys this handler ignores.
-   * The playtest needs it: it is a fullscreen mode, and app shortcuts firing underneath
-   * would act on a UI the user cannot see.
+   * Hides every lower layer while registered, even for keys this handler ignores. The
+   * fullscreen playtest needs it: an app shortcut firing underneath acts on a hidden UI.
    */
   blocksLowerLayers?: boolean;
 }
@@ -48,9 +37,9 @@ const handlers: RegisteredHandler[] = [];
 let listening = false;
 
 function dispatch(event: KeyboardEvent) {
-  // Iterate a snapshot: a handler that closes a dialog unmounts its neighbours while the
-  // loop is still running, because React flushes state updates from a discrete event
-  // synchronously. `registered` is what keeps a torn-down handler from being called.
+  // A snapshot, because React flushes state from a discrete event synchronously: a handler
+  // that closes a dialog unmounts its neighbours while this loop is still running, and
+  // `registered` is what keeps a torn-down handler from being called anyway.
   const stack = handlers.slice();
   let floor = -1;
 
@@ -63,14 +52,9 @@ function dispatch(event: KeyboardEvent) {
   }
 }
 
-/**
- * Registers `handle` on `options.layer` and returns its unregister function.
- *
- * Ordering caveat: handlers are stacked in registration order, and React runs child
- * effects before parent ones. Two surfaces of the same layer mounting in a single commit
- * therefore register inner-first, leaving the outer one on top. In practice a nested
- * surface is opened by a later commit, which lands it in front as expected.
- */
+// Ordering caveat: React runs child effects before parent ones, so two surfaces of the same
+// layer mounting in one commit register inner-first and leave the outer one on top. In
+// practice a nested surface opens in a later commit, which lands it in front as expected.
 export function registerShortcutHandler(handle: ShortcutHandler, options: ShortcutHandlerOptions): () => void {
   const entry: RegisteredHandler = {
     handle,

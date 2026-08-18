@@ -9,7 +9,6 @@ export interface SearchFilters {
   cmc: string;
   /** Oracle text the card must contain. Scryfall matches English text only. */
   text: string;
-  /** Oracle text the card must not contain. */
   excludeText: string;
   /** Keyword ability, e.g. `flying`. Closed list; see KEYWORD_OPTIONS. */
   keyword: string;

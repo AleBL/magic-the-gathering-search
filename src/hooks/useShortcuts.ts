@@ -31,28 +31,24 @@ export function useShortcuts({ onSearchFocus, onEscape, onSaveDeck, onPlaytest, 
         return true;
       }
 
-      // Cmd/Ctrl + F
       if (hasModifierKey && pressedKey === 'f' && onSearchFocus) {
         event.preventDefault();
         onSearchFocus();
         return true;
       }
 
-      // Cmd/Ctrl + S
       if (hasModifierKey && pressedKey === 's' && onSaveDeck) {
         event.preventDefault();
         onSaveDeck();
         return true;
       }
 
-      // Cmd/Ctrl + P
       if (hasModifierKey && pressedKey === 'p' && onPlaytest) {
         event.preventDefault();
         onPlaytest();
         return true;
       }
 
-      // Cmd/Ctrl + Shift + N
       if (hasModifierKey && event.shiftKey && pressedKey === 'n' && onClearDeck) {
         event.preventDefault();
         onClearDeck();

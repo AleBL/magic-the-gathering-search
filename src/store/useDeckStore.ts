@@ -44,11 +44,7 @@ interface DeckStoreState {
   pendingAction: PendingAction | null;
   setPendingAction: (action: PendingAction | null) => void;
 
-  /**
-   * Read-only snapshot of the saved deck currently open for viewing in the
-   * deck manager (null when browsing/editing). Published by DeckManager so
-   * detached UI (the navbar's mobile page menu) can offer the right actions.
-   */
+  /** Read-only snapshot published by DeckManager, so detached UI can offer the right actions. */
   selectedDeckSummary: SelectedDeckSummary | null;
   setSelectedDeckSummary: (summary: SelectedDeckSummary | null) => void;
 
@@ -57,9 +53,8 @@ interface DeckStoreState {
   setSavedDeckCount: (count: number) => void;
 
   /**
-   * Encoded deck lifted from a `?deck=` share link on startup. App detects it,
-   * switches to the deck tab and parks it here; DeckManager consumes it once
-   * mounted (importing the deck) and clears it.
+   * Encoded deck lifted from a `?deck=` share link on startup: App parks it here, and
+   * DeckManager consumes it once mounted and clears it.
    */
   pendingSharedDeck: string | null;
   setPendingSharedDeck: (encoded: string | null) => void;
@@ -72,10 +67,9 @@ export interface SelectedDeckSummary {
 }
 
 /**
- * Cross-component command channel: emitters (shortcuts, command palette,
- * mobile page menu) set one of these and the owning component's effect
- * executes it. A union — not string — so a typo'd dispatch or handler
- * comparison fails to compile instead of silently no-opping.
+ * Cross-component command channel: shortcuts, the command palette and the page menu set one
+ * of these and the owning component's effect runs it. A union, not a string, so a typo fails
+ * to compile instead of silently no-opping.
  */
 export type PendingAction =
   | 'focus-search'

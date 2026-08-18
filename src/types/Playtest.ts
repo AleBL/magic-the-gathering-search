@@ -7,10 +7,7 @@ export interface PlaytestCard {
   isTapped: boolean;
   counters?: number;
   isFaceDown?: boolean;
-  /**
-   * Original double-faced card when `card` currently holds a single chosen
-   * face on the battlefield; restored as soon as the card leaves it.
-   */
+  /** The whole double-faced card while `card` holds one chosen face; restored on leaving play. */
   baseCard?: Card;
 }
 

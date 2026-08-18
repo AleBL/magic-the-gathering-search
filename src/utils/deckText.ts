@@ -1,11 +1,8 @@
 import { Card } from '../types/Card';
 
-/**
- * Serializes a deck's cards to the plain-text list format shared by MTG Arena
- * and MTGO importers: `<count> <name> (<SET>) <collector_number>`, one line per
- * distinct printing. Set/collector data is included only when present so the
- * output stays valid for cards imported without an exact printing.
- */
+// The format MTG Arena and MTGO importers accept: `<count> <name> (<SET>) <collector_number>`,
+// one line per distinct printing. Set and collector number are emitted only when both are
+// known, because a partial tail makes the line invalid for those importers.
 export function deckToArenaText(cards: Card[]): string {
   const counts = new Map<string, { count: number; card: Card }>();
   for (const card of cards) {

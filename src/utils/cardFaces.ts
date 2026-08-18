@@ -5,19 +5,12 @@ export interface CardFaceImages {
   back: string;
 }
 
-/** Best-available image URL for a single card face ('' when the face has none). */
 export function faceImage(face: NonNullable<Card['card_faces']>[number]): string {
   return face.image_uris?.normal || face.image_uris?.large || face.image_uris?.png || '';
 }
 
-/**
- * Returns the two face image URLs for a genuinely double-faced card
- * (transform / modal double-faced), or `null` otherwise.
- *
- * Only cards whose two faces each carry their own `image_uris` qualify —
- * that excludes split, adventure and flip cards, which share a single
- * physical image and must not be flipped.
- */
+// Requiring an image on both faces is what excludes split, adventure and flip cards: they
+// have two faces in the data but one physical image, and flipping them shows nothing.
 export function getCardFaceImages(card: Card): CardFaceImages | null {
   const faces = card.card_faces;
   if (!faces || faces.length < 2) return null;
@@ -29,16 +22,12 @@ export function getCardFaceImages(card: Card): CardFaceImages | null {
   return { front, back };
 }
 
-/** Whether the card can be flipped to reveal a distinct back face. */
 export function isDoubleFaced(card: Card): boolean {
   return getCardFaceImages(card) !== null;
 }
 
-/**
- * The card's display name in the printing's language. Multi-face cards (split,
- * DFC…) often lack a top-level `printed_name`, so their localized name is
- * composed from the faces' `printed_name` (e.g. "Expansão // Explosão").
- */
+// Multi-face cards usually have no top-level `printed_name`, so the localized name has to be
+// rebuilt from the faces ("Expansão // Explosão") or the card shows up in English.
 export function localizedCardName(card: Card): string {
   if (card.printed_name) return card.printed_name;
   const faces = card.card_faces;
@@ -49,13 +38,7 @@ export function localizedCardName(card: Card): string {
   return card.name;
 }
 
-/**
- * Returns a Card representing exactly one face of a double-faced card:
- * name, types, cost, P/T, text and image all come from that face, while
- * ids/set/prices stay from the physical card. Used by the playtest so the
- * battlefield registers the face actually being played. Returns the card
- * unchanged when the requested face doesn't exist.
- */
+/** Printed attributes come from the face, identity (ids, set, prices) from the physical card. */
 export function cardWithFace(card: Card, faceIndex: number): Card {
   const face = card.card_faces?.[faceIndex];
   if (!face) return card;
@@ -72,8 +55,8 @@ export function cardWithFace(card: Card, faceIndex: number): Card {
     power: face.power,
     toughness: face.toughness,
     image_uris: face.image_uris ?? card.image_uris,
-    // A selected print image always shows the FRONT of the physical card —
-    // only keep it when the front face is the one being represented.
+    // A selected print image always shows the front of the physical card, so carrying it onto
+    // the back face would show the wrong side.
     selectedPrintImageUri: faceIndex === 0 ? card.selectedPrintImageUri : undefined
   };
 }

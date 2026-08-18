@@ -1,8 +1,4 @@
-/**
- * Spawns a single Material-style ripple span inside `element`, centered on
- * (clientX, clientY), and removes it once its CSS animation finishes.
- * Shared by useRipple (per-callsite wiring) and useGlobalRipple (delegated).
- */
+/** Shared by useRipple (wired per call site) and useGlobalRipple (delegated). */
 export function spawnRippleAt(element: HTMLElement, clientX: number, clientY: number) {
   const rect = element.getBoundingClientRect();
   const size = Math.max(rect.width, rect.height);

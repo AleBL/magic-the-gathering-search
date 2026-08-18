@@ -10,11 +10,9 @@ const readStoredCardSize = (): CardSize => {
 };
 
 /**
- * Shared card-size preference for the grids that offer a CardSizeSelector.
- *
- * The deck and collection screens read the same key, so keeping the read/write
- * pair in one hook is what makes them actually agree — before this, the
- * collection screen read the stored size but never wrote its own changes back.
+ * Shared card-size preference for every grid with a CardSizeSelector. Keeping the read and
+ * the write in one hook is what makes the screens agree: the collection screen used to read
+ * the stored size and never write its own changes back.
  */
 export function useCardSizePreference() {
   const [cardSize, setCardSize] = useState<CardSize>(readStoredCardSize);

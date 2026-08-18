@@ -275,3 +275,28 @@ describe('hypergeometric helpers', () => {
     expect(cardsSeenByTurn(3, false)).toBe(10);
   });
 });
+
+describe('computeDeckStatistics — most expensive cards', () => {
+  const priced = (name: string, usd: string): Card => spell('{1}{R}', { name, prices: { usd } });
+
+  it('ranks by price and keeps one row per card name', () => {
+    const deck = [
+      priced('Cheap', '1.00'),
+      priced('Expensive', '50.00'),
+      priced('Expensive', '50.00'),
+      priced('Expensive', '50.00'),
+      priced('Middling', '10.00'),
+      priced('Modest', '5.00')
+    ];
+
+    const { mostExpensiveCards } = computeDeckStatistics(deck);
+
+    expect(mostExpensiveCards.map((card) => card.name)).toEqual(['Expensive', 'Middling', 'Modest']);
+  });
+
+  it('ignores cards with no USD price', () => {
+    const deck = [priced('Priced', '3.00'), spell('{1}{R}', { name: 'Unpriced', prices: undefined })];
+
+    expect(computeDeckStatistics(deck).mostExpensiveCards.map((card) => card.name)).toEqual(['Priced']);
+  });
+});

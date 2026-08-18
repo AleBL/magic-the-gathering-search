@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 /**
- * Keeps a component mounted for `exitMs` after `isOpen` flips to false, so a
- * CSS exit transition has time to play instead of the element vanishing
- * instantly. Pair with: `if (!shouldRender) return null;` and toggle an exit
- * class off `isClosing`. Reduced-motion users unmount immediately.
+ * Keeps a component mounted for `exitMs` after `isOpen` turns false so a CSS exit transition
+ * can play. Pair with `if (!shouldRender) return null;` and an exit class off `isClosing`.
  */
 export function useMountTransition(isOpen: boolean, exitMs = 150) {
   const [shouldRender, setShouldRender] = useState(isOpen);

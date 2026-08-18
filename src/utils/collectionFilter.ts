@@ -1,18 +1,10 @@
 import { Card } from '../types/Card';
 import { SearchFilters } from '../types';
 
-/**
- * Applies the search panel's filters to cards already in hand.
- *
- * The search tab turns these same filters into a Scryfall query; the collection cannot, because
- * it works offline against IndexedDB. So the predicates are reimplemented locally, and where a
- * filter has no local equivalent it is left out of the panel rather than silently ignored:
- *
- * - **Oracle tags** are community metadata that only exists server-side. Not offered here.
- * - **Keywords** are matched against the rules text. Scryfall keeps a curated `keywords` array
- *   that the stored card does not carry, so "flying" finds cards whose text says flying — close
- *   enough to be useful, and it never claims to be the curated list.
- */
+// The search tab sends these filters to Scryfall; the collection works offline against
+// IndexedDB and has to reimplement them. A filter with no local equivalent is left out of the
+// panel instead of being silently ignored: oracle tags exist only server-side, and `keyword`
+// matches rules text here because the stored card carries no curated `keywords` array.
 
 /** `4`, `>=4`, `<2`, `>3`. Returns null when the input is not a usable comparison. */
 export function parseComparison(raw: string): { op: string; value: number } | null {

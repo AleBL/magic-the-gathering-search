@@ -17,13 +17,11 @@ export interface Deck {
   notes?: string;
   createdAt: string;
   relatedTokens?: DeckRelatedToken[];
-  /** Card whose art represents the deck on its "deck box"; falls back to the
-   *  commander or best available art when unset. Non-indexed, so it needs no
-   *  Dexie schema bump — Dexie persists unlisted fields as-is. */
+  /** Non-indexed on purpose: Dexie persists unlisted fields as-is, so this needs no schema
+   *  bump. Unset falls back to the commander or the best available art. */
   coverCardId?: string;
 }
 
-/** Point-in-time snapshot of a deck, kept for the version history feature. */
 export interface DeckVersion {
   id: string;
   deckId: string;

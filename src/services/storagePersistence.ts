@@ -1,10 +1,8 @@
 import { logger } from '../utils/logger';
 
-/**
- * IndexedDB is *best-effort* storage by default: under disk pressure the browser may
- * discard the whole origin without asking. `navigator.storage.persist()` is the documented
- * way to opt out of that, and it has to be requested — nothing grants it automatically.
- */
+// IndexedDB is best-effort storage by default: under disk pressure the browser may discard
+// the whole origin without asking. `navigator.storage.persist()` is the documented way out,
+// and nothing grants it automatically.
 
 const ASKED_KEY = 'deckforge_storage_persist_asked';
 
@@ -50,10 +48,8 @@ export async function requestPersistence(): Promise<boolean | null> {
   }
 }
 
-/**
- * Asks once, after the user has something worth keeping. Firefox shows a permission prompt
- * here, so asking on every save would be nagging; Chrome decides silently from engagement.
- */
+// Once only: Firefox shows a permission prompt here, so asking on every save would nag.
+// Chrome decides silently from engagement, and asking again buys nothing there either.
 export async function requestPersistenceOnce(): Promise<void> {
   const storage = storageApi();
   if (!storage?.persist || !storage.persisted) return;

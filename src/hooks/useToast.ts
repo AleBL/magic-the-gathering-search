@@ -19,10 +19,8 @@ export default function useToast() {
   const showToast = useCallback((text: string, variant: ToastVariant = 'success', action?: ToastAction) => {
     setToastState({ message: text, variant, action });
 
-    // Trigger native desktop OS notification. Guarded: on mobile browsers
-    // (e.g. Android Chrome) `new Notification()` throws — page-context
-    // notifications are not allowed there — and that must never take the
-    // in-app toast down with it.
+    // Guarded: on mobile browsers `new Notification()` throws, since page-context
+    // notifications are not allowed there, and that must not take the in-app toast down.
     try {
       if ('Notification' in window) {
         if (Notification.permission === 'granted') {
