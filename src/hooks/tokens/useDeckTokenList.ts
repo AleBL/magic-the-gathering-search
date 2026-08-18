@@ -31,5 +31,5 @@ export function useDeckTokenList({ cachedTokens, onTokensLoaded }: DeckTokenList
     publishTokens(localTokens.filter((token) => token.tokenCard.id !== tokenId));
   };
 
-  return { localTokens, addTokens, handleDeleteToken, publishTokens };
+  return { localTokens, addTokens, handleDeleteToken };
 }
