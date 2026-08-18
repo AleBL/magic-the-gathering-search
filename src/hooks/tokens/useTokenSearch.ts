@@ -7,6 +7,7 @@ import { getCardImageUrl } from '../../utils/deckGrouping';
 import { translateCards } from '../../utils/translationHelper';
 import { dispatchToast } from '../../utils/toastHelper';
 import { dedupeTokensByIdentity, uniqueTokenId, withImageFallback } from '../../utils/tokenCards';
+import { isBrowserOffline } from '../../utils/scryfallSearch';
 
 /** Searching Scryfall for a token and adding the chosen printing to the deck. */
 export function useTokenSearch(addTokens: (tokens: RelatedToken[]) => void) {
@@ -62,8 +63,7 @@ export function useTokenSearch(addTokens: (tokens: RelatedToken[]) => void) {
       logger.error('Failed to search tokens:', error);
       // A dropped connection rejects the fetch with a generic network error, and "Error
       // searching tokens." next to an empty result list reads as a problem with the name.
-      const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
-      if (isOffline || (error instanceof Error && error.message === 'ScryfallOffline')) {
+      if (isBrowserOffline() || (error instanceof Error && error.message === 'ScryfallOffline')) {
         setSearchError(t('search.scryfallOffline'));
       } else {
         setSearchError(t('tokens.searchError'));

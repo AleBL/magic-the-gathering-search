@@ -5,6 +5,7 @@ import * as Scry from 'scryfall-sdk';
 import { Card } from '../types/Card';
 import { dispatchToast } from '../utils/toastHelper';
 import { buildPrintsQuery, sortPrintsByRelevance, tokenIdentityKey, withGathererImage } from '../utils/cardPrints';
+import { isBrowserOffline } from '../utils/scryfallSearch';
 
 export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: string, isToken?: boolean) {
   const [prints, setPrints] = useState<Card[]>([]);
@@ -28,7 +29,7 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     // With no connection the emitter is not dependable: an aborted request ends as `done`
     // with zero results or emits nothing at all, so the editions sidebar either read as
     // "this card has one printing" or waited forever.
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (isBrowserOffline()) {
       setPrints([]);
       setIsLoading(false);
       setError('offline');
@@ -52,7 +53,7 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
 
       // Zero results with no error event is also what a single-printing card looks like,
       // and the editions control simply disappeared. Say which one it was.
-      if (sorted.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      if (sorted.length === 0 && isBrowserOffline()) {
         setError('offline');
       }
 

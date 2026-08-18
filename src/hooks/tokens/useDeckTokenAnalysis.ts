@@ -7,6 +7,7 @@ import { RelatedToken } from '../useCardRelatedTokens';
 import { translateCards } from '../../utils/translationHelper';
 import { dispatchToast } from '../../utils/toastHelper';
 import { findTokenGenerators, withImageFallback, withoutKnownTokens } from '../../utils/tokenCards';
+import { isBrowserOffline } from '../../utils/scryfallSearch';
 
 const COLLECTION_BATCH_SIZE = 75;
 
@@ -99,8 +100,7 @@ export function useDeckTokenAnalysis({ cards, localTokens, addTokens, onTokensLo
       // reached no one ends exactly like a deck that makes no tokens — and the empty state
       // then states that as fact. Say a lookup failed, whether none or only some got through.
       if (lookupFailed) {
-        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        dispatchToast(isOffline ? t('search.scryfallOffline') : t('tokens.analysisError'), 'danger');
+        dispatchToast(isBrowserOffline() ? t('search.scryfallOffline') : t('tokens.analysisError'), 'danger');
       }
 
       const partIds = Array.from(partIdToGenerator.keys());
