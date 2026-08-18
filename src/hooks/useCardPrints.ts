@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import * as Scry from 'scryfall-sdk';
 import { Card } from '../types/Card';
 import { dispatchToast } from '../utils/toastHelper';
+import { buildPrintsQuery, sortPrintsByRelevance, tokenIdentityKey, withGathererImage } from '../utils/cardPrints';
 
 export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: string, isToken?: boolean) {
   const [prints, setPrints] = useState<Card[]>([]);
@@ -14,19 +15,9 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
   const isCardObject = typeof cardOrName !== 'string';
   const cardName = isCardObject ? cardOrName?.name : cardOrName;
   const targetOracleId = isCardObject ? cardOrName?.oracle_id : oracleId;
-  const originalPower = isCardObject ? cardOrName?.power : undefined;
-  const originalToughness = isCardObject ? cardOrName?.toughness : undefined;
-  const originalColors = isCardObject ? cardOrName?.colors : undefined;
-  /**
-   * Arrays are compared by reference, so listing `originalColors` in the dependency array
-   * re-ran the lookup for any caller that built its card object during render — each run set
-   * state, which re-rendered, which built another array, forever. A caller passing a card held
-   * in state was fine, which is why nothing broke in the app; the fix removes the trap rather
-   * than relying on every future caller knowing about it.
-   */
-  const originalColorsKey = [...(originalColors ?? [])].sort().join(',');
-  const originalTypeLine = isCardObject ? cardOrName?.type_line : undefined;
-  const originalOracleText = isCardObject ? cardOrName?.oracle_text : undefined;
+  // A string, not the card's own fields: arrays compare by reference, so a caller building
+  // its card during render re-ran the lookup, which set state, which rebuilt the array.
+  const originalIdentity = isCardObject && cardOrName ? tokenIdentityKey(cardOrName) : '';
 
   useEffect(() => {
     if (!cardName && !targetOracleId) {
@@ -34,10 +25,9 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
       return;
     }
 
-    // With no connection the SDK's emitter is not dependable: an aborted request sometimes
-    // ends as `done` with zero results and sometimes emits nothing at all, so the sidebar
-    // either vanished — reading as "this card has one printing" — or waited forever.
-    // Knowing the answer up front removes the guesswork.
+    // With no connection the emitter is not dependable: an aborted request ends as `done`
+    // with zero results or emits nothing at all, so the editions sidebar either read as
+    // "this card has one printing" or waited forever.
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       setPrints([]);
       setIsLoading(false);
@@ -48,71 +38,20 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     setIsLoading(true);
     setError(null);
 
-    const targetLang = i18n.language || 'en';
-    const cleanLang = targetLang.split('-')[0].toLowerCase();
-
-    // Every printing in every language (`lang:any` + `unique:prints`), so the
-    // user can switch a card's language/edition, not just its art.
-    let query = '';
-    if (isToken) {
-      // Use name:!"name" for exact name match on Scryfall
-      query = `t:token name:!"${cardName}" unique:prints lang:any`;
-    } else if (targetOracleId && !targetOracleId.startsWith('token-oracle-')) {
-      query = `oracle_id:${targetOracleId} unique:prints lang:any`;
-    } else {
-      query = `!"${cardName}" unique:prints lang:any`;
-    }
-
     const results: Card[] = [];
-    const emitter = Scry.Cards.search(query);
+    const emitter = Scry.Cards.search(buildPrintsQuery({ cardName, oracleId: targetOracleId, isToken }));
 
     emitter.on('data', (card: Scry.Card) => {
-      const multiverseId = card.multiverse_ids?.[0];
-      const gathererUrl = multiverseId
-        ? `https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${multiverseId}&type=card`
-        : '';
-
-      results.push({
-        ...(card as unknown as Card),
-        image_uris: card.image_uris
-          ? {
-              ...card.image_uris,
-              gatherer: gathererUrl
-            }
-          : undefined
-      });
+      results.push(withGathererImage(card as unknown as Card));
     });
 
     emitter.on('done', () => {
-      // Keep every printing (all languages); only filter mismatched tokens.
-      const filtered = results.filter((printCard) => {
-        if (isToken && isCardObject) {
-          const powerMatches = (printCard.power || '') === (originalPower || '');
-          const toughnessMatches = (printCard.toughness || '') === (originalToughness || '');
-          // Spread before sorting: `.sort()` mutates, and these arrays belong to the cards.
-          const colorsMatches = [...(printCard.colors ?? [])].sort().join(',') === originalColorsKey;
-          const typeLineMatches = (printCard.type_line || '') === (originalTypeLine || '');
-          const oracleTextMatches =
-            (printCard.oracle_text || '').trim().toLowerCase() === (originalOracleText || '').trim().toLowerCase();
-          return powerMatches && toughnessMatches && colorsMatches && typeLineMatches && oracleTextMatches;
-        }
-        return true;
-      });
+      const matching =
+        isToken && isCardObject ? results.filter((print) => tokenIdentityKey(print) === originalIdentity) : results;
+      const sorted = sortPrintsByRelevance(matching, i18n.language);
 
-      // Sort: printings with images first, then the app-language ones, so the
-      // most relevant editions surface at the top of a potentially long list.
-      const sorted = filtered.sort((a, b) => {
-        const aImg = a.image_uris?.normal || a.card_faces?.[0]?.image_uris?.normal;
-        const bImg = b.image_uris?.normal || b.card_faces?.[0]?.image_uris?.normal;
-        if (aImg && !bImg) return -1;
-        if (!aImg && bImg) return 1;
-        const aLang = a.lang === cleanLang ? 0 : 1;
-        const bLang = b.lang === cleanLang ? 0 : 1;
-        return aLang - bLang;
-      });
-      // A dropped connection ends this lookup the same way a card with a single printing
-      // does — zero results, no error event — so the editions control simply disappeared
-      // and the card looked like it had no other printings. Say which one it was.
+      // Zero results with no error event is also what a single-printing card looks like,
+      // and the editions control simply disappeared. Say which one it was.
       if (sorted.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
         setError('offline');
       }
@@ -127,7 +66,6 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     });
 
     emitter.on('error', (err: Error) => {
-      // Suppress 404/not found errors, just return empty list
       if (err.message?.includes('404') || err.message?.includes('not found')) {
         setPrints([]);
       } else {
@@ -139,26 +77,13 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
     });
 
     return () => {
-      // Cancel search emitter on unmount/card change
       try {
         emitter.cancel();
       } catch {
-        // Suppress emitter cancellation errors
+        // A cancelled emitter that already finished throws; there is nothing left to stop.
       }
     };
-  }, [
-    cardName,
-    targetOracleId,
-    i18n.language,
-    isToken,
-    isCardObject,
-    originalPower,
-    originalToughness,
-    originalColorsKey,
-    originalTypeLine,
-    originalOracleText,
-    t
-  ]);
+  }, [cardName, targetOracleId, i18n.language, isToken, isCardObject, originalIdentity, t]);
 
   return { prints, isLoading, error };
 }
