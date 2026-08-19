@@ -120,6 +120,56 @@ describe('useDeckManager', () => {
     });
   });
 
+  describe('saveEditedDeck', () => {
+    it('merges the edit into the stored deck without touching what was not sent', async () => {
+      decks.set('a', { ...aDeck('a', 'Burn'), notes: 'sideboard notes', relatedTokens: [] });
+      const { result } = setup();
+      const cards = [makeCard({ name: 'Shock' })];
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.saveEditedDeck('a', '  Burn v2  ', DeckFormatType.MODERN, cards);
+      });
+
+      expect(outcome).toMatchObject({ success: true });
+      const stored = decks.get('a')!;
+      expect(stored.name).toBe('Burn v2');
+      expect(stored.format).toBe(DeckFormatType.MODERN);
+      expect(stored.cards).toEqual(cards);
+      // Untouched fields survive: the info editor sends only name and format.
+      expect(stored.createdAt).toBe('2026-01-01T00:00:00.000Z');
+      expect(stored.relatedTokens).toEqual([]);
+    });
+
+    // The edit dialog can outlive the deck — deleted in another tab, or undone. Writing here
+    // would resurrect it under an id the deck list has already forgotten.
+    it('writes nothing when the deck being edited is gone', async () => {
+      const { result } = setup();
+
+      await act(async () => {
+        await result.current.saveEditedDeck('ghost', 'Whatever', DeckFormatType.FREEFORM, [makeCard()]);
+      });
+
+      expect(putSpy).not.toHaveBeenCalled();
+      expect(decks.has('ghost')).toBe(false);
+    });
+
+    it('reports a write failure instead of claiming success', async () => {
+      decks.set('a', aDeck('a'));
+      putSpy.mockImplementationOnce(() => {
+        throw new Error('QuotaExceededError');
+      });
+      const { result } = setup();
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.saveEditedDeck('a', 'Burn', DeckFormatType.FREEFORM, [makeCard()]);
+      });
+
+      expect(outcome).toMatchObject({ success: false, errorKey: 'deck.saveError' });
+    });
+  });
+
   describe('deleteDeck', () => {
     it('removes the deck and returns it, so the undo toast has something to restore', async () => {
       decks.set('a', aDeck('a', 'Doomed'));

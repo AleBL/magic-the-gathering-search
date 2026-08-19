@@ -136,15 +136,25 @@ describe('useAnimatedList', () => {
     expect(result.current.find((entry) => entry.key === 'b')?.isLeaving).toBe(false);
   });
 
+  // Matched on the id of the exit timer itself, not on "clearTimeout ran at all": a list
+  // unmounted mid-exit leaves a timer holding a setState on a tree that is gone, and any
+  // other cleared timeout would satisfy a bare call count.
   it('clears pending exit timers on unmount', () => {
+    const setSpy = vi.spyOn(window, 'setTimeout');
     const clearSpy = vi.spyOn(window, 'clearTimeout');
     const { rerender, unmount } = renderHook(({ items }: { items: Row[] }) => useAnimatedList(items, getKey, 200), {
       initialProps: { items: rows('a', 'b') }
     });
 
     rerender({ items: rows('a') });
+    const exitTimer = setSpy.mock.calls.findIndex(([, delay]) => delay === 200);
+    expect(exitTimer, 'no exit timer was scheduled for the removed row').toBeGreaterThanOrEqual(0);
+    const exitTimerId = setSpy.mock.results[exitTimer].value;
+
     unmount();
 
-    expect(clearSpy).toHaveBeenCalled();
+    expect(clearSpy).toHaveBeenCalledWith(exitTimerId);
+    setSpy.mockRestore();
+    clearSpy.mockRestore();
   });
 });

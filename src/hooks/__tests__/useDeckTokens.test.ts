@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import i18n from '../../plugins/i18n';
 import { Card } from '../../types/Card';
+import { TokenPreset } from '../../components/playtest/PlaytestTokenModal';
 
 /**
  * The offline halves of the tokens tab. Both used to end the same way a legitimately empty
@@ -84,6 +85,78 @@ describe('useDeckTokens', () => {
       });
 
       expect(result.current.searchError).toBe(i18n.t('search.scryfallOffline'));
+    });
+  });
+
+  // The quick-add path: no search, no modal, straight from the built-in list into the deck.
+  describe('presets and the deck token list', () => {
+    const soldier: TokenPreset = {
+      id: 'token-soldier',
+      name: 'Soldier',
+      type_line: 'Token Creature — Soldier',
+      colors: ['W'],
+      power: '1',
+      toughness: '1',
+      oracle_text: '',
+      rarity: 'common',
+      set_name: 'Tokens',
+      localeKey: 'soldierToken'
+    };
+
+    it('adds a preset as a token and publishes the new list', async () => {
+      const onTokensLoaded = vi.fn();
+      const { result } = renderHook(() => useDeckTokens({ cards: [], onTokensLoaded }));
+
+      await act(async () => {
+        await result.current.handlePresetClick(soldier);
+      });
+
+      expect(result.current.localTokens).toHaveLength(1);
+      expect(result.current.localTokens[0].tokenCard.name).toBe('Soldier');
+      expect(result.current.localTokens[0].tokenCard.type_line).toBe('Token Creature — Soldier');
+      expect(onTokensLoaded).toHaveBeenCalledWith(result.current.localTokens);
+    });
+
+    // Two Soldiers are two tokens: a shared id would make deleting one delete both.
+    it('gives repeated presets ids of their own', async () => {
+      const { result } = renderHook(() => useDeckTokens({ cards: [] }));
+
+      await act(async () => {
+        await result.current.handlePresetClick(soldier);
+      });
+      await act(async () => {
+        await result.current.handlePresetClick(soldier);
+      });
+
+      const [first, second] = result.current.localTokens;
+      expect(result.current.localTokens).toHaveLength(2);
+      expect(first.tokenCard.id).not.toBe(second.tokenCard.id);
+    });
+
+    it('deletes the token asked for and leaves the rest', async () => {
+      const onTokensLoaded = vi.fn();
+      const { result } = renderHook(() => useDeckTokens({ cards: [], onTokensLoaded }));
+      await act(async () => {
+        await result.current.handlePresetClick(soldier);
+      });
+      await act(async () => {
+        await result.current.handlePresetClick({ ...soldier, id: 'token-zombie', name: 'Zombie' });
+      });
+      const doomedId = result.current.localTokens[0].tokenCard.id;
+
+      act(() => result.current.handleDeleteToken(doomedId));
+
+      expect(result.current.localTokens.map((token) => token.tokenCard.name)).toEqual(['Zombie']);
+      expect(onTokensLoaded).toHaveBeenLastCalledWith(result.current.localTokens);
+    });
+
+    // The list is the deck record's: a hook that only kept it locally would lose every
+    // token the moment the tab remounted.
+    it('starts from the tokens already stored on the deck', () => {
+      const cached = [{ tokenCard: { id: 'stored-1', name: 'Treasure' } as Card, generatorCardName: 'Krenko' }];
+      const { result } = renderHook(() => useDeckTokens({ cards: [], cachedTokens: cached }));
+
+      expect(result.current.localTokens).toEqual(cached);
     });
   });
 

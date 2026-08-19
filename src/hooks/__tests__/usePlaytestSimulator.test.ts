@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { usePlaytestSimulator } from '../usePlaytestSimulator';
 import { makeCard } from '../../test/factories';
 import { Card } from '../../types/Card';
+import { PlaytestZone } from '../../types/enums';
 
 const deckOf = (n: number): Card[] =>
   Array.from({ length: n }, (_, i) => makeCard({ id: `deck-${i}`, name: `Card ${i}` }));
@@ -40,15 +41,21 @@ describe('usePlaytestSimulator', () => {
     expect(result.current.hand.some((c) => c.playtestId === topCardId)).toBe(true);
   });
 
-  it('shuffling preserves the exact set of library cards', () => {
+  it('shuffling reorders the library without losing or duplicating a card', () => {
     const { result } = renderHook(() => usePlaytestSimulator(deckOf(15)));
     act(() => result.current.startSimulation());
 
-    const before = result.current.library.map((c) => c.playtestId).sort();
+    const before = result.current.library.map((c) => c.playtestId);
+    // Pinned randomness, because "the same cards are still there" is also true of a shuffle
+    // that does nothing. Fisher-Yates always picking index 0 rotates the pile by one, so the
+    // order assertion below is a fact about the shuffle rather than a coin toss.
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
     act(() => result.current.handleShuffleLibrary());
-    const after = result.current.library.map((c) => c.playtestId).sort();
+    random.mockRestore();
+    const after = result.current.library.map((c) => c.playtestId);
 
-    expect(after).toEqual(before);
+    expect([...after].sort()).toEqual([...before].sort());
+    expect(after, 'the library came back in the order it went in').not.toEqual(before);
   });
 
   it('plays a card from the hand onto the battlefield', () => {
@@ -285,5 +292,243 @@ describe('usePlaytestSimulator — opening a game', () => {
 
     expect(result.current.hand.map((item) => item.playtestId).slice(0, 7)).toEqual(dealt);
     expect(result.current.hand).toHaveLength(8);
+  });
+});
+
+describe('usePlaytestSimulator — the London mulligan', () => {
+  const afterOneMulligan = () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+    act(() => result.current.handleMulligan());
+    return result;
+  };
+
+  it('deals a fresh seven and counts the mulligan', () => {
+    const result = afterOneMulligan();
+
+    expect(result.current.hand).toHaveLength(7);
+    expect(result.current.library).toHaveLength(3);
+    expect(result.current.mulligans).toBe(1);
+    expect(result.current.isMulliganPhase).toBe(true);
+  });
+
+  // The rule the whole phase exists for: you always draw seven and put back as many as you
+  // have mulliganed. Selecting an eighth card would let a player keep a full hand for free.
+  it('refuses to select more cards than mulligans taken', () => {
+    const result = afterOneMulligan();
+    const [first, second] = result.current.hand;
+
+    act(() => result.current.handleToggleCardSelection(first.playtestId));
+    act(() => result.current.handleToggleCardSelection(second.playtestId));
+
+    expect(result.current.selectedToBottom.size).toBe(1);
+    expect(result.current.selectedToBottom.has(first.playtestId)).toBe(true);
+  });
+
+  it('frees the slot again when the same card is deselected', () => {
+    const result = afterOneMulligan();
+    const cardId = result.current.hand[0].playtestId;
+
+    act(() => result.current.handleToggleCardSelection(cardId));
+    act(() => result.current.handleToggleCardSelection(cardId));
+
+    expect(result.current.selectedToBottom.size).toBe(0);
+  });
+
+  it('puts the selected card on the bottom of the library, face down', () => {
+    const result = afterOneMulligan();
+    const doomed = result.current.hand[0].playtestId;
+
+    act(() => result.current.handleToggleCardSelection(doomed));
+    act(() => result.current.handleConfirmMulligan());
+
+    expect(result.current.hand).toHaveLength(6);
+    expect(result.current.hand.some((item) => item.playtestId === doomed)).toBe(false);
+    expect(result.current.library).toHaveLength(4);
+    expect(result.current.library.at(-1)?.playtestId).toBe(doomed);
+    expect(result.current.library.at(-1)?.isFaceDown).toBe(true);
+    expect(result.current.isMulliganPhase).toBe(false);
+  });
+
+  it('refuses to confirm while fewer cards are selected than mulligans taken', () => {
+    const result = afterOneMulligan();
+
+    act(() => result.current.handleConfirmMulligan());
+
+    expect(result.current.hand).toHaveLength(7);
+    expect(result.current.library).toHaveLength(3);
+    expect(result.current.isMulliganPhase).toBe(true);
+  });
+
+  it('keeps the seven as dealt when the hand is kept outright', () => {
+    const result = afterOneMulligan();
+
+    act(() => result.current.handleKeepHand());
+
+    expect(result.current.isMulliganPhase).toBe(false);
+    expect(result.current.hand).toHaveLength(7);
+    expect(result.current.selectedToBottom.size).toBe(0);
+  });
+
+  it('ignores card selection outside the mulligan phase', () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+
+    act(() => result.current.handleToggleCardSelection(result.current.hand[0].playtestId));
+
+    expect(result.current.selectedToBottom.size).toBe(0);
+  });
+});
+
+describe('usePlaytestSimulator — moving cards between zones', () => {
+  const openGame = () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(12)));
+    act(() => result.current.startSimulation());
+    return result;
+  };
+
+  it('discards from the hand onto the top of the graveyard', () => {
+    const result = openGame();
+    const cardId = result.current.hand[0].playtestId;
+
+    act(() => result.current.handleDiscardFromHand(cardId));
+
+    expect(result.current.hand.some((item) => item.playtestId === cardId)).toBe(false);
+    expect(result.current.graveyard[0].playtestId).toBe(cardId);
+  });
+
+  it('exiles a card that is in play', () => {
+    const result = openGame();
+    const cardId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(cardId));
+
+    act(() => result.current.handleSendToExile(cardId));
+
+    expect(result.current.battlefield).toHaveLength(0);
+    expect(result.current.exile[0].playtestId).toBe(cardId);
+  });
+
+  // The position is the reason this is not just "put it back": scry and tutor effects put a
+  // card at a chosen depth, and it has to be hidden again once it is in the library.
+  it('puts a card back into the library at the position asked for, face down', () => {
+    const result = openGame();
+    const cardId = result.current.hand[0].playtestId;
+    const libraryBefore = result.current.library.map((item) => item.playtestId);
+
+    act(() => result.current.handleSendToLibraryPosition(cardId, 2));
+
+    expect(result.current.library[2].playtestId).toBe(cardId);
+    expect(result.current.library[2].isFaceDown).toBe(true);
+    expect(result.current.library.filter((item) => libraryBefore.includes(item.playtestId))).toHaveLength(
+      libraryBefore.length
+    );
+  });
+
+  it('returns a card from the graveyard to the hand, face up', () => {
+    const result = openGame();
+    const cardId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(cardId));
+    act(() => result.current.handleSendToGraveyard(cardId));
+
+    act(() => result.current.handleReturnToHand(cardId, PlaytestZone.GRAVEYARD));
+
+    expect(result.current.graveyard).toHaveLength(0);
+    const returned = result.current.hand.find((item) => item.playtestId === cardId);
+    expect(returned?.isFaceDown).toBe(false);
+  });
+
+  it('mills a card straight from the library into the graveyard', () => {
+    const result = openGame();
+    const cardId = result.current.library[1].playtestId;
+
+    act(() => result.current.handleLibraryToGraveyard(cardId));
+
+    expect(result.current.library.some((item) => item.playtestId === cardId)).toBe(false);
+    expect(result.current.graveyard[0].playtestId).toBe(cardId);
+  });
+
+  // Every named handler names the zone it moves from, and a card that is not there must not
+  // be teleported out of wherever it actually is.
+  it('ignores a move whose card is not in the zone it names', () => {
+    const result = openGame();
+    const inLibrary = result.current.library[0].playtestId;
+
+    act(() => result.current.handleDiscardFromHand(inLibrary));
+
+    expect(result.current.graveyard).toHaveLength(0);
+    expect(result.current.library.some((item) => item.playtestId === inLibrary)).toBe(true);
+  });
+});
+
+describe('usePlaytestSimulator — cards already in play', () => {
+  const withOnePermanent = () => {
+    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
+    act(() => result.current.startSimulation());
+    const cardId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(cardId));
+    return { result, cardId };
+  };
+
+  const inPlay = (result: ReturnType<typeof withOnePermanent>['result'], cardId: string) =>
+    result.current.battlefield.find((item) => item.playtestId === cardId);
+
+  it('taps a permanent and untaps it again', () => {
+    const { result, cardId } = withOnePermanent();
+
+    act(() => result.current.handleToggleTapCard(cardId));
+    expect(inPlay(result, cardId)?.isTapped).toBe(true);
+
+    act(() => result.current.handleToggleTapCard(cardId));
+    expect(inPlay(result, cardId)?.isTapped).toBe(false);
+  });
+
+  it('adds counters and never takes one below zero', () => {
+    const { result, cardId } = withOnePermanent();
+
+    act(() => result.current.handleAddCounter(cardId));
+    act(() => result.current.handleAddCounter(cardId));
+    expect(inPlay(result, cardId)?.counters).toBe(2);
+
+    act(() => result.current.handleRemoveCounter(cardId));
+    act(() => result.current.handleRemoveCounter(cardId));
+    act(() => result.current.handleRemoveCounter(cardId));
+
+    expect(inPlay(result, cardId)?.counters).toBe(0);
+  });
+
+  it('untaps everything at once', () => {
+    const { result, cardId } = withOnePermanent();
+    const secondId = result.current.hand[0].playtestId;
+    act(() => result.current.handlePlayCard(secondId));
+    act(() => result.current.handleToggleTapCard(cardId));
+    act(() => result.current.handleToggleTapCard(secondId));
+
+    act(() => result.current.handleUntapAll());
+
+    expect(result.current.battlefield.every((item) => item.isTapped === false)).toBe(true);
+  });
+
+  it('turns a permanent face down and back up', () => {
+    const { result, cardId } = withOnePermanent();
+
+    act(() => result.current.handleToggleFaceDown(cardId));
+    expect(inPlay(result, cardId)?.isFaceDown).toBe(true);
+
+    act(() => result.current.handleToggleFaceDown(cardId));
+    expect(inPlay(result, cardId)?.isFaceDown).toBe(false);
+  });
+
+  // Two copies of the same token are two permanents: sharing a playtestId would make every
+  // later action hit whichever one the lookup found first.
+  it('summons tokens that do not collide with each other', () => {
+    const { result } = withOnePermanent();
+    const token = makeCard({ id: 'token-goblin', name: 'Goblin' });
+
+    act(() => result.current.handleSummonToken(token));
+    act(() => result.current.handleSummonToken(token));
+
+    const summoned = result.current.battlefield.filter((item) => item.card.id === 'token-goblin');
+    expect(summoned).toHaveLength(2);
+    expect(summoned[0].playtestId).not.toBe(summoned[1].playtestId);
   });
 });

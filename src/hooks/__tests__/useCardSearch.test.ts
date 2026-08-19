@@ -167,8 +167,11 @@ describe('useCardSearch.buildQuery', () => {
     expect(result.current.buildQuery('bolt')).toBe('bolt c:R t:instant r:common cmc=1');
   });
 
+  // Asserted whole rather than as "no leading space": the empty head has to disappear from
+  // the joined query, and a negative match on whitespace is also true of a query that came
+  // back empty or wrong.
   it('does not leave a leading space when only filters are set', async () => {
     const result = await withFilters({ colors: ['G'] });
-    expect(result.current.buildQuery('')).not.toMatch(/^\s/);
+    expect(result.current.buildQuery('')).toBe('c:G');
   });
 });

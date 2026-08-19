@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import i18n from '../../plugins/i18n';
 import { useDeckActions } from '../useDeckActions';
 import { useDeckStore } from '../../store/useDeckStore';
 import { makeCard } from '../../test/factories';
@@ -17,8 +18,16 @@ const setup = () => {
 };
 
 describe('useDeckActions', () => {
+  const originalLanguage = i18n.language;
+
   beforeEach(() => {
     useDeckStore.setState({ currentDeck: [], currentDeckRelatedTokens: [] });
+  });
+
+  // The language is process-wide: leaving it switched would silently retranslate every
+  // suite that runs after this file.
+  afterEach(async () => {
+    await i18n.changeLanguage(originalLanguage);
   });
 
   it('adds a card to the deck and confirms it by name', async () => {
@@ -46,7 +55,12 @@ describe('useDeckActions', () => {
 
   // The removal toast used to interpolate a hardcoded Portuguese "Removido", so an
   // English or Spanish user got one word of Portuguese in an otherwise translated app.
+  // Asserted by switching the language: any message hardcoded in one language is wrong in
+  // the other, which "does not contain the old word" could never tell.
   it('translates the removal message instead of hardcoding one language', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
     const card = makeCard({ name: 'Counterspell' });
     const { showToast, result } = setup();
     await act(async () => result.current.handleAddToDeck(card));
@@ -54,7 +68,11 @@ describe('useDeckActions', () => {
 
     act(() => result.current.handleRemoveFromDeckWithToast(card));
 
-    expect(showToast.mock.calls[0][0]).not.toMatch(/Removido/);
+    const message = showToast.mock.calls[0][0];
+    expect(message).toBe(`Counterspell: ${i18n.t('cardDetails.cardRemoved')}`);
+    expect(message, 'the message did not follow the language').not.toBe(
+      `Counterspell: ${i18n.getFixedT('pt')('cardDetails.cardRemoved')}`
+    );
   });
 
   it('puts the card back when undo is invoked', async () => {
