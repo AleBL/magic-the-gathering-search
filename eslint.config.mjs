@@ -132,6 +132,17 @@ export default tseslint.config(
     }
   },
 
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/locales/**'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 560, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 5],
+      complexity: ['error', 45]
+    }
+  },
+
   // Prettier last (disables conflicting rules)
   pluginPrettier
 );
