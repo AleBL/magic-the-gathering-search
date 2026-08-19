@@ -168,22 +168,23 @@ i18n.changeLanguage('es');                      // Switch to Spanish
 | File | Purpose | Lines |
 |------|---------|-------|
 | `src/main.tsx` | App entry point (web/Electron) | ~20 |
-| `src/App.tsx` | Root React component, tab routing | ~180 |
-| `src/store/useDeckStore.ts` | Global Zustand store | ~160 |
-| `src/db/database.ts` | Dexie schema definition | ~20 |
-| `src/hooks/useDeckManager.ts` | Load/save deck logic | ~440 |
-| `src/hooks/useCardSearch.ts` | Scryfall API integration | ~350 |
-| `src/hooks/usePlaytestSimulator.ts` | Playtest game state | ~610 |
-| `src/services/deckImportService.ts` | Parse deck formats | ~365 |
-| `src/utils/deckValidator.ts` | Format legality rules | ~280 |
-| `src/utils/symbolHelper.tsx` | Render mana symbols | ~110 |
-| `src/components/deck/DeckManager.tsx` | Deck editor UI | ~765 |
-| `src/components/playtest/PlaytestSimulator.tsx` | Playtest UI | ~215 |
-| `src/components/card/VirtualizedCardGrid.tsx` | Windowed grid for the collection | ~120 |
-| `src/services/profileBackup.ts` | Full profile export/restore | ~200 |
+| `src/App.tsx` | Root React component, tab routing | ~195 |
+| `src/store/useDeckStore.ts` | Global Zustand store | ~210 |
+| `src/db/database.ts` | Dexie schema definition | ~30 |
+| `src/hooks/useDeckManager.ts` | Composes the `hooks/deck/` slices | ~80 |
+| `src/hooks/useCardSearch.ts` | Composes the `hooks/search/` slices | ~105 |
+| `src/hooks/usePlaytestSimulator.ts` | Composes the `hooks/playtest/` slices | ~130 |
+| `src/services/deckImportService.ts` | Parse deck formats | ~385 |
+| `src/utils/deckValidator.ts` | Format legality rules | ~300 |
+| `src/utils/symbolHelper.tsx` | Render mana symbols | ~95 |
+| `src/components/deck/DeckManager.tsx` | Deck editor UI | ~620 |
+| `src/components/playtest/PlaytestSimulator.tsx` | Playtest UI | ~210 |
+| `src/components/card/VirtualizedCardGrid.tsx` | Windowed grid for the collection | ~180 |
+| `src/services/profileBackup.ts` | Full profile export/restore | ~185 |
 | `src/utils/searchQuery.ts` | Builds the Scryfall query from the filters | ~70 |
-| `src/utils/goldfishSimulation.ts` | Monte Carlo mana/curve report | ~230 |
-| `src/utils/deckEntry.ts` | Per-copy identity (`instanceId`) for deck cards | ~30 |
+| `src/utils/deckDoctor.ts` | Consistency score and opening-hand goldfish | ~390 |
+| `src/utils/playoutSimulation.ts` | Turn-by-turn Monte Carlo playout | ~250 |
+| `src/utils/deckEntry.ts` | Per-copy identity (`instanceId`) for deck cards | ~22 |
 
 ### Invariants worth knowing before editing
 
@@ -199,6 +200,32 @@ i18n.changeLanguage('es');                      // Switch to Spanish
 - **`useEscapeKey` reads its callback from a ref.** Its effect depends on `active` alone; a
   listener re-registering per render can be torn out of a live event dispatch (see
   `useEscapeKey.ts` for the full mechanism).
+- **A hook folder is one hook's insides, not a public API.** `hooks/deck/`,
+  `hooks/playtest/`, `hooks/print/`, `hooks/search/` and `hooks/tokens/` hold the slices of a
+  single orchestrating hook that keeps the folder's name (`useDeckManager`,
+  `usePlaytestSimulator`, `useProxyPrint`, `useCardSearch`, `useDeckTokens`). Components
+  import the orchestrator, never a slice: the split was made so the state stays in one place
+  while the file stops being 600 lines. Importing a slice directly re-couples a component to
+  an internal seam that is free to move.
+
+## Hook Composition
+
+Five hooks were long enough that reading them meant searching them, so each became a folder of
+named slices behind an orchestrator with the original name and the original return value.
+
+| Orchestrator | Folder | Slices |
+|---|---|---|
+| `useDeckManager` | `hooks/deck/` | export, file import, records, saving, validation, import-progress modal |
+| `usePlaytestSimulator` | `hooks/playtest/` | zones, library, battlefield, card moves, mulligan, turn, life, log, history, face choice |
+| `useDeckTokens` | `hooks/tokens/` | token analysis, token list, presets, search |
+| `useCardSearch` | `hooks/search/` | paging, Scryfall emitters |
+| `useProxyPrint` | `hooks/print/` | print routine |
+
+What was pure calculation left React entirely and became testable without a renderer:
+`utils/playtestBoard.ts`, `utils/cardPrints.ts`, `utils/proxyPrintLayout.ts`,
+`utils/tokenCards.ts` and `utils/scryfallSearch.ts`. That last one also owns
+`isBrowserOffline()`, the single definition of "the browser says there is no connection",
+which used to be copied inline in six places.
 
 ## Code Splitting
 
@@ -263,7 +290,7 @@ manager.saveDeck();            // Async DB write
 ```
 
 ### **Error Boundaries**
-`src/components/ErrorBoundary.tsx` catches render errors and displays user-friendly fallback UI.
+`src/components/ui/ErrorBoundary.tsx` catches render errors and displays user-friendly fallback UI.
 
 ### **Hooks for Reuse**
 Custom hooks encapsulate complex logic (Scryfall API, deck validation, playtest rules). Components remain simple and declarative.

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-15 | Files scanned: 50+ | Token estimate: ~1200 -->
+<!-- Generated: 2026-08-18 | Files scanned: 50+ | Token estimate: ~1200 -->
 
 # MTG Deck Forge — Architecture Overview
 
@@ -30,7 +30,7 @@
 ## Core Layers
 
 ### **Presentation Layer (React Components)**
-- **Card**: Search, Grid, VirtualizedCardGrid, Details Modal, Printing Selector, DFC Flip, SearchFilters, CollectionFilterSelector
+- **Card**: CardSearch, CardGrid, VirtualizedCardGrid, CardDetailModal (+ ImagePanel, Data, Actions, EditControls, RelatedTokens, PrintsSidebar), CardItem (+ StatusBadges, HoverControls), FlipCard, SearchFilters, CollectionFilterSelector
 - **Collection**: CollectionManager — owned printings + wishlist, windowed grid
 - **Deck**: DeckManager, DeckEditWorkspace (two-pane editor), DeckList, SavedDecksPanel, AllDecksModal, DeckPreview, DeckCoverModal, DeckVersionHistoryModal, DeckSuggestionsModal, DeckValidationBadge
 - **Stats**: DeckStats + panels (ManaCurve, ColorDistribution, TypesBreakdown, ManaBaseOptimizer, ManaPipAnalysis, DeckDoctor, Playout, BudgetEstimator, Rarity)
@@ -44,12 +44,23 @@
 - Immutable updates: addCard, removeCard, updateCard, toggleCommander, clearDeck
 
 ### **Custom Hooks Layer**
-- **Deck ops**: useDeckManager, useDeckActions, useDeckTokens, useDeckTextImport, useDeckInfoEditor, useSelectedDeckSync
+- **Deck ops**: useDeckManager, useDeckActions, useDeckTokens, useDeckTextImport, useDeckInfoEditor, useSelectedDeckSync, useSuggestedLands
 - **Search/Cards**: useCardSearch, useCardPrints, useCardRelatedTokens, useSearchFilters, useCardSizePreference
-- **Collection**: useCollection, useCardCollection (printing + all-printings totals), useCollectionOwnership
+- **Collection**: useCollection, useCardCollection (printing + all-printings totals), useCollectionOwnership, useCollectionImportExport
 - **Playtest**: usePlaytestSimulator, useProxyPrint, useTokenHandlers
-- **Cross-cutting**: usePendingAction (command channel), useProfileBackup, useEscapeKey, useFocusTrap, useAnimatedList
-- **UI**: useShortcuts, useDialog, useToast, useDarkMode
+- **Cross-cutting**: usePendingAction (command channel), useProfileBackup, useEscapeKey, useFocusTrap, useAnimatedList, useOnlineStatus
+- **UI**: useShortcuts, useDialog, useToast, useDarkMode, useSwipeToClose, useDismissTransition, useMountTransition
+
+Five of these are orchestrators over a folder of slices. The folder is internal: components
+import the orchestrator, never a file inside it.
+
+| Orchestrator | Folder | Slices |
+|---|---|---|
+| useDeckManager | `hooks/deck/` | useDeckExport, useDeckFileImport, useDeckRecords, useDeckSaving, useDeckValidation, useImportProgressModal |
+| usePlaytestSimulator | `hooks/playtest/` | Zones, Library, Battlefield, CardMoves, Mulligan, Turn, Life, Log, History, FaceChoice |
+| useDeckTokens | `hooks/tokens/` | useDeckTokenAnalysis, useDeckTokenList, useTokenPresets, useTokenSearch, presetTokenCard |
+| useCardSearch | `hooks/search/` | useCardSearchPaging, useScryfallEmitters |
+| useProxyPrint | `hooks/print/` | useProxyPrintRoutine |
 
 ### **Services Layer**
 - **deckImportService** → Parse MTG Arena / .DEC / JSON imports, normalize card names
@@ -80,6 +91,13 @@
 - **deckStatistics** → Mana curve, color distribution, card type breakdown
 - **translationHelper** → Multi-language support (en, es, pt)
 - **contextMenuPosition** → Smart popup placement
+- **playtestBoard** → Pure board/zone transitions lifted out of usePlaytestSimulator
+- **cardPrints** → Printing list building, Gatherer fallback art, token identity
+- **proxyPrintLayout** → Page/grid math for the proxy sheet
+- **tokenCards** → Token card shaping for the deck's related tokens
+- **scryfallSearch** → Query dispatch, language fallback, error classification, `isBrowserOffline()`
+- **typeGuards** → Narrows unknown API/JSON payloads; never asserts
+- **cardTypePredicates / deckGrouping / deckText** → Type tests, pile grouping, deck text I/O
 
 ## Data Flow
 
@@ -94,7 +112,7 @@ User Input
    ├─→ DeckManager
    │   ├─→ useDeckManager (load/save/export)
    │   │   └─→ Dexie (IndexedDB persist)
-   │   └─→ useDeckValidator
+   │   └─→ hooks/deck/useDeckValidation
    │       └─→ Legality check vs Scryfall
    │
    └─→ PlaytestSimulator

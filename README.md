@@ -151,23 +151,39 @@ yarn clean             # remove build output folders
 
 ```
 src/
+├── assets/       # Static assets bundled by Vite
 ├── components/   # UI components organized by domain
 │   ├── card/     # Card-related components (Search, Grid, Detail Modal, ...)
 │   ├── collection/ # Personal collection tab
 │   ├── deck/     # Deck management components (List, Editor, Stats, ...)
+│   ├── layout/   # App shell (RootLayout, Header, ProfileMenu sections)
 │   ├── playtest/ # Playtest simulator components (Battlefield, Hand, Log, ...)
+│   ├── settings/ # Backup panel, storage usage
 │   ├── stats/    # Deck analysis panels (mana curve, mana base, goldfish, ...)
 │   └── ui/       # Reusable base components (Dialogs, Toasts, EmptyStates, ...)
+├── constants/    # Storage keys, search options, mana colors
 ├── db/           # Local database configuration (IndexedDB)
 ├── hooks/        # Custom React hooks (useDeckManager, usePlaytestSimulator, ...)
+│   ├── deck/     # Slices of useDeckManager (export, import, saving, validation)
+│   ├── playtest/ # Slices of usePlaytestSimulator (zones, turn, life, history, ...)
+│   ├── print/    # Slices of useProxyPrint
+│   ├── search/   # Slices of useCardSearch (paging, Scryfall emitters)
+│   └── tokens/   # Slices of useDeckTokens (analysis, list, presets, search)
 ├── locales/      # i18n translations (en, es, pt)
+├── plugins/      # i18next setup
 ├── services/     # External integrations and file utilities (Deck imports, etc)
 ├── store/        # Global state management (Zustand)
 ├── style/        # Modular CSS (variables, layout, components, ...)
+├── test/         # Vitest setup and shared test helpers
 ├── types/        # TypeScript types (Card, Deck, Playtest, ...)
-└── utils/        # Deck validator, mana symbol helpers
+└── utils/        # Deck validator, mana symbol helpers, pure calculations
 electron/         # Electron main process & preload script
+e2e/              # Playwright journeys (browser + Electron projects)
 ```
+
+A folder under `hooks/` holds the internals of the single hook that shares its name. Components
+import the orchestrator (`useDeckManager`, `usePlaytestSimulator`, `useProxyPrint`,
+`useCardSearch`, `useDeckTokens`), never a file inside the folder.
 
 ## Contributing
 
