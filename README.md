@@ -174,7 +174,7 @@ src/
 ├── services/     # External integrations and file utilities (Deck imports, etc)
 ├── store/        # Global state management (Zustand)
 ├── style/        # Modular CSS (variables, layout, components, ...)
-├── test/         # Vitest setup and shared test helpers
+├── test/         # Vitest setup and shared test factories (not the tests themselves)
 ├── types/        # TypeScript types (Card, Deck, Playtest, ...)
 └── utils/        # Deck validator, mana symbol helpers, pure calculations
 electron/         # Electron main process & preload script
@@ -184,6 +184,11 @@ e2e/              # Playwright journeys (browser + Electron projects)
 A folder under `hooks/` holds the internals of the single hook that shares its name. Components
 import the orchestrator (`useDeckManager`, `usePlaytestSimulator`, `useProxyPrint`,
 `useCardSearch`, `useDeckTokens`), never a file inside the folder.
+
+Unit tests live in a `__tests__/` folder beside the code they cover, so
+`src/utils/deckDoctor.ts` is tested by `src/utils/__tests__/deckDoctor.test.ts`. The test moves
+with its module during a refactor, while the directory listing stays code-only. `src/test/`
+holds shared setup and factories, not test cases.
 
 ## Contributing
 

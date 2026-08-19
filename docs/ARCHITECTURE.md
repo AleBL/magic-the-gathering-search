@@ -200,6 +200,12 @@ i18n.changeLanguage('es');                      // Switch to Spanish
 - **`useEscapeKey` reads its callback from a ref.** Its effect depends on `active` alone; a
   listener re-registering per render can be torn out of a live event dispatch (see
   `useEscapeKey.ts` for the full mechanism).
+- **A `__tests__/` folder belongs to the directory above it.** Unit tests sit in
+  `__tests__/` next to the module they cover (`src/utils/__tests__/deckDoctor.test.ts` for
+  `src/utils/deckDoctor.ts`), which keeps a test travelling with its module through a
+  refactor while leaving the directory listing code-only. `src/test/` is shared
+  infrastructure (`setup.ts`, `factories.ts`), never a home for test cases. Relative imports
+  inside a test therefore start one level up: `../deckDoctor`, `../../test/factories`.
 - **A hook folder is one hook's insides, not a public API.** `hooks/deck/`,
   `hooks/playtest/`, `hooks/print/`, `hooks/search/` and `hooks/tokens/` hold the slices of a
   single orchestrating hook that keeps the folder's name (`useDeckManager`,
