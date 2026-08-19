@@ -17,10 +17,20 @@ afterEach(() => {
 //
 // Covered 2026-08-06: useSearchFilters, useShortcuts, useDeckTextImport,
 // useCardPrints, useAnimatedList, useEscapeKey — hooks went 31% → 42% statements.
+//
+// Covered 2026-08-18 by the P4 sweeps, which lifted the pure calculation out of the
+// long hooks and tested it where it landed: useDeckManager, useDeckActions,
+// useCardSearch, useDeckTokens, usePlaytestSimulator (undo/redo + mulligan),
+// deckImportService, deckImage, deckValidator, plus new suites for playtestBoard,
+// cardPrints, proxyPrintLayout, tokenCards and scryfallSearch.
+//
 // Still open, highest value first:
-//   - hooks: useDeckManager, useDeckActions, useCardSearch, useDeckTokens,
-//     useProxyPrint, and playtest undo/redo + mulligan flows
-//   - services: deckImportService, fileDownload
-//   - utils: cardTypePredicates, formatLabel, contextMenuPosition, rippleEffect,
-//     deckImage (24%, the largest single gap left)
-//   - deckValidator's commander partnership / color-identity branches
+//   - hooks: useProxyPrint — the routine is tested through utils/proxyPrintLayout,
+//     the hook wrapper around it is not
+//   - services: fileDownload — the only untested path that writes a file
+//   - utils: cardTypePredicates, formatLabel
+//
+// Deliberately not on this list: contextMenuPosition and rippleEffect. Both are
+// geometry and visual effect whose failure mode is "looks wrong", which a unit test
+// asserting numbers does not catch and the E2E suite does. Adding tests there would
+// move the coverage number without making a regression more likely to be caught.

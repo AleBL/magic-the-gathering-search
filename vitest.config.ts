@@ -37,11 +37,15 @@ export default defineConfig({
       // 0,04 pp of slack, so an unrelated PR adding one untested conditional went red with
       // nothing in the Vitest output naming the culprit. A ratchet is meant to stop
       // backsliding, not to fail on noise.
+      // Raised 2026-08-19 (was 67/60/64/67) after the P4 readability sweeps lifted the
+      // pure calculation out of the long hooks and tested it: playtestBoard, cardPrints,
+      // proxyPrintLayout, tokenCards and scryfallSearch arrived with their own suites.
+      // 73.82/67.27/68.86/74.95 measured, each floor a full point under it.
       thresholds: {
-        statements: 67,
-        branches: 60,
-        functions: 64,
-        lines: 67
+        statements: 72,
+        branches: 66,
+        functions: 67,
+        lines: 73
       }
     }
   }
