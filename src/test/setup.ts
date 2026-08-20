@@ -16,9 +16,9 @@ afterEach(() => {
 // rather than being excluded from the denominator.
 
 // Still open, highest value first:
-//   - hooks + services, one package: useProxyPrint and print/useProxyPrintRoutine end in
-//     services/fileDownload, all three at 0%. Testing the routine before the download is
-//     tested measures the mock, so they land together
+//   - hooks: deck/useDeckExport, three delegations to fileDownload. Worth testing now that
+//     fileDownload has real tests: the assertion can be the exported file itself, not the
+//     mock, which is why it was skipped before
 //   - hooks: tokens/useTokenSearch and tokens/useDeckTokenAnalysis, the other open front
 //   - utils: cardTypePredicates, formatLabel
 //

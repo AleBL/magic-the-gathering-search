@@ -23,10 +23,10 @@ export default defineConfig({
       // 'json-summary' + 'json' feed the PR coverage-report action; 'text' for CI logs.
       reporter: ['text', 'text-summary', 'json', 'json-summary', 'html'],
       thresholds: {
-        statements: 77,
-        branches: 69,
-        functions: 73,
-        lines: 78
+        statements: 79,
+        branches: 70,
+        functions: 76,
+        lines: 80
       }
     }
   }
