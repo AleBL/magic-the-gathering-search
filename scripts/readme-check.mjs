@@ -30,7 +30,9 @@ const CI = argv.slice(2).includes('--ci');
 
 /**
  * Yarn's own subcommands. `yarn install` is not a script and never will be, so seeing one
- * here is not a broken instruction.
+ * here is not a broken instruction. `pack` is in the list for the opposite reason: it shadows
+ * any script of that name, which is why the README names the app packager `pack:app` and then
+ * has to mention the builtin to explain itself.
  */
 const YARN_BUILTINS = new Set([
   'install',
@@ -51,6 +53,7 @@ const YARN_BUILTINS = new Set([
   'workspace',
   'set',
   'plugin',
+  'pack',
   'version'
 ]);
 
@@ -70,8 +73,8 @@ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const scripts = new Set(Object.keys(pkg.scripts ?? {}));
 
 /**
- * Every `yarn <thing>` in the file, fenced or inline. `yarn run pack` is the same command as
- * `yarn pack`, and a leading env assignment (`ELECTRON_E2E=1 yarn test:e2e`) is still an
+ * Every `yarn <thing>` in the file, fenced or inline. `yarn run <script>` is the same command
+ * as `yarn <script>`, and a leading env assignment (`ELECTRON_E2E=1 yarn test:e2e`) is still an
  * instruction to run that script.
  */
 const mentioned = new Map();
