@@ -228,6 +228,7 @@ const es = {
       coverUpdated: 'Portada del mazo actualizada',
       newDeckFromCopy: 'Editando una nueva copia del mazo',
       invalidShareLink: 'Este enlace de mazo es inválido o está dañado.',
+      deckGoneError: 'Este mazo ya no existe. Puede que se haya eliminado en otra pestaña.',
       deckManager: 'Gestor de Mazos',
       deckNamePlaceholder: 'Nombre del mazo',
       deckSaved: '¡Mazo guardado con éxito!',

@@ -79,18 +79,21 @@ export function useDeckSaving({ onDeckSaved }: DeckSavingArgs) {
   ): Promise<DeckWriteResult> => {
     try {
       const existing = await db.decks.get(id);
-      if (existing) {
-        const updated: Deck = {
-          ...existing,
-          name: name.trim(),
-          format,
-          cards,
-          notes,
-          relatedTokens: relatedTokens || existing.relatedTokens
-        };
-        await db.decks.put(updated);
-        await snapshotQuietly(updated);
+
+      if (!existing) {
+        return { success: false, errorKey: 'deck.deckGoneError' };
       }
+
+      const updated: Deck = {
+        ...existing,
+        name: name.trim(),
+        format,
+        cards,
+        notes,
+        relatedTokens: relatedTokens || existing.relatedTokens
+      };
+      await db.decks.put(updated);
+      await snapshotQuietly(updated);
       return { success: true };
     } catch (error) {
       logger.error('Failed to save edited deck:', error);

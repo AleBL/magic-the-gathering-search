@@ -226,6 +226,7 @@ const en = {
       coverUpdated: 'Deck cover updated',
       newDeckFromCopy: 'Editing a new copy of the deck',
       invalidShareLink: 'This deck link is invalid or corrupted.',
+      deckGoneError: 'This deck no longer exists. It may have been deleted in another tab.',
       deckManager: 'Deck Manager',
       deckNamePlaceholder: 'Deck name',
       deckSaved: 'Deck saved successfully!',

@@ -226,6 +226,7 @@ const pt = {
       coverUpdated: 'Capa do deck atualizada',
       newDeckFromCopy: 'Editando uma nova cópia do deck',
       invalidShareLink: 'Este link de deck é inválido ou está corrompido.',
+      deckGoneError: 'Este deck não existe mais. Ele pode ter sido excluído em outra aba.',
       deckManager: 'Gerenciador de Decks',
       deckNamePlaceholder: 'Nome do deck',
       deckSaved: 'Deck salvo com sucesso!',
