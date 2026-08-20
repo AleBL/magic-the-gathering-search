@@ -100,17 +100,17 @@ yarn build:win         # Windows installer
 yarn build:mac         # macOS installer
 yarn build:linux       # Linux installer
 yarn dist              # installer for the current platform
-yarn run pack          # unpacked desktop app, no installer
+yarn pack:app          # unpacked desktop app, no installer
 ```
 
-`pack` needs the explicit `run`: plain `yarn pack` is Yarn's own tarball command, which shadows the
-script and silently builds nothing.
-
-`yarn build` compiles into `dist-vite/` and `dist-electron/`. The platform targets and `pack` run
-Electron Builder on top of that and write into `dist/`, which is also where `yarn build:web`
-publishes; each of them clears `dist/` first, so a desktop package and a web bundle never coexist
-there.
+`yarn build` compiles into `dist-vite/` and `dist-electron/`. The platform targets and `pack:app`
+run Electron Builder on top of that and write into `dist/`, which is also where `yarn build:web`
+publishes. Every one of them runs `yarn clean` first, so a desktop package and a web bundle never
+coexist there, and building one discards the other's output rather than half-overwriting it.
 See [Electron Builder CLI docs](https://www.electron.build/cli.html) for additional options.
+
+The script is `pack:app`, not `pack`, because `yarn pack` is Yarn's own tarball command: it shadows
+any script of that name and would silently produce a source tarball instead of the app.
 
 ### Tests
 
