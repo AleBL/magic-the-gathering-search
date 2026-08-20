@@ -2,13 +2,7 @@
 /**
  * Builds a large, real collection CSV in the format the app's Collection importer accepts.
  *
- *   node scripts/generate-collection-csv.mjs [--rows 10000] [--out collection-large.csv]
- *                                            [--query "game:paper"]
- *
- * Real printings, not invented rows: RR-18 in docs/issues-roadmap/16-RESIDUAL-RISK-REGISTER.md
- * is about what the import does to Scryfall when the file is big, and identifiers that
- * resolve to nothing would exercise the miss path instead of the fan-out. Each row carries
- * a real name, set code, collector number and Scryfall id, so every one of them resolves.
+ *   node scripts/generate-collection-csv.mjs [--rows 10000] [--out collection-large.csv] [--query "game:paper"]
  *
  * The file is written to the repo root and is gitignored: 10k rows is ~700 KB of data that
  * belongs in a run, not in history.

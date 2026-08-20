@@ -256,10 +256,6 @@ const toEntry = (card: Card, row: CollectionCsvRow): CollectionEntry => ({
 });
 
 // Rows are matched back to Scryfall results by id, then set+number, then name.
-//
-// The pacing, the stop-on-failure and the skipping of owned rows below are not polish: they
-// come from importing a real 10k-row file (RR-18 in
-// docs/issues-roadmap/16-RESIDUAL-RISK-REGISTER.md).
 export async function resolveCollectionCsvRows(
   rows: CollectionCsvRow[],
   options: ResolveCollectionCsvOptions = {}
