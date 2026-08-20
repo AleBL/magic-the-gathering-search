@@ -14,20 +14,12 @@ afterEach(() => {
 // TODO(test-coverage): the coverage gate in vitest.config.ts spans the whole logic
 // layer (utils/services/store/hooks), so the gaps below show up as real numbers
 // rather than being excluded from the denominator.
-//
-// Covered 2026-08-06: useSearchFilters, useShortcuts, useDeckTextImport,
-// useCardPrints, useAnimatedList, useEscapeKey — hooks went 31% → 42% statements.
-//
-// Covered 2026-08-18 by the P4 sweeps, which lifted the pure calculation out of the
-// long hooks and tested it where it landed: useDeckManager, useDeckActions,
-// useCardSearch, useDeckTokens, usePlaytestSimulator (undo/redo + mulligan),
-// deckImportService, deckImage, deckValidator, plus new suites for playtestBoard,
-// cardPrints, proxyPrintLayout, tokenCards and scryfallSearch.
-//
+
 // Still open, highest value first:
-//   - hooks: useProxyPrint — the routine is tested through utils/proxyPrintLayout,
-//     the hook wrapper around it is not
-//   - services: fileDownload — the only untested path that writes a file
+//   - hooks + services, one package: useProxyPrint and print/useProxyPrintRoutine end in
+//     services/fileDownload, all three at 0%. Testing the routine before the download is
+//     tested measures the mock, so they land together
+//   - hooks: tokens/useTokenSearch and tokens/useDeckTokenAnalysis, the other open front
 //   - utils: cardTypePredicates, formatLabel
 //
 // Deliberately not on this list: contextMenuPosition and rippleEffect. Both are

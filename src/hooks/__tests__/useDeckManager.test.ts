@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import i18n from '../../plugins/i18n';
 import { Deck } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
 import { makeCard } from '../../test/factories';
+import { buildDeckFileContent, encodeDeckToShareString } from '../../services/deckShare';
 import { Card } from '../../types/Card';
 
 /**
@@ -45,6 +47,14 @@ vi.mock('../../services/deckVersionService', () => ({
 }));
 vi.mock('../../utils/toastHelper', () => ({ dispatchToast: vi.fn() }));
 
+// Only the Scryfall round trip is stubbed. Parsing stays real, so these tests still prove
+// that a `.dec` line or a share payload turns into the identifiers the lookup is asked for.
+const resolveList = vi.hoisted(() => vi.fn());
+vi.mock('../../services/deckImportService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/deckImportService')>()),
+  fetchCardsFromParsedList: resolveList
+}));
+
 const { default: useDeckManager } = await import('../useDeckManager');
 
 // Stable identity matters here too: the hook validates the deck in an effect keyed on
@@ -67,6 +77,7 @@ describe('useDeckManager', () => {
   beforeEach(() => {
     decks.clear();
     putSpy.mockClear();
+    resolveList.mockReset();
   });
 
   describe('saveDeck', () => {
@@ -283,6 +294,237 @@ describe('useDeckManager', () => {
 
       expect(result.current.fileImportError).toBeTruthy();
       expect(putSpy).not.toHaveBeenCalled();
+    });
+
+    // A file that parses fine and then cannot be written is the last place this path can
+    // fail silently: the modal would sit on a finished progress bar over an empty deck list.
+    it('reports a write that failed mid-import instead of finishing the modal', async () => {
+      putSpy.mockImplementationOnce(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(jsonFile(aDeck('a', 'Atraxa')));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t('deck.invalidFile'));
+      expect(decks.size).toBe(0);
+    });
+  });
+
+  // Everything that is not the `.json` happy path: the other three extensions the router
+  // knows, the ones it does not, and a file the browser cannot read at all. This is the
+  // class of failure that costs the most here, because it fails quietly — the modal closes
+  // and nothing says which of the two Scryfall or the file was the problem.
+  describe('importDeckFile: lists, share files and unreadable files', () => {
+    const textFile = (name: string, body: string) => new File([body], name, { type: 'text/plain' });
+
+    const storedDecks = () => [...decks.values()];
+
+    it.each(['Burn.dec', 'Burn.txt'])('imports %s as a text list named after the file', async (fileName) => {
+      const resolved = makeCard({ name: 'Lightning Bolt' });
+      resolveList.mockResolvedValue({ cards: [resolved], missing: [] });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(textFile(fileName, '4 Lightning Bolt\n'));
+      });
+
+      const [stored] = storedDecks();
+      // The extension is not part of the deck name: it would show up in the deck list and
+      // in every export made from it.
+      expect(stored.name).toBe('Burn');
+      expect(stored.format).toBe(DeckFormatType.FREEFORM);
+      expect(stored.cards).toEqual([resolved]);
+      expect(resolveList.mock.calls[0][0]).toMatchObject([{ name: 'Lightning Bolt', quantity: 4 }]);
+    });
+
+    // The modal opens on a placeholder total, because the file has not been parsed yet. What
+    // it ends up showing has to come from the lookup, and has to finish full rather than
+    // stopping wherever the last chunk left it.
+    it('carries the lookup progress into the modal and finishes it filled', async () => {
+      resolveList.mockImplementation(async (_entries, _lang, onProgress) => {
+        onProgress({ isImporting: true, current: 3, total: 9, message: 'resolving' });
+        return { cards: [makeCard()], missing: [] };
+      });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(textFile('Burn.dec', '4 Lightning Bolt\n'));
+      });
+
+      expect(result.current.importProgress).toEqual({
+        isImporting: false,
+        current: 9,
+        total: 9,
+        message: 'resolving'
+      });
+    });
+
+    // A `.deck` file is a share payload with a header; the round trip is asserted against
+    // the real writer so a change to either end fails here.
+    it('imports a .deck share file by resolving the list it carries', async () => {
+      const shared: Deck = { ...aDeck('source', 'Shared Burn'), format: DeckFormatType.MODERN };
+      const resolved = makeCard({ name: 'Lightning Bolt' });
+      resolveList.mockResolvedValue({ cards: [resolved], missing: [] });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(new File([buildDeckFileContent(shared)], 'shared.deck'));
+      });
+
+      const [stored] = storedDecks();
+      expect(stored.name).toBe('Shared Burn');
+      expect(stored.format).toBe(DeckFormatType.MODERN);
+      expect(stored.cards).toEqual([resolved]);
+      // A new id, or importing a deck twice would overwrite the first copy.
+      expect(stored.id).not.toBe('source');
+    });
+
+    it('reports a .deck file with no payload in it and writes nothing', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(new File(['# just a header\n'], 'shared.deck'));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t('deck.invalidFile'));
+      expect(decks.size).toBe(0);
+    });
+
+    it('reports a text list with no card lines in it and writes nothing', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(textFile('Burn.txt', '// only a comment\n'));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t('deck.invalidFile'));
+      expect(decks.size).toBe(0);
+      expect(resolveList).not.toHaveBeenCalled();
+    });
+
+    it('refuses an extension it does not know, with the modal open to say so', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(new File(['whatever'], 'deck.pdf'));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t('deck.invalidFile'));
+      expect(result.current.isFileImportModalOpen).toBe(true);
+      expect(decks.size).toBe(0);
+    });
+
+    // A FileReader that errors never fires `onload`. If the reader's failure did not resolve
+    // the read, the import would sit on a spinner that nothing ever clears.
+    it('reports a file the browser could not read instead of waiting on it', async () => {
+      const RealFileReader = globalThis.FileReader;
+      class UnreadableFileReader {
+        error = new Error('NotReadableError');
+        onload: ((event: unknown) => void) | null = null;
+        onerror: (() => void) | null = null;
+        readAsText() {
+          queueMicrotask(() => this.onerror?.());
+        }
+      }
+      globalThis.FileReader = UnreadableFileReader as unknown as typeof FileReader;
+
+      try {
+        const { result } = setup();
+        await act(async () => {
+          await result.current.importDeckFile(textFile('Burn.dec', '4 Lightning Bolt\n'));
+        });
+
+        expect(result.current.fileImportError).toBe(i18n.t('deck.invalidFile'));
+        expect(result.current.importProgress.isImporting).toBe(false);
+        expect(decks.size).toBe(0);
+      } finally {
+        globalThis.FileReader = RealFileReader;
+      }
+    });
+
+    // Scryfall's own failures have to arrive as themselves: "the deck could not be imported"
+    // over a rate limit sends the user back to a file that was never the problem.
+    it.each([
+      ['ScryfallOffline', 'search.scryfallOffline'],
+      ['ScryfallRateLimited', 'search.rateLimited'],
+      ['Scryfall API error', 'deck.importError']
+    ])('reports a %s from the card lookup under its own message', async (thrown, messageKey) => {
+      resolveList.mockRejectedValue(new Error(thrown));
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(textFile('Burn.dec', '4 Lightning Bolt\n'));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t(messageKey));
+      expect(decks.size).toBe(0);
+    });
+
+    it('refuses a list where nothing resolved rather than storing an empty deck', async () => {
+      resolveList.mockResolvedValue({ cards: [], missing: ['Blacker Lotus'] });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importDeckFile(textFile('Burn.dec', '4 Blacker Lotus\n'));
+      });
+
+      expect(result.current.fileImportError).toBe(i18n.t('deck.importError'));
+      expect(result.current.fileMissingCards).toEqual(['Blacker Lotus']);
+      expect(decks.size).toBe(0);
+    });
+  });
+
+  describe('importSharedDeckString', () => {
+    /** Hand-built payloads, for share shapes `encodeDeckToShareString` cannot produce. */
+    const encodePayload = (payload: unknown): string =>
+      btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+    it('stores the deck a valid share string describes', async () => {
+      const shared: Deck = { ...aDeck('source', 'Shared Burn'), format: DeckFormatType.MODERN };
+      const resolved = makeCard({ name: 'Lightning Bolt' });
+      resolveList.mockResolvedValue({ cards: [resolved], missing: [] });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importSharedDeckString(encodeDeckToShareString(shared));
+      });
+
+      const [stored] = [...decks.values()];
+      expect(stored.name).toBe('Shared Burn');
+      expect(stored.format).toBe(DeckFormatType.MODERN);
+      expect(stored.cards).toEqual([resolved]);
+      expect(result.current.fileImportError).toBeNull();
+    });
+
+    // A link shared with no deck name still has to land under something readable, and in a
+    // format the deck screen can render.
+    it('names an unnamed share and gives it a format', async () => {
+      resolveList.mockResolvedValue({ cards: [makeCard()], missing: [] });
+
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importSharedDeckString(encodePayload({ v: 1, n: '', c: [{ q: 1, n: 'Lightning Bolt' }] }));
+      });
+
+      const [stored] = [...decks.values()];
+      expect(stored.name).toBe(i18n.t('deck.importedDeckName'));
+      expect(stored.format).toBe(DeckFormatType.FREEFORM);
+    });
+
+    // Opening the modal is the point: a broken link that closed it silently is exactly the
+    // failure this path exists to avoid.
+    it('opens the modal to report a broken share link', async () => {
+      const { result } = setup();
+      await act(async () => {
+        await result.current.importSharedDeckString('not-a-real-payload!!');
+      });
+
+      expect(result.current.isFileImportModalOpen).toBe(true);
+      expect(result.current.fileImportError).toBe(i18n.t('deck.invalidShareLink'));
+      expect(decks.size).toBe(0);
     });
   });
 });
