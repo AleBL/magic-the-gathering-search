@@ -10,12 +10,69 @@ const MAX_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 5000;
 
+// Scryfall asks for 50 to 100 ms between requests. 150 leaves room for a slow hop, matching
+// the collection CSV import (see services/collectionCsv.ts).
+const SCRYFALL_REQUEST_GAP_MS = 150;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * How long to wait after a 429. `headers.get` returns `null` for an absent header and
+ * `Number(null)` is `0`, which is finite: reading the header without the `> 0` test accepted
+ * that zero and retried instantly, so the fallback below never applied to the case it exists
+ * for. Exported because that is the whole bug, and it is worth pinning in one assertion.
+ */
+export function retryDelayFor(header: string | null, fallbackMs: number = DEFAULT_RETRY_DELAY_MS): number {
+  const seconds = Number(header);
+  if (!Number.isFinite(seconds) || seconds <= 0) return fallbackMs;
+  return Math.min(seconds * 1000, MAX_RETRY_DELAY_MS);
+}
+
+/**
+ * Spaces out every Scryfall request one import makes. All three loops below (the chunked
+ * lookups, the not-found retry pass and the per-name localized lookups) share one clock, so
+ * none of them has to remember to pace itself and the gaps hold across the boundaries between
+ * them. Per import rather than per module: a run never waits on the previous one's clock, and
+ * tests stay independent of each other.
+ */
+interface RequestPacer {
+  gapMs: number;
+  retryDelayMs: number;
+  nextAllowedAt: number;
+}
+
+/** Pacing knobs. Tests set them to zero; nothing in the app overrides them. */
+export interface ImportPacingOptions {
+  requestGapMs?: number;
+  retryDelayMs?: number;
+}
+
+const createPacer = ({
+  requestGapMs = SCRYFALL_REQUEST_GAP_MS,
+  retryDelayMs = DEFAULT_RETRY_DELAY_MS
+}: ImportPacingOptions = {}): RequestPacer => ({
+  gapMs: requestGapMs,
+  retryDelayMs,
+  nextAllowedAt: 0
+});
+
+// The clock is stamped before the request, not after it: the calls are sequential, so a
+// request that itself took longer than the gap has already provided the spacing and adding
+// another pause on top of it would only make a slow import slower.
+const pacedFetch = async (pacer: RequestPacer, url: string, init?: RequestInit): Promise<Response> => {
+  const waitMs = pacer.nextAllowedAt - Date.now();
+  if (waitMs > 0) await sleep(waitMs);
+  pacer.nextAllowedAt = Date.now() + pacer.gapMs;
+  return fetch(url, init);
+};
+
 /** POSTs to Scryfall's collection endpoint, retrying lightly on 429 (rate limit) before giving up. */
 const fetchCollectionWithRetry = async (
-  identifiers: Array<{ name?: string; set?: string; collector_number?: string }>
+  identifiers: Array<{ name?: string; set?: string; collector_number?: string }>,
+  pacer: RequestPacer
 ): Promise<Response> => {
   for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
-    const response = await fetch('https://api.scryfall.com/cards/collection', {
+    const response = await pacedFetch(pacer, 'https://api.scryfall.com/cards/collection', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifiers })
@@ -25,11 +82,7 @@ const fetchCollectionWithRetry = async (
       return response;
     }
 
-    const retryAfterHeader = Number(response.headers.get('Retry-After'));
-    const delayMs = Number.isFinite(retryAfterHeader)
-      ? Math.min(retryAfterHeader * 1000, MAX_RETRY_DELAY_MS)
-      : DEFAULT_RETRY_DELAY_MS;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await sleep(retryDelayFor(response.headers.get('Retry-After'), pacer.retryDelayMs));
   }
 
   // Unreachable: the loop always returns within MAX_RATE_LIMIT_RETRIES + 1 iterations.
@@ -168,12 +221,15 @@ const LOCALIZED_LOOKUP_LIMIT = 40;
 // Scryfall's /cards/collection `name` identifier matches English names only, so a deck
 // exported from Arena in pt never resolves there. The search endpoint does match localized
 // printed names, which is why the stragglers get a second pass through it.
-const resolveLocalizedName = async (name: string, lang: string): Promise<Card | null> => {
+const resolveLocalizedName = async (name: string, lang: string, pacer: RequestPacer): Promise<Card | null> => {
   const queries = lang && lang !== 'en' ? [`!"${name}" lang:${lang}`, `"${name}" lang:${lang}`] : [`!"${name}"`];
 
   for (const query of queries) {
     try {
-      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`);
+      const res = await pacedFetch(
+        pacer,
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`
+      );
       if (!res.ok) continue;
       const cards = toCardList(readField(await res.json(), 'data'));
       if (cards.length > 0) return cards[0];
@@ -188,8 +244,10 @@ export const fetchCardsFromParsedList = async (
   parsed: ParseResult[],
   currentLang: string = 'en',
   onProgress?: (progress: ImportProgressData) => void,
-  t?: (key: string, options?: Record<string, unknown>) => string
+  t?: (key: string, options?: Record<string, unknown>) => string,
+  pacing?: ImportPacingOptions
 ): Promise<{ cards: Card[]; missing: string[] }> => {
+  const pacer = createPacer(pacing);
   const uniqueParsed = Array.from(
     new Map(parsed.map((p) => [`${p.name}|${p.set || ''}|${p.collector_number || ''}`, p])).values()
   );
@@ -220,7 +278,7 @@ export const fetchCardsFromParsedList = async (
       return { name: item.name };
     });
 
-    const response = await fetchCollectionWithRetry(identifiers);
+    const response = await fetchCollectionWithRetry(identifiers, pacer);
 
     if (!response.ok) {
       if (response.status === 503 || response.status === 504) {
@@ -280,7 +338,7 @@ export const fetchCardsFromParsedList = async (
     for (let chunkStartIndex = 0; chunkStartIndex < uniqueRetries.length; chunkStartIndex += CHUNK_SIZE) {
       const chunk = uniqueRetries.slice(chunkStartIndex, chunkStartIndex + CHUNK_SIZE);
 
-      const response = await fetchCollectionWithRetry(chunk);
+      const response = await fetchCollectionWithRetry(chunk, pacer);
 
       if (response.ok) {
         allResolvedCards.push(...toCardList(readField(await response.json(), 'data')));
@@ -299,7 +357,7 @@ export const fetchCardsFromParsedList = async (
   if (unresolved.length > 0) {
     const lang = (currentLang || 'en').split('-')[0].toLowerCase();
     for (const item of unresolved.slice(0, LOCALIZED_LOOKUP_LIMIT)) {
-      const localized = await resolveLocalizedName(item.name, lang);
+      const localized = await resolveLocalizedName(item.name, lang, pacer);
       if (localized) allResolvedCards.push(localized);
     }
   }
