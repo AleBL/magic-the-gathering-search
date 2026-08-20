@@ -142,8 +142,9 @@ describe('useDeckManager', () => {
     });
 
     // The edit dialog can outlive the deck — deleted in another tab, or undone. Writing here
-    // would resurrect it under an id the deck list has already forgotten.
-    it('returns success for a deck that is gone even though it writes nothing', async () => {
+    // would resurrect it under an id the deck list has already forgotten, so the callers get an
+    // error to show instead of a success they would echo back into the screen.
+    it('reports the deck is gone instead of claiming a write that never happened', async () => {
       const { result } = setup();
 
       let outcome;
@@ -153,7 +154,7 @@ describe('useDeckManager', () => {
 
       expect(putSpy).not.toHaveBeenCalled();
       expect(decks.has('ghost')).toBe(false);
-      expect(outcome).toMatchObject({ success: true });
+      expect(outcome).toMatchObject({ success: false, errorKey: 'deck.deckGoneError' });
     });
 
     it('reports a write failure instead of claiming success', async () => {
