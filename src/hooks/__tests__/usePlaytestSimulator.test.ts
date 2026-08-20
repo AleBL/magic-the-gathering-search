@@ -330,6 +330,9 @@ describe('usePlaytestSimulator — the London mulligan', () => {
     const cardId = result.current.hand[0].playtestId;
 
     act(() => result.current.handleToggleCardSelection(cardId));
+
+    expect(result.current.selectedToBottom.size).toBe(1);
+
     act(() => result.current.handleToggleCardSelection(cardId));
 
     expect(result.current.selectedToBottom.size).toBe(0);
@@ -370,12 +373,16 @@ describe('usePlaytestSimulator — the London mulligan', () => {
     expect(result.current.selectedToBottom.size).toBe(0);
   });
 
-  it('ignores card selection outside the mulligan phase', () => {
-    const { result } = renderHook(() => usePlaytestSimulator(deckOf(10)));
-    act(() => result.current.startSimulation());
+  it('ignores card selection once the mulligan has been confirmed', () => {
+    const result = afterOneMulligan();
+    const doomed = result.current.hand[0].playtestId;
+    act(() => result.current.handleToggleCardSelection(doomed));
+    act(() => result.current.handleConfirmMulligan());
 
     act(() => result.current.handleToggleCardSelection(result.current.hand[0].playtestId));
 
+    expect(result.current.isMulliganPhase).toBe(false);
+    expect(result.current.mulligans).toBe(1);
     expect(result.current.selectedToBottom.size).toBe(0);
   });
 });

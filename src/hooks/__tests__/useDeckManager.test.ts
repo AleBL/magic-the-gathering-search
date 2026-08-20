@@ -143,15 +143,17 @@ describe('useDeckManager', () => {
 
     // The edit dialog can outlive the deck — deleted in another tab, or undone. Writing here
     // would resurrect it under an id the deck list has already forgotten.
-    it('writes nothing when the deck being edited is gone', async () => {
+    it('returns success for a deck that is gone even though it writes nothing', async () => {
       const { result } = setup();
 
+      let outcome;
       await act(async () => {
-        await result.current.saveEditedDeck('ghost', 'Whatever', DeckFormatType.FREEFORM, [makeCard()]);
+        outcome = await result.current.saveEditedDeck('ghost', 'Whatever', DeckFormatType.FREEFORM, [makeCard()]);
       });
 
       expect(putSpy).not.toHaveBeenCalled();
       expect(decks.has('ghost')).toBe(false);
+      expect(outcome).toMatchObject({ success: true });
     });
 
     it('reports a write failure instead of claiming success', async () => {

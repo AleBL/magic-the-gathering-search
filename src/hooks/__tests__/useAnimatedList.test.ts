@@ -37,6 +37,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   matchMediaValue = false;
 });
 
@@ -154,7 +155,5 @@ describe('useAnimatedList', () => {
     unmount();
 
     expect(clearSpy).toHaveBeenCalledWith(exitTimerId);
-    setSpy.mockRestore();
-    clearSpy.mockRestore();
   });
 });
