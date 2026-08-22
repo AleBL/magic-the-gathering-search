@@ -1,4 +1,5 @@
 import { Card } from '../types/Card';
+import { isTokenCard } from './tokenCards';
 import { DeckFormat } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
 import i18n from '../plugins/i18n';
@@ -56,6 +57,13 @@ export type CardFormatStatus = 'legal' | 'banned' | 'restricted' | 'invalid';
 
 export function cardFormatStatus(card: Card, format?: DeckFormat): CardFormatStatus {
   if (!format || format === DeckFormatType.FREEFORM) return 'legal';
+
+  // Scryfall marks every format `not_legal` on a token, because a token is never a deck
+  // entry to begin with. Reading that as a verdict badged the deck's own tokens as
+  // invalid, and only sometimes: a token added from a local preset carries no
+  // `legalities` at all, so the same tab showed some tokens flagged and others clean.
+  // `validateDeck` already leaves tokens out; the badge has to agree with it.
+  if (isTokenCard(card)) return 'legal';
 
   const legality = card.legalities?.[format as keyof typeof card.legalities];
   if (legality === 'banned') return 'banned';
