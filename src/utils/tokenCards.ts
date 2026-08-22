@@ -18,6 +18,22 @@ const TOKEN_KEYWORDS = [
   'amass'
 ];
 
+// Scryfall's own layouts for the printings that are not real cards. Emblems and art
+// series ride along: like tokens, they exist on the battlefield or outside the game and
+// no format ever lists them as legal.
+const TOKEN_LAYOUTS = new Set(['token', 'double_faced_token', 'emblem', 'art_series']);
+
+/**
+ * Whether the card is a token rather than a real card. `layout` answers it for anything
+ * Scryfall returned; the id prefix covers the presets the app mints locally, which carry
+ * no Scryfall metadata at all.
+ */
+export function isTokenCard(card: Card): boolean {
+  if (card.layout && TOKEN_LAYOUTS.has(card.layout)) return true;
+  if (card.id?.startsWith('token-')) return true;
+  return /^token\b/i.test(card.type_line?.trim() ?? '');
+}
+
 export const uniqueTokenId = (seed?: string): string =>
   `token-${seed || Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}`;
 
