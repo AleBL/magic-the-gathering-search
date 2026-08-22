@@ -431,4 +431,28 @@ describe('cardFormatStatus', () => {
     const banned = card({ rarity: 'uncommon', legalities: { pauper: 'banned' } });
     expect(cardFormatStatus(banned, DeckFormatType.PAUPER)).toBe('banned');
   });
+
+  // Scryfall returns `not_legal` in every format for a token, since a token is never a
+  // deck entry. Read as a verdict, that badged the deck's own tokens INVALID.
+  it('never marks a token as invalid, whatever its legalities say', () => {
+    const scryfallToken = card({
+      layout: 'token',
+      type_line: 'Token Creature — Goblin',
+      legalities: { standard: 'not_legal', modern: 'not_legal', pauper: 'not_legal', commander: 'not_legal' }
+    });
+
+    expect(cardFormatStatus(scryfallToken, DeckFormatType.STANDARD)).toBe('legal');
+    expect(cardFormatStatus(scryfallToken, DeckFormatType.COMMANDER)).toBe('legal');
+    // Pauper reads rarity rather than legality, and a token is not a common.
+    expect(cardFormatStatus({ ...scryfallToken, rarity: 'uncommon' }, DeckFormatType.PAUPER)).toBe('legal');
+  });
+
+  // A preset token minted locally has no Scryfall metadata, which is why only some
+  // tokens carried the badge: the flagged ones were the ones that had been fetched.
+  it('recognises a locally minted preset token', () => {
+    const preset = card({ id: 'token-soldier-a1b2c3', name: 'Soldier', type_line: 'Token Creature — Soldier' });
+    delete (preset as Partial<Card>).legalities;
+
+    expect(cardFormatStatus(preset, DeckFormatType.MODERN)).toBe('legal');
+  });
 });

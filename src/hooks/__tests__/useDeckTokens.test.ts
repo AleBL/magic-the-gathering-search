@@ -195,16 +195,51 @@ describe('useDeckTokens', () => {
       expect(dispatchToast).toHaveBeenCalledWith(i18n.t('tokens.analysisError'), 'danger');
     });
 
-    // A 404 *is* an answer: Scryfall has no such card, so it makes no tokens.
+    // Scryfall not knowing the card *is* an answer: it makes no tokens. The collection
+    // endpoint reports that as a 200 listing the identifier under `not_found`.
     it('stays quiet when Scryfall answers that the card does not exist', async () => {
       const { result } = renderHook(() => useDeckTokens({ cards: [generator] }));
 
-      fetchMock.mockResolvedValue({ ok: false, status: 404 });
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ data: [], not_found: [{ name: generator.name }] })
+      });
       await act(async () => {
         await result.current.handleAnalyzeDeck();
       });
 
       expect(dispatchToast).not.toHaveBeenCalled();
+    });
+
+    // The generator lookup used to be one `/cards/named` request per card, fired through
+    // Promise.all: a Commander deck opened dozens of connections at once and Scryfall
+    // answered 429. Batching is what keeps the analysis inside the rate limit.
+    it('asks about every generator in one request instead of one request each', async () => {
+      const generators = Array.from({ length: 40 }, (_, index) => ({
+        ...generator,
+        id: `gen-${index}`,
+        name: `Generator ${index}`
+      })) as Card[];
+      const { result } = renderHook(() => useDeckTokens({ cards: generators }));
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1)); // the preset images
+      fetchMock.mockClear();
+
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ data: [], not_found: [] })
+      });
+      await act(async () => {
+        await result.current.handleAnalyzeDeck();
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://api.scryfall.com/cards/collection');
+      expect(JSON.parse(init.body).identifiers).toHaveLength(40);
     });
 
     it('never reaches the network for a deck with no token generators', async () => {
