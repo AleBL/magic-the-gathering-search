@@ -5,89 +5,25 @@ import { ScryfallNotFoundIdentifier } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
 import { newId } from '../utils/id';
 import { readField, toCardList, toImportedDeck, toNotFoundIdentifiers } from '../utils/typeGuards';
+import { PacingOptions, RequestPacer, createPacer, fetchWithRateLimitRetry, pacedFetch } from './scryfallPacing';
 
-const MAX_RATE_LIMIT_RETRIES = 2;
-const DEFAULT_RETRY_DELAY_MS = 1000;
-const MAX_RETRY_DELAY_MS = 5000;
-
-// Scryfall asks for 50 to 100 ms between requests. 150 leaves room for a slow hop, matching
-// the collection CSV import (see services/collectionCsv.ts).
-const SCRYFALL_REQUEST_GAP_MS = 150;
-
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/**
- * How long to wait after a 429. `headers.get` returns `null` for an absent header and
- * `Number(null)` is `0`, which is finite: reading the header without the `> 0` test accepted
- * that zero and retried instantly, so the fallback below never applied to the case it exists
- * for. Exported because that is the whole bug, and it is worth pinning in one assertion.
- */
-export function retryDelayFor(header: string | null, fallbackMs: number = DEFAULT_RETRY_DELAY_MS): number {
-  const seconds = Number(header);
-  if (!Number.isFinite(seconds) || seconds <= 0) return fallbackMs;
-  return Math.min(seconds * 1000, MAX_RETRY_DELAY_MS);
-}
-
-/**
- * Spaces out every Scryfall request one import makes. All three loops below (the chunked
- * lookups, the not-found retry pass and the per-name localized lookups) share one clock, so
- * none of them has to remember to pace itself and the gaps hold across the boundaries between
- * them. Per import rather than per module: a run never waits on the previous one's clock, and
- * tests stay independent of each other.
- */
-interface RequestPacer {
-  gapMs: number;
-  retryDelayMs: number;
-  nextAllowedAt: number;
-}
+// Re-exported so the pacing primitives have one home while callers keep importing the
+// import service they already talk to.
+export { retryDelayFor } from './scryfallPacing';
 
 /** Pacing knobs. Tests set them to zero; nothing in the app overrides them. */
-export interface ImportPacingOptions {
-  requestGapMs?: number;
-  retryDelayMs?: number;
-}
-
-const createPacer = ({
-  requestGapMs = SCRYFALL_REQUEST_GAP_MS,
-  retryDelayMs = DEFAULT_RETRY_DELAY_MS
-}: ImportPacingOptions = {}): RequestPacer => ({
-  gapMs: requestGapMs,
-  retryDelayMs,
-  nextAllowedAt: 0
-});
-
-// The clock is stamped before the request, not after it: the calls are sequential, so a
-// request that itself took longer than the gap has already provided the spacing and adding
-// another pause on top of it would only make a slow import slower.
-const pacedFetch = async (pacer: RequestPacer, url: string, init?: RequestInit): Promise<Response> => {
-  const waitMs = pacer.nextAllowedAt - Date.now();
-  if (waitMs > 0) await sleep(waitMs);
-  pacer.nextAllowedAt = Date.now() + pacer.gapMs;
-  return fetch(url, init);
-};
+export type ImportPacingOptions = PacingOptions;
 
 /** POSTs to Scryfall's collection endpoint, retrying lightly on 429 (rate limit) before giving up. */
 const fetchCollectionWithRetry = async (
   identifiers: Array<{ name?: string; set?: string; collector_number?: string }>,
   pacer: RequestPacer
-): Promise<Response> => {
-  for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
-    const response = await pacedFetch(pacer, 'https://api.scryfall.com/cards/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifiers })
-    });
-
-    if (response.status !== 429 || attempt === MAX_RATE_LIMIT_RETRIES) {
-      return response;
-    }
-
-    await sleep(retryDelayFor(response.headers.get('Retry-After'), pacer.retryDelayMs));
-  }
-
-  // Unreachable: the loop always returns within MAX_RATE_LIMIT_RETRIES + 1 iterations.
-  throw new Error('ScryfallRateLimited');
-};
+): Promise<Response> =>
+  fetchWithRateLimitRetry(pacer, 'https://api.scryfall.com/cards/collection', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifiers })
+  });
 
 /**
  * Reads an exported `.json` deck file. Accepts both shapes the app writes: a single deck,
