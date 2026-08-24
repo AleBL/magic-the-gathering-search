@@ -72,7 +72,7 @@ export function useCardPrints(cardOrName: Card | string | undefined, oracleId?: 
       } else {
         logger.error('Failed to fetch card prints:', err);
         setError(err.message);
-        dispatchToast(t('common.printsLoadError'), 'danger');
+        dispatchToast(t('common.printsLoadError'), 'error');
       }
       setIsLoading(false);
     });

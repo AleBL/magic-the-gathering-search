@@ -17,7 +17,7 @@ export function downloadAsJson(data: unknown, filename: string): void {
     downloadBlob(new Blob([jsonString], { type: 'application/json' }), filename);
   } catch (error) {
     logger.error('Failed to download file:', error);
-    dispatchToast(i18n.t('common.unexpectedError') as string, 'danger');
+    dispatchToast(i18n.t('common.unexpectedError') as string, 'error');
   }
 }
 
@@ -26,6 +26,6 @@ export function downloadAsText(text: string, filename: string, mimeType = 'text/
     downloadBlob(new Blob([text], { type: mimeType }), filename);
   } catch (error) {
     logger.error('Failed to download file:', error);
-    dispatchToast(i18n.t('common.unexpectedError') as string, 'danger');
+    dispatchToast(i18n.t('common.unexpectedError') as string, 'error');
   }
 }

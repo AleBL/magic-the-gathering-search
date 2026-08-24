@@ -75,7 +75,7 @@ export function useCardRelatedTokensForCard(card: Card | null) {
         logger.error('Failed to fetch related tokens:', error);
         const message = error instanceof Error ? error.message : 'Failed to fetch related tokens';
         setError(message);
-        dispatchToast(t('common.relatedTokensLoadError'), 'danger');
+        dispatchToast(t('common.relatedTokensLoadError'), 'error');
       } finally {
         setIsLoading(false);
       }

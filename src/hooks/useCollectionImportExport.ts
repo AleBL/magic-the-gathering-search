@@ -77,7 +77,7 @@ export function useCollectionImportExport(entries: CollectionEntry[]) {
               : failure === 'rateLimited'
                 ? t('search.rateLimited')
                 : t('collection.importError');
-          dispatchToast(reason + skippedNote, 'danger');
+          dispatchToast(reason + skippedNote, 'error');
         } else if (unreached > 0) {
           // Partial: say what landed, what did not, and that running it again resumes.
           dispatchToast(
@@ -87,7 +87,7 @@ export function useCollectionImportExport(entries: CollectionEntry[]) {
         } else if (resolved.length === 0 && skipped > 0) {
           dispatchToast(t('collection.importAllSkipped', { count: skipped }), 'info');
         } else if (resolved.length === 0) {
-          dispatchToast(t('collection.importError'), 'danger');
+          dispatchToast(t('collection.importError'), 'error');
         } else if (missing.length > 0) {
           dispatchToast(
             t('collection.importedWithMissing', { count: resolved.length, missing: missing.length }) + skippedNote
@@ -98,11 +98,11 @@ export function useCollectionImportExport(entries: CollectionEntry[]) {
       } catch (error) {
         logger.error('Failed to import collection:', error);
         if (error instanceof Error && error.message === 'ScryfallOffline') {
-          dispatchToast(t('search.scryfallOffline'), 'danger');
+          dispatchToast(t('search.scryfallOffline'), 'error');
         } else if (error instanceof Error && error.message === 'ScryfallRateLimited') {
-          dispatchToast(t('search.rateLimited'), 'danger');
+          dispatchToast(t('search.rateLimited'), 'error');
         } else {
-          dispatchToast(t('collection.importError'), 'danger');
+          dispatchToast(t('collection.importError'), 'error');
         }
       } finally {
         setIsImporting(false);

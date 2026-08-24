@@ -37,7 +37,7 @@ export function useProfileBackup() {
       dispatchToast(t('backup.exported'));
     } catch (error) {
       logger.error('Failed to create backup:', error);
-      dispatchToast(t('backup.exportFailed'), 'danger');
+      dispatchToast(t('backup.exportFailed'), 'error');
     } finally {
       setIsWorking(false);
     }
@@ -48,11 +48,11 @@ export function useProfileBackup() {
     async (file: File): Promise<ProfileBackup | null> => {
       try {
         const backup = parseProfileBackup(await file.text());
-        if (!backup) dispatchToast(t('backup.invalidFile'), 'danger');
+        if (!backup) dispatchToast(t('backup.invalidFile'), 'error');
         return backup;
       } catch (error) {
         logger.error('Failed to read backup file:', error);
-        dispatchToast(t('backup.invalidFile'), 'danger');
+        dispatchToast(t('backup.invalidFile'), 'error');
         return null;
       }
     },
@@ -69,7 +69,7 @@ export function useProfileBackup() {
         return true;
       } catch (error) {
         logger.error('Failed to restore backup:', error);
-        dispatchToast(t('backup.restoreFailed'), 'danger');
+        dispatchToast(t('backup.restoreFailed'), 'error');
         return false;
       } finally {
         setIsWorking(false);

@@ -91,7 +91,7 @@ describe('fileDownload', () => {
       downloadAsJson(circular, 'broken.json');
 
       expect(clicked).toHaveLength(0);
-      expect(toasts).toEqual([{ message: i18n.t('common.unexpectedError'), variant: 'danger' }]);
+      expect(toasts).toEqual([{ message: i18n.t('common.unexpectedError'), variant: 'error' }]);
     });
   });
 
@@ -118,7 +118,7 @@ describe('fileDownload', () => {
       downloadAsText('4 Lightning Bolt', 'burn.dec');
 
       expect(clicked).toHaveLength(0);
-      expect(toasts).toEqual([{ message: i18n.t('common.unexpectedError'), variant: 'danger' }]);
+      expect(toasts).toEqual([{ message: i18n.t('common.unexpectedError'), variant: 'error' }]);
     });
   });
 });

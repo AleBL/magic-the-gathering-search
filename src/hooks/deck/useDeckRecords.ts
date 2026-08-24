@@ -24,7 +24,7 @@ export function useDeckRecords({ onDeckDeleted }: DeckRecordsArgs) {
       return await action();
     } catch (error) {
       logger.error(logMessage, error);
-      dispatchToast(t(toastKey), 'danger');
+      dispatchToast(t(toastKey), 'error');
       return undefined;
     }
   };
