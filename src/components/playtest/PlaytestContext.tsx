@@ -56,7 +56,7 @@ export function PlaytestProvider({ children, deckCards, deckFormat, isOpen }: Pl
   const baseState = usePlaytestSimulator(deckCards, deckFormat, isOpen);
 
   // Start open on desktop, collapsed on small screens where it would overlay the board.
-  const [isLogOpen, setIsLogOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
+  const [isLogOpen, setIsLogOpen] = useState(() => window.innerWidth >= 1024);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [dragOverZone, setDragOverZone] = useState<PlaytestDragZone | null>(null);
   const [contextMenu, setContextMenu] = useState<{

@@ -21,8 +21,6 @@ const LEGACY_STORAGE_KEYS: Partial<Record<StorageKey, string>> = {
 // Null when neither key is set, so a caller can tell "never chosen" from "chosen and off":
 // the distinction that decides whether dark mode follows the OS.
 export function readStoredPreference(key: StorageKey): string | null {
-  if (typeof window === 'undefined') return null;
-
   const current = window.localStorage.getItem(key);
   if (current !== null) return current;
 

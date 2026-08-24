@@ -9,8 +9,6 @@ const LARGE_WIDTH = 320;
 const VIEWPORT_MARGIN = 40;
 
 const widthForViewport = (): number => {
-  if (typeof window === 'undefined') return BASE_WIDTH;
-
   const fitsTall = window.innerHeight >= LARGE_WIDTH * CARD_ASPECT + VIEWPORT_MARGIN * 2;
   const fitsWide = window.innerWidth >= LARGE_WIDTH * 2 + VIEWPORT_MARGIN * 2;
 

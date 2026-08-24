@@ -132,7 +132,7 @@ export function decodeShareString(encoded: string): DecodedShareDeck | null {
 
 export function buildShareUrl(deck: Deck, origin?: string): string {
   const encoded = encodeDeckToShareString(deck);
-  const base = origin ?? (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
+  const base = origin ?? `${window.location.origin}${window.location.pathname}`;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${SHARE_PARAM}=${encoded}`;
 }

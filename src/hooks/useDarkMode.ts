@@ -7,10 +7,9 @@ export default function useDarkMode() {
     const savedDarkMode = readStoredPreference(STORAGE_KEYS.darkMode);
     if (savedDarkMode !== null) return savedDarkMode === 'true';
     // No saved preference yet — respect the OS-level prefers-color-scheme instead of forcing dark.
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return true;
+    // `matchMedia` is the part that can genuinely be missing (jsdom has no implementation),
+    // and with no way to read the OS preference the app's own default stands.
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
   });
 
   useEffect(() => {
