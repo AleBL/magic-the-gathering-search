@@ -48,7 +48,7 @@ export function CollectionBinderView({ entries, onSelectCard, layout }: Collecti
   const sheetRef = useRef<HTMLDivElement>(null);
   // How many pages fit side by side at actual size. Recomputed on resize, never guessed.
   const [pagesPerSpread, setPagesPerSpread] = useState(1);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [page, setPage] = useState(0);
 
   const ordered = useMemo(
@@ -96,6 +96,18 @@ export function CollectionBinderView({ entries, onSelectCard, layout }: Collecti
       };
     });
   }, [ordered, spread, pagesPerSpread, pageCount, slotsPerPage]);
+
+  /**
+   * The page numbers on screen, as a sentence: "1", "1 and 2", "1, 2 and 3". The counter
+   * used to report spreads ("spread 2 of 5"), a unit that exists nowhere in the binder and
+   * changes meaning when the window resizes; the page numbers are what the sheets are
+   * actually labelled with. `Intl.ListFormat` supplies each language's own conjunction,
+   * so the joining word never has to live in the translation files.
+   */
+  const visiblePageLabel = useMemo(() => {
+    const numbers = visiblePages.map((binderPage) => String(binderPage.number));
+    return new Intl.ListFormat(i18n.language || 'en', { style: 'long', type: 'conjunction' }).format(numbers);
+  }, [visiblePages, i18n.language]);
 
   return (
     <div ref={sheetRef} className="flex flex-col gap-3">
@@ -158,20 +170,23 @@ export function CollectionBinderView({ entries, onSelectCard, layout }: Collecti
           type="button"
           onClick={() => setPage((current) => Math.max(0, current - pagesPerSpread))}
           disabled={spread === 0}
-          aria-label={t('collection.binderPrevious')}
+          aria-label={t('collection.binderPrevious', { count: pagesPerSpread })}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
         >
           <FaChevronLeft className="text-xs" />
         </button>
         <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
-          {/* Counts spreads, not pages: with three sheets on screen, "page 1 of 12" would be a lie. */}
-          {t('collection.binderSpread', { spread: spread + 1, total: spreadCount, pages: visiblePages.length })}
+          {t('collection.binderPages', {
+            count: visiblePages.length,
+            pages: visiblePageLabel,
+            total: pageCount
+          })}
         </span>
         <button
           type="button"
           onClick={() => setPage((current) => Math.min((spreadCount - 1) * pagesPerSpread, current + pagesPerSpread))}
           disabled={spread >= spreadCount - 1}
-          aria-label={t('collection.binderNext')}
+          aria-label={t('collection.binderNext', { count: pagesPerSpread })}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
         >
           <FaChevronRight className="text-xs" />
