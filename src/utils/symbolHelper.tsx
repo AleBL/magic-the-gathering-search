@@ -2,6 +2,7 @@ import { logger } from './logger';
 import { ReactNode } from 'react';
 import i18n from '../plugins/i18n';
 import { dispatchToast } from './toastHelper';
+import { SCRYFALL_API, scryfallSymbolSvgUrl } from '../constants/urls';
 let symbolMap: Record<string, string> = {};
 let isFetching = false;
 
@@ -14,7 +15,7 @@ export async function fetchSymbols() {
   if (Object.keys(symbolMap).length > 0 || isFetching) return;
   isFetching = true;
   try {
-    const res = await fetch('https://api.scryfall.com/symbology');
+    const res = await fetch(SCRYFALL_API.symbology);
     const json = await res.json();
     if (json.data && Array.isArray(json.data)) {
       const map: Record<string, string> = {};
@@ -27,7 +28,7 @@ export async function fetchSymbols() {
     }
   } catch (error) {
     logger.error('Failed to fetch Scryfall symbology:', error);
-    dispatchToast(i18n.t('common.errorFetchingSymbology') as string, 'danger');
+    dispatchToast(i18n.t('common.errorFetchingSymbology') as string, 'error');
   } finally {
     isFetching = false;
   }
@@ -38,7 +39,7 @@ export function getSymbolUrl(symbol: string): string {
     return symbolMap[symbol];
   }
   const clean = symbol.replace(/[{}]/g, '').replace(/\//g, '');
-  return `https://svgs.scryfall.io/card-symbols/${clean}.svg`;
+  return scryfallSymbolSvgUrl(clean);
 }
 
 /**

@@ -170,7 +170,7 @@ describe('useDeckTokens', () => {
         await result.current.handleAnalyzeDeck();
       });
 
-      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('search.scryfallOffline'), 'danger');
+      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('search.scryfallOffline'), 'error');
     });
 
     it('reports a failed lookup while online as an analysis failure', async () => {
@@ -181,7 +181,7 @@ describe('useDeckTokens', () => {
         await result.current.handleAnalyzeDeck();
       });
 
-      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('tokens.analysisError'), 'danger');
+      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('tokens.analysisError'), 'error');
     });
 
     it('reports a Scryfall error status, since that is not an answer about the deck', async () => {
@@ -192,7 +192,7 @@ describe('useDeckTokens', () => {
         await result.current.handleAnalyzeDeck();
       });
 
-      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('tokens.analysisError'), 'danger');
+      expect(dispatchToast).toHaveBeenCalledWith(i18n.t('tokens.analysisError'), 'error');
     });
 
     // Scryfall not knowing the card *is* an answer: it makes no tokens. The collection

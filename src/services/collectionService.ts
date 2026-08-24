@@ -2,6 +2,7 @@ import { logger } from '../utils/logger';
 import { db } from '../db/database';
 import { Card } from '../types/Card';
 import { CollectionEntry } from '../types/Collection';
+import { scryfallPrintingUrl } from '../constants/urls';
 
 const buildEntry = (card: Card, overrides: Partial<CollectionEntry> = {}): CollectionEntry => ({
   id: card.id,
@@ -36,7 +37,12 @@ const enrichPriceFallback = async (cardId: string): Promise<void> => {
     const entry = await db.collection.get(cardId);
     if (!entry || entry.fallbackPrices !== undefined || !needsPriceFallback(entry.card)) return;
 
-    const response = await fetch(`https://api.scryfall.com/cards/${entry.card.set}/${entry.card.collector_number}/en`);
+    // Both parts address the printing, so without either one there is nothing to ask for:
+    // the URL would carry the literal string "undefined" and come back 404.
+    const { set, collector_number: collectorNumber } = entry.card;
+    if (!set || !collectorNumber) return;
+
+    const response = await fetch(scryfallPrintingUrl(set, collectorNumber));
     const prices = response.ok ? (((await response.json()) as Card).prices ?? null) : null;
 
     const fresh = await db.collection.get(cardId);

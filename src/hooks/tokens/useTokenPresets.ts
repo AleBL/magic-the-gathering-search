@@ -2,6 +2,7 @@ import { logger } from '../../utils/logger';
 import { useEffect, useState } from 'react';
 import { tokenPresets, TokenPreset } from '../../components/playtest/PlaytestTokenModal';
 import { ScryfallSearchResponse } from '../../types/Scryfall';
+import { scryfallSearchUrl } from '../../constants/urls';
 
 const PRESET_IMAGE_QUERY =
   't:token (name:soldier or name:zombie or name:goblin or name:thopter or name:saproling or name:bird or name:beast or name:treasure or name:food)';
@@ -20,9 +21,7 @@ export function useTokenPresets() {
   useEffect(() => {
     const fetchPresetImages = async () => {
       try {
-        const response = await fetch(
-          `https://api.scryfall.com/cards/search?q=${encodeURIComponent(PRESET_IMAGE_QUERY)}`
-        );
+        const response = await fetch(scryfallSearchUrl(PRESET_IMAGE_QUERY));
         if (!response.ok) return;
         const data = (await response.json()) as ScryfallSearchResponse;
         if (data.data && Array.isArray(data.data)) {

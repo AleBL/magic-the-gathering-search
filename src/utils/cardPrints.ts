@@ -1,4 +1,5 @@
 import { Card } from '../types/Card';
+import { gathererImageUrl } from '../constants/urls';
 
 /**
  * Adds the Gatherer image URL for printings that have a multiverse id, which is the only
@@ -6,9 +7,7 @@ import { Card } from '../types/Card';
  */
 export function withGathererImage(card: Card & { multiverse_ids?: number[] }): Card {
   const multiverseId = card.multiverse_ids?.[0];
-  const gatherer = multiverseId
-    ? `https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${multiverseId}&type=card`
-    : '';
+  const gatherer = multiverseId ? gathererImageUrl(multiverseId) : '';
 
   return {
     ...card,

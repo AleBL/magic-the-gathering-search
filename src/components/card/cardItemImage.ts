@@ -1,6 +1,7 @@
 import { Card } from '../../types/Card';
 import { CardSize } from '../../types';
 import locales from '../../locales';
+import { scryfallNamedImageUrl } from '../../constants/urls';
 
 export const getGlowColor = (rarity: string | undefined): string => {
   switch (rarity?.toLowerCase()) {
@@ -47,7 +48,7 @@ export function getCardItemImageUrl(card: Card, size: CardSize): string {
   const imageUris = card.image_uris ?? card.card_faces?.[0]?.image_uris;
   if (!imageUris) {
     const landName = BASIC_LAND_NAMES[card.name?.toLowerCase()];
-    return landName ? `https://api.scryfall.com/cards/named?exact=${landName}&format=image` : '';
+    return landName ? scryfallNamedImageUrl(landName) : '';
   }
 
   if (card.image_uris?.gatherer) return card.image_uris.gatherer;
@@ -63,5 +64,5 @@ export function getCardItemImageUrl(card: Card, size: CardSize): string {
   if (prioritizedUri) return prioritizedUri;
 
   const landName = BASIC_LAND_NAMES[card.name?.toLowerCase()];
-  return landName ? `https://api.scryfall.com/cards/named?exact=${landName}&format=image` : '';
+  return landName ? scryfallNamedImageUrl(landName) : '';
 }

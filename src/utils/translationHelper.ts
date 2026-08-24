@@ -2,6 +2,7 @@ import { logger } from './logger';
 import { Card } from '../types/Card';
 import i18n from '../plugins/i18n';
 import { dispatchToast } from './toastHelper';
+import { gathererImageUrl, scryfallSearchUrl } from '../constants/urls';
 
 const hasPriceData = (prices?: Card['prices']): boolean =>
   !!prices && [prices.usd, prices.usd_foil, prices.eur, prices.eur_foil].some((v) => v != null && v !== '');
@@ -34,7 +35,7 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
     // resolve to their localized printing instead of their English name.
     const oracleQuery = batch.map((id) => `oracle_id:${id}`).join(' OR ');
     const query = `(${oracleQuery}) lang:${lang} include:extras`;
-    const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`;
+    const url = scryfallSearchUrl(query);
 
     try {
       const response = await fetch(url);
@@ -44,9 +45,7 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
           json.data.forEach((card: Card & { multiverse_ids?: number[] }) => {
             if (card.oracle_id) {
               const multiverseId = card.multiverse_ids?.[0];
-              const gathererUrl = multiverseId
-                ? `https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${multiverseId}&type=card`
-                : '';
+              const gathererUrl = multiverseId ? gathererImageUrl(multiverseId) : '';
 
               const image_uris = card.image_uris || {
                 small: '',
@@ -67,7 +66,7 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
       }
     } catch (error) {
       logger.error('Failed to translate card batch:', error);
-      dispatchToast(i18n.t('common.errorTranslatingBatch') as string, 'danger');
+      dispatchToast(i18n.t('common.errorTranslatingBatch') as string, 'error');
     }
   }
 

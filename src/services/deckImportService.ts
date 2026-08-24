@@ -6,6 +6,7 @@ import { translateCards } from '../utils/translationHelper';
 import { newId } from '../utils/id';
 import { readField, toCardList, toImportedDeck, toNotFoundIdentifiers } from '../utils/typeGuards';
 import { PacingOptions, RequestPacer, createPacer, fetchWithRateLimitRetry, pacedFetch } from './scryfallPacing';
+import { SCRYFALL_API, scryfallSearchUrl } from '../constants/urls';
 
 // Re-exported so the pacing primitives have one home while callers keep importing the
 // import service they already talk to.
@@ -19,7 +20,7 @@ const fetchCollectionWithRetry = async (
   identifiers: Array<{ name?: string; set?: string; collector_number?: string }>,
   pacer: RequestPacer
 ): Promise<Response> =>
-  fetchWithRateLimitRetry(pacer, 'https://api.scryfall.com/cards/collection', {
+  fetchWithRateLimitRetry(pacer, SCRYFALL_API.cardsCollection, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifiers })
@@ -162,10 +163,7 @@ const resolveLocalizedName = async (name: string, lang: string, pacer: RequestPa
 
   for (const query of queries) {
     try {
-      const res = await pacedFetch(
-        pacer,
-        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`
-      );
+      const res = await pacedFetch(pacer, scryfallSearchUrl(query, { unique: 'cards' }));
       if (!res.ok) continue;
       const cards = toCardList(readField(await res.json(), 'data'));
       if (cards.length > 0) return cards[0];

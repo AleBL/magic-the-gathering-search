@@ -1,6 +1,7 @@
 import { Card } from '../types/Card';
 import { CollectionEntry } from '../types/Collection';
 import { ScryfallCollectionResponse } from '../types/Scryfall';
+import { SCRYFALL_API } from '../constants/urls';
 
 export interface CollectionCsvRow {
   name: string;
@@ -153,7 +154,7 @@ interface ChunkError extends Error {
 }
 
 const fetchChunk = async (identifiers: Array<Record<string, string>>): Promise<ScryfallCollectionResponse> => {
-  const response = await fetch('https://api.scryfall.com/cards/collection', {
+  const response = await fetch(SCRYFALL_API.cardsCollection, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifiers })

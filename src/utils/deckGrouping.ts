@@ -1,6 +1,7 @@
 import { Card } from '../types/Card';
 import { GroupCriteria, SortCriteria } from '../types/enums';
 import locales from '../locales';
+import { scryfallNamedImageUrl } from '../constants/urls';
 
 interface CardWithSelectedPrintImage extends Card {
   selectedPrintImageUri?: string;
@@ -166,7 +167,7 @@ export const getCardImageUrl = (card: Card): string => {
 
   const landName = BASIC_LAND_NAMES[card.name?.toLowerCase()];
   if (landName) {
-    return `https://api.scryfall.com/cards/named?exact=${landName}&format=image`;
+    return scryfallNamedImageUrl(landName);
   }
 
   return '';
@@ -181,7 +182,7 @@ export const getCardArtCropUrl = (card: Card): string => {
 
   const landName = BASIC_LAND_NAMES[card.name?.toLowerCase()];
   if (landName) {
-    return `https://api.scryfall.com/cards/named?exact=${landName}&format=image`;
+    return scryfallNamedImageUrl(landName);
   }
 
   return '';

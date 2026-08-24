@@ -9,10 +9,9 @@ import { dispatchToast } from '../../utils/toastHelper';
 import { findTokenGenerators, withImageFallback, withoutKnownTokens } from '../../utils/tokenCards';
 import { isBrowserOffline } from '../../utils/scryfallSearch';
 import { RequestPacer, createPacer, fetchWithRateLimitRetry } from '../../services/scryfallPacing';
+import { SCRYFALL_API } from '../../constants/urls';
 
 const COLLECTION_BATCH_SIZE = 75;
-
-const COLLECTION_URL = 'https://api.scryfall.com/cards/collection';
 
 /** Token printing id to the name of the deck card that makes it. */
 type GeneratorByPartId = Map<string, string>;
@@ -28,7 +27,7 @@ async function postCollection(
   for (let start = 0; start < identifiers.length; start += COLLECTION_BATCH_SIZE) {
     const batch = identifiers.slice(start, start + COLLECTION_BATCH_SIZE);
     try {
-      const response = await fetchWithRateLimitRetry(pacer, COLLECTION_URL, {
+      const response = await fetchWithRateLimitRetry(pacer, SCRYFALL_API.cardsCollection, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifiers: batch })
@@ -147,7 +146,7 @@ export function useDeckTokenAnalysis({ cards, localTokens, addTokens, onTokensLo
       // reached no one ends exactly like a deck that makes no tokens — and the empty state
       // then states that as fact. Say a lookup failed, whether none or only some got through.
       if (lookupFailed) {
-        dispatchToast(isBrowserOffline() ? t('search.scryfallOffline') : t('tokens.analysisError'), 'danger');
+        dispatchToast(isBrowserOffline() ? t('search.scryfallOffline') : t('tokens.analysisError'), 'error');
       }
 
       const partIds = Array.from(partIdToGenerator.keys());
@@ -160,7 +159,7 @@ export function useDeckTokenAnalysis({ cards, localTokens, addTokens, onTokensLo
       // A batch that never came back used to vanish quietly, leaving the tab looking like
       // Scryfall had answered with fewer tokens than the deck actually makes.
       if (printingsFailed && !lookupFailed) {
-        dispatchToast(isBrowserOffline() ? t('search.scryfallOffline') : t('tokens.analysisError'), 'danger');
+        dispatchToast(isBrowserOffline() ? t('search.scryfallOffline') : t('tokens.analysisError'), 'error');
       }
 
       const translated = await translateCards(printings, i18n.language || 'en');
@@ -172,7 +171,7 @@ export function useDeckTokenAnalysis({ cards, localTokens, addTokens, onTokensLo
       addTokens(withoutKnownTokens(localTokens, discovered));
     } catch (error) {
       logger.error('Failed to analyze deck for tokens:', error);
-      dispatchToast(t('tokens.analysisError'), 'danger');
+      dispatchToast(t('tokens.analysisError'), 'error');
     } finally {
       setIsLoading(false);
     }

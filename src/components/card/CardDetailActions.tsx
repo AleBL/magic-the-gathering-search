@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { FaExternalLinkAlt } from 'react-icons/fa';
 import { Card } from '../../types/Card';
+import { GATHERER_FAVICON_URL, SCRYFALL_FAVICON_URL } from '../../constants/urls';
 
 interface CardDetailActionsProps {
   card: Card;
@@ -23,7 +24,7 @@ export function CardDetailActions({ card, isDeckCard, isToken, onAddCardToDeck }
           title={t('export.scryfall')}
         >
           <img
-            src="https://scryfall.com/favicon.ico"
+            src={SCRYFALL_FAVICON_URL}
             alt={t('export.scryfall')}
             className="w-3 h-3 opacity-70"
             onError={(e) => (e.currentTarget.style.display = 'none')}
@@ -40,7 +41,7 @@ export function CardDetailActions({ card, isDeckCard, isToken, onAddCardToDeck }
             title={t('export.gatherer')}
           >
             <img
-              src="https://gatherer.wizards.com/favicon.ico"
+              src={GATHERER_FAVICON_URL}
               alt={t('export.gatherer')}
               className="w-3 h-3 opacity-70"
               onError={(e) => (e.currentTarget.style.display = 'none')}

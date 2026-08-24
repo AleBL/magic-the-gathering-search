@@ -8,6 +8,7 @@ import { translateCards } from '../../utils/translationHelper';
 import { dispatchToast } from '../../utils/toastHelper';
 import { dedupeTokensByIdentity, uniqueTokenId, withImageFallback } from '../../utils/tokenCards';
 import { isBrowserOffline } from '../../utils/scryfallSearch';
+import { scryfallSearchUrl } from '../../constants/urls';
 
 /** Searching Scryfall for a token and adding the chosen printing to the deck. */
 export function useTokenSearch(addTokens: (tokens: RelatedToken[]) => void) {
@@ -42,7 +43,7 @@ export function useTokenSearch(addTokens: (tokens: RelatedToken[]) => void) {
 
     try {
       const query = `t:token lang:any ${searchTerm.trim()}`;
-      const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(scryfallSearchUrl(query));
 
       if (!response.ok) {
         // 404 is Scryfall's answer for "no card matches", which is an empty result and not a failure.
@@ -89,7 +90,7 @@ export function useTokenSearch(addTokens: (tokens: RelatedToken[]) => void) {
       setIsSearchModalOpen(false);
     } catch (error) {
       logger.error('Failed to add token:', error);
-      dispatchToast(t('tokens.addTokenError'), 'danger');
+      dispatchToast(t('tokens.addTokenError'), 'error');
     } finally {
       setIsSearching(false);
     }
