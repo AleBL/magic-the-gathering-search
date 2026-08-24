@@ -28,6 +28,7 @@ import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
 import useDialog from '../../hooks/useDialog';
 import { CollectionSummaryBar } from './CollectionSummaryBar';
+import { APP_EVENTS, emitAppEvent } from '../../constants/appEvents';
 
 function CollectionManager() {
   const { t } = useTranslation();
@@ -358,7 +359,7 @@ function CollectionManager() {
               action={{
                 label: t('commandPalette.goToSearch'),
                 // App listens for this and switches to the search tab.
-                onClick: () => window.dispatchEvent(new CustomEvent('mtg-navigate-tab', { detail: 'search' }))
+                onClick: () => emitAppEvent(APP_EVENTS.navigateTab, 'search')
               }}
             />
           )}
