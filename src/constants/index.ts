@@ -47,6 +47,10 @@ export const COMMANDER_DECK_SIZE = 100;
 // 1 above the --z-playtest CSS variable (99999) so card details render above the fullscreen playtest overlay.
 export const PLAYTEST_CARD_DETAIL_Z_INDEX = 100000;
 
+// Matches the --z-dialog CSS variable (300), one layer above --z-overlay (250): a card
+// detail opened from inside a modal has to render above the modal that opened it.
+export const NESTED_CARD_DETAIL_Z_INDEX = 300;
+
 export const PLAYTEST_CONTEXT_MENU_EDGE_MARGIN_PX = 10;
 
 export const PLAYTEST_CARD_SIZE_CLASSES = 'w-28 sm:w-32 md:w-36 lg:w-40 xl:w-48 aspect-[5/7]';
