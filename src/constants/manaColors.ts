@@ -7,12 +7,8 @@ export const MANA_COLOR_GRADIENTS: Record<string, string> = {
   C: 'bg-gradient-to-br from-[#d6d6d6] to-[#a8a9ad] text-[#3f3f3f] ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-[#a8a9ad] shadow-lg scale-110 z-10'
 };
 
-/**
- * Same per-color palette as {@link MANA_COLOR_GRADIENTS}, without the ring/
- * scale/z-index treatment meant for the small circular swatch — for wider
- * elements (a full-width selected row) those would look like a stray halo
- * and an oddly-enlarged button instead of a color cue.
- */
+// {@link MANA_COLOR_GRADIENTS} minus ring, scale and z-index: on a full-width row those read
+// as a stray halo around an oddly enlarged button rather than as a color cue.
 export const MANA_COLOR_ROW_ACTIVE: Record<string, string> = {
   W: 'bg-gradient-to-r from-[#fff7de] to-[#f8e7b9] text-[#5c4f2e] shadow-md shadow-black/5',
   U: 'bg-gradient-to-r from-[#1a7bc4] to-[#0e68ab] text-white shadow-md shadow-blue-500/20',
@@ -22,7 +18,7 @@ export const MANA_COLOR_ROW_ACTIVE: Record<string, string> = {
   C: 'bg-gradient-to-r from-[#d6d6d6] to-[#a8a9ad] text-[#3f3f3f] shadow-md shadow-black/5'
 };
 
-/** Whether a color's row background is light enough to need a dark swatch overlay instead of a light one. */
+/** Light backgrounds need a dark swatch overlay, not a light one. */
 export const MANA_COLOR_IS_LIGHT: Record<string, boolean> = {
   W: true,
   U: false,

@@ -63,8 +63,10 @@ Search Magic: The Gathering cards, build and manage decks with [Scryfall](https:
 ```bash
 node -v # 24.15.0
 yarn -v # 4.17.1
-npm  -v # 11.12.1
 ```
+
+Yarn 4 is pinned through `packageManager` in `package.json`; run `corepack enable` once so the
+right version is used. The repository ships a `yarn.lock` only, so use Yarn (not npm) to install.
 
 ### Linux dependencies (Electron)
 
@@ -75,8 +77,7 @@ sudo apt-get install -yq --no-install-recommends libasound2 libatk1.0-0 libc6 li
 ### Install dependencies
 
 ```bash
-npm install
-# OR
+corepack enable
 yarn install
 ```
 
@@ -84,71 +85,110 @@ yarn install
 
 ```bash
 # Electron app with hot reload
-npm run dev
+yarn dev
 
 # Browser only (no Electron)
-bash dev-web.sh
+yarn dev:web
 ```
 
 ### Build
 
 ```bash
-npm run build          # default build
-npm run build:win      # Windows target
-npm run build:mac      # macOS target
-npm run build:linux    # Linux target
+yarn build             # renderer + Electron main (dist-vite/ and dist-electron/)
+yarn build:web         # browser/PWA bundle
+yarn build:win         # Windows installer
+yarn build:mac         # macOS installer
+yarn build:linux       # Linux installer
+yarn dist              # installer for the current platform
+yarn pack:app          # unpacked desktop app, no installer
 ```
 
-Distributable files are generated in `dist-vite/` and `dist-electron/`.
+`yarn build` compiles into `dist-vite/` and `dist-electron/`. The platform targets and `pack:app`
+run Electron Builder on top of that and write into `dist/`, which is also where `yarn build:web`
+publishes. Every one of them runs `yarn clean` first, so a desktop package and a web bundle never
+coexist there, and building one discards the other's output rather than half-overwriting it.
 See [Electron Builder CLI docs](https://www.electron.build/cli.html) for additional options.
+
+The script is `pack:app`, not `pack`, because `yarn pack` is Yarn's own tarball command: it shadows
+any script of that name and would silently produce a source tarball instead of the app.
 
 ### Tests
 
 ```bash
-npm run test           # unit + component tests (Vitest)
-npm run test:coverage  # same, enforcing the coverage thresholds in vitest.config.ts
-npm run test:e2e       # end-to-end journeys (Playwright)
-npm run test:e2e:ui    # the same journeys in Playwright's interactive runner
-npm run test:e2e:bench # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
+yarn test              # unit + component tests (Vitest)
+yarn test:watch        # the same suite in watch mode
+yarn test:coverage     # same, enforcing the coverage thresholds in vitest.config.ts
+yarn test:e2e          # end-to-end journeys (Playwright)
+yarn test:e2e:ui       # the same journeys in Playwright's interactive runner
+yarn test:e2e:bench    # collection scale benchmark (add BENCH_PROD=1 for the production bundle)
+yarn test:e2e:electron # desktop boot journeys against the real Electron process
 ```
 
 The E2E suite starts its own dev server on port 5199 and stubs every Scryfall request, so
 it needs no network and will not collide with a dev server you already have running. It
 drives Chrome locally; CI installs Playwright's own chromium.
 
+`test:e2e:electron` is the exception: it runs the built desktop app instead of a browser, so
+it needs `yarn build` first and a display. Without one (Linux with no `DISPLAY` nor
+`WAYLAND_DISPLAY`) the project skips itself, and a skip is not evidence.
+
 ### Other scripts
 
 ```bash
-npm run lint           # ESLint + Prettier auto-fix
-npm run type-check     # TypeScript type check only
-npm run i18n:check     # verify en/es/pt share the same key set
-npm run deadcode       # unused files/exports/dependencies (knip)
-npm run seed:profile   # generate a demo profile (7 decks + collection) to import via Backup
-npm run deps:update    # interactive major dependency updates (taze)
-npm run clean          # remove build output folders
+yarn lint:check        # ESLint + Prettier, report only (the gate CI runs)
+yarn lint:fix          # the same rules with auto-fix applied
+yarn type-check        # TypeScript type check only
+yarn i18n:check        # verify en/es/pt share the same key set
+yarn readme:check      # verify this file's commands match package.json
+yarn deadcode          # unused files/exports/dependencies (knip)
+yarn seed:profile      # generate a demo profile (7 decks + collection) to import via Backup
+yarn collection:csv    # generate a large real collection CSV (--rows 10000) to import
+yarn deps:update       # interactive major dependency updates (taze)
+yarn clean             # remove build output folders
 ```
 
 ## Project Structure
 
 ```
 src/
+├── assets/       # Static assets bundled by Vite
 ├── components/   # UI components organized by domain
 │   ├── card/     # Card-related components (Search, Grid, Detail Modal, ...)
 │   ├── collection/ # Personal collection tab
 │   ├── deck/     # Deck management components (List, Editor, Stats, ...)
+│   ├── layout/   # App shell (RootLayout, Header, ProfileMenu sections)
 │   ├── playtest/ # Playtest simulator components (Battlefield, Hand, Log, ...)
+│   ├── settings/ # Backup panel, storage usage
 │   ├── stats/    # Deck analysis panels (mana curve, mana base, goldfish, ...)
 │   └── ui/       # Reusable base components (Dialogs, Toasts, EmptyStates, ...)
+├── constants/    # Storage keys, search options, mana colors
 ├── db/           # Local database configuration (IndexedDB)
 ├── hooks/        # Custom React hooks (useDeckManager, usePlaytestSimulator, ...)
+│   ├── deck/     # Slices of useDeckManager (export, import, saving, validation)
+│   ├── playtest/ # Slices of usePlaytestSimulator (zones, turn, life, history, ...)
+│   ├── print/    # Slices of useProxyPrint
+│   ├── search/   # Slices of useCardSearch (paging, Scryfall emitters)
+│   └── tokens/   # Slices of useDeckTokens (analysis, list, presets, search)
 ├── locales/      # i18n translations (en, es, pt)
+├── plugins/      # i18next setup
 ├── services/     # External integrations and file utilities (Deck imports, etc)
 ├── store/        # Global state management (Zustand)
 ├── style/        # Modular CSS (variables, layout, components, ...)
+├── test/         # Vitest setup and shared test factories (not the tests themselves)
 ├── types/        # TypeScript types (Card, Deck, Playtest, ...)
-└── utils/        # Deck validator, mana symbol helpers
+└── utils/        # Deck validator, mana symbol helpers, pure calculations
 electron/         # Electron main process & preload script
+e2e/              # Playwright journeys (browser + Electron projects)
 ```
+
+A folder under `hooks/` holds the internals of the single hook that shares its name. Components
+import the orchestrator (`useDeckManager`, `usePlaytestSimulator`, `useProxyPrint`,
+`useCardSearch`, `useDeckTokens`), never a file inside the folder.
+
+Unit tests live in a `__tests__/` folder beside the code they cover, so
+`src/utils/deckDoctor.ts` is tested by `src/utils/__tests__/deckDoctor.test.ts`. The test moves
+with its module during a refactor, while the directory listing stays code-only. `src/test/`
+holds shared setup and factories, not test cases.
 
 ## Contributing
 

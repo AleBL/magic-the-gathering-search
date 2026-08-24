@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useShortcutHandler } from './useShortcutHandler';
 
 interface ShortcutOptions {
   onSearchFocus?: () => void;
@@ -8,61 +8,55 @@ interface ShortcutOptions {
   onClearDeck?: () => void;
 }
 
-export function useShortcuts({ onSearchFocus, onEscape, onSaveDeck, onPlaytest, onClearDeck }: ShortcutOptions) {
-  const isModifierKeyPressed = useCallback((event: KeyboardEvent): boolean => {
-    const safeNavigator: Navigator & { userAgentData?: { platform?: string } } = navigator;
-    const isMacOS = safeNavigator.userAgentData?.platform === 'macOS' || /Mac/i.test(navigator.userAgent);
-    return isMacOS ? event.metaKey : event.ctrlKey;
-  }, []);
+/** Read at dispatch time: the platform check has to see the event that just fired. */
+function isModifierKeyPressed(event: KeyboardEvent): boolean {
+  const safeNavigator: Navigator & { userAgentData?: { platform?: string } } = navigator;
+  const isMacOS = safeNavigator.userAgentData?.platform === 'macOS' || /Mac/i.test(navigator.userAgent);
+  return isMacOS ? event.metaKey : event.ctrlKey;
+}
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+/**
+ * The app-wide bindings, on the registry's bottom layer: a modal or the playtest above
+ * them takes the key first, and only what neither of them claimed lands here.
+ */
+export function useShortcuts({ onSearchFocus, onEscape, onSaveDeck, onPlaytest, onClearDeck }: ShortcutOptions) {
+  useShortcutHandler(
+    (event) => {
       const hasModifierKey = isModifierKeyPressed(event);
       const pressedKey = event.key.toLowerCase();
 
-      // Escape
-      if (event.key === 'Escape') {
-        if (onEscape) {
-          onEscape();
-        }
+      // Escape stays unprevented: it is the browser's own dismiss key.
+      if (event.key === 'Escape' && onEscape) {
+        onEscape();
+        return true;
       }
 
-      // Cmd/Ctrl + F
-      if (hasModifierKey && pressedKey === 'f') {
-        if (onSearchFocus) {
-          event.preventDefault();
-          onSearchFocus();
-        }
+      if (hasModifierKey && pressedKey === 'f' && onSearchFocus) {
+        event.preventDefault();
+        onSearchFocus();
+        return true;
       }
 
-      // Cmd/Ctrl + S
-      if (hasModifierKey && pressedKey === 's') {
-        if (onSaveDeck) {
-          event.preventDefault();
-          onSaveDeck();
-        }
+      if (hasModifierKey && pressedKey === 's' && onSaveDeck) {
+        event.preventDefault();
+        onSaveDeck();
+        return true;
       }
 
-      // Cmd/Ctrl + P
-      if (hasModifierKey && pressedKey === 'p') {
-        if (onPlaytest) {
-          event.preventDefault();
-          onPlaytest();
-        }
+      if (hasModifierKey && pressedKey === 'p' && onPlaytest) {
+        event.preventDefault();
+        onPlaytest();
+        return true;
       }
 
-      // Cmd/Ctrl + Shift + N
-      if (hasModifierKey && event.shiftKey && pressedKey === 'n') {
-        if (onClearDeck) {
-          event.preventDefault();
-          onClearDeck();
-        }
+      if (hasModifierKey && event.shiftKey && pressedKey === 'n' && onClearDeck) {
+        event.preventDefault();
+        onClearDeck();
+        return true;
       }
-    };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onSearchFocus, onEscape, onSaveDeck, onPlaytest, onClearDeck, isModifierKeyPressed]);
+      return false;
+    },
+    { layer: 'app' }
+  );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt } from 'react-icons/fa';
+import { FaBoxOpen, FaHeart, FaFileImport, FaFileExport, FaTrashAlt, FaChevronUp, FaSpinner } from 'react-icons/fa';
 import { SearchFilters } from '../../types';
 import { EMPTY_SEARCH_FILTERS } from '../../constants';
 import { useCardSizePreference } from '../../hooks/useCardSizePreference';
@@ -18,6 +18,7 @@ import { CollectionBySetView } from './CollectionBySetView';
 import { CollectionBinderView } from './CollectionBinderView';
 import { CollectionViewOptions, type CollectionViewMode } from './CollectionViewOptions';
 import type { BinderLayout } from './CollectionBinderView';
+import { STORAGE_KEYS } from '../../constants/storage';
 /** The collection has one mode the deck tab does not: a tick-list for stocktaking. */
 import type { Card } from '../../types/Card';
 import { useSearchFilters } from '../../hooks/useSearchFilters';
@@ -27,6 +28,7 @@ import CardSkeleton from '../card/CardSkeleton';
 import CustomDialog from '../ui/CustomDialog';
 import useDialog from '../../hooks/useDialog';
 import { CollectionSummaryBar } from './CollectionSummaryBar';
+import { APP_EVENTS, emitAppEvent } from '../../constants/appEvents';
 
 function CollectionManager() {
   const { t } = useTranslation();
@@ -37,6 +39,30 @@ function CollectionManager() {
   const [cardSize, setCardSize] = useCardSizePreference();
   const [viewMode, setViewMode] = useState<CollectionViewMode>('grid');
   const [binderLayout, setBinderLayout] = useState<BinderLayout>('3x3');
+  /**
+   * The summary strip and the filter panel together take a good third of the height, which the
+   * binder needs back. Collapsed state is remembered: someone browsing a binder wants it that
+   * way every time, not once per visit.
+   */
+  const [areToolsOpen, setAreToolsOpen] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.collectionToolsOpen) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleTools = () => {
+    setAreToolsOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem(STORAGE_KEYS.collectionToolsOpen, String(next));
+      } catch {
+        // Ignore persistence failures (private mode); the session still honours the choice.
+      }
+      return next;
+    });
+  };
   // The grid's CardItem owns its own modal; the list and stack views do not, so the tab holds
   // the selection for them.
   const [detailCard, setDetailCard] = useState<Card | null>(null);
@@ -45,7 +71,7 @@ function CollectionManager() {
   const currency = useCollectionSettings((state) => state.currency);
   const setCurrency = useCollectionSettings((state) => state.setCurrency);
   const { rarities } = useSearchFilters(filters, setFilters);
-  const { isImporting, exportCsv, importCsv } = useCollectionImportExport(entries);
+  const { isImporting, importProgress, exportCsv, importCsv } = useCollectionImportExport(entries);
   const { dialogState, showConfirm, closeDialog } = useDialog();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +150,9 @@ function CollectionManager() {
               {viewTab('wishlist', <FaHeart className="text-xs" />, t('collection.wishlist'), summary.wishlistCount)}
             </div>
 
-            {/* Below md: three equal compact buttons filling the row. */}
+            {/* Below md: three equal compact buttons filling the row. The view picker lives
+                here rather than in the filter panel, so collapsing the panel cannot strand
+                someone inside the binder with no way back to the grid. */}
             <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
               <button
                 type="button"
@@ -152,6 +180,31 @@ function CollectionManager() {
                 <FaTrashAlt className="text-xs shrink-0" />
                 <span className="truncate">{t('collection.clear')}</span>
               </button>
+
+              <CollectionViewOptions
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                cardSize={cardSize}
+                onCardSizeChange={setCardSize}
+                binderLayout={binderLayout}
+                onBinderLayoutChange={setBinderLayout}
+              />
+
+              <button
+                type="button"
+                onClick={toggleTools}
+                aria-expanded={areToolsOpen}
+                aria-controls="collection-tools"
+                title={areToolsOpen ? t('collection.hideTools') : t('collection.showTools')}
+                className="flex items-center justify-center gap-2 px-2 md:px-3 py-2 rounded-xl text-xs md:text-sm font-semibold bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <FaChevronUp
+                  className={`text-xs shrink-0 transition-transform duration-200 ${areToolsOpen ? '' : 'rotate-180'}`}
+                />
+                <span className="truncate hidden lg:inline">
+                  {areToolsOpen ? t('collection.hideTools') : t('collection.showTools')}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -165,75 +218,106 @@ function CollectionManager() {
             aria-hidden="true"
           />
 
-          <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
+          {/* A real collection file is thousands of rows and the requests are deliberately
+              paced, so the import takes tens of seconds. Without this the app looked frozen:
+              one disabled button and no sign that anything was happening. */}
+          {isImporting && (
+            <div className="modal-overlay" role="status" aria-live="polite">
+              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center gap-3 text-center">
+                <FaSpinner className="text-3xl text-indigo-500 animate-spin" />
+                <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wider">
+                  {t('collection.importingTitle')}
+                </h3>
+                {importProgress && importProgress.total > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-gray-600 dark:text-slate-300 tabular-nums">
+                      {t('collection.importingProgress', {
+                        done: importProgress.done,
+                        total: importProgress.total
+                      })}
+                    </p>
+                    <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 transition-[width] duration-300"
+                        style={{
+                          width: `${Math.round((importProgress.done / importProgress.total) * 100)}%`
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs font-semibold text-gray-600 dark:text-slate-300">{t('collection.importing')}</p>
+                )}
+                <p className="text-[11px] text-gray-400 dark:text-slate-500 leading-snug">
+                  {t('collection.importingHint')}
+                </p>
+              </div>
+            </div>
+          )}
 
-          <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-            {/* Mirrors the search tab exactly: the colour/type quick filters on their own row
+          {/* Summary and filters collapse together: they are the "set up what I am looking at"
+              block, and the binder wants that height for pockets. */}
+          <div id="collection-tools" className={areToolsOpen ? 'flex flex-col gap-4' : 'hidden'}>
+            <CollectionSummaryBar summary={summary} currency={currency} onCurrencyChange={setCurrency} view={view} />
+
+            <div className="flex flex-col gap-3 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
+              {/* Mirrors the search tab exactly: the colour/type quick filters on their own row
                 above, the advanced panel behind its button below. Below `sm` the quick filters
                 move into the sheet, which is why they are hidden rather than duplicated. */}
-            <div className="hidden sm:block">
-              <CardFilterBar filters={filters} setFilters={setFilters} />
-            </div>
-            {/* Below sm the selects stack full-width for comfortable tapping. The advanced
+              <div className="hidden sm:block">
+                <CardFilterBar filters={filters} setFilters={setFilters} />
+              </div>
+              {/* Below sm the selects stack full-width for comfortable tapping. The advanced
                 filters button joins this row rather than sitting on its own line: on a wide
                 screen it was dropping below a row that had space to spare. */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-              <SearchFiltersPanel
-                filters={filters}
-                setFilters={setFilters}
-                hideOracleTag
-                mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
-              />
-              {/* Capped: as a `flex-1` it grew to fill the row on wide screens, which made a
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+                <SearchFiltersPanel
+                  filters={filters}
+                  setFilters={setFilters}
+                  hideOracleTag
+                  mobileExtras={<CardFilterBar filters={filters} setFilters={setFilters} mobileLayout />}
+                />
+                {/* Capped: as a `flex-1` it grew to fill the row on wide screens, which made a
                   short card name look like a form field for an essay. */}
-              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px] sm:max-w-[320px]">
-                <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
-                <input
-                  type="search"
-                  value={nameQuery}
-                  onChange={(event) => setNameQuery(event.target.value)}
-                  placeholder={t('collection.searchPlaceholder')}
-                  className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 placeholder:font-normal placeholder:text-gray-400"
-                />
-              </label>
-              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t('search.rarity')}
-                <select
-                  value={filters.rarity}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, rarity: e.target.value }))}
-                  className="flex-1 sm:flex-none max-w-[60%] sm:max-w-none rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100"
-                >
-                  {rarities.map((rarity) => (
-                    <option key={rarity.value} value={rarity.value}>
-                      {rarity.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                {t('collection.set')}
-                <select
-                  value={setFilter}
-                  onChange={(e) => setSetFilter(e.target.value)}
-                  className="flex-1 sm:flex-none max-w-[60%] sm:max-w-[220px] rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100"
-                >
-                  <option value="">{t('search.all')}</option>
-                  {availableSets.map((set) => (
-                    <option key={set.code} value={set.code}>
-                      {set.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="ml-auto">
-                <CollectionViewOptions
-                  viewMode={viewMode}
-                  setViewMode={setViewMode}
-                  cardSize={cardSize}
-                  onCardSizeChange={setCardSize}
-                  binderLayout={binderLayout}
-                  onBinderLayoutChange={setBinderLayout}
-                />
+                <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:flex-1 sm:min-w-[200px] sm:max-w-[320px]">
+                  <span className="sr-only sm:not-sr-only">{t('collection.searchLabel')}</span>
+                  <input
+                    type="search"
+                    value={nameQuery}
+                    onChange={(event) => setNameQuery(event.target.value)}
+                    placeholder={t('collection.searchPlaceholder')}
+                    className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 placeholder:font-normal placeholder:text-gray-400"
+                  />
+                </label>
+                <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  {t('search.rarity')}
+                  <select
+                    value={filters.rarity}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, rarity: e.target.value }))}
+                    className="flex-1 sm:flex-none max-w-[60%] sm:max-w-none rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100"
+                  >
+                    {rarities.map((rarity) => (
+                      <option key={rarity.value} value={rarity.value}>
+                        {rarity.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  {t('collection.set')}
+                  <select
+                    value={setFilter}
+                    onChange={(e) => setSetFilter(e.target.value)}
+                    className="flex-1 sm:flex-none max-w-[60%] sm:max-w-[220px] rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100"
+                  >
+                    <option value="">{t('search.all')}</option>
+                    {availableSets.map((set) => (
+                      <option key={set.code} value={set.code}>
+                        {set.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </div>
           </div>
@@ -275,7 +359,7 @@ function CollectionManager() {
               action={{
                 label: t('commandPalette.goToSearch'),
                 // App listens for this and switches to the search tab.
-                onClick: () => window.dispatchEvent(new CustomEvent('mtg-navigate-tab', { detail: 'search' }))
+                onClick: () => emitAppEvent(APP_EVENTS.navigateTab, 'search')
               }}
             />
           )}

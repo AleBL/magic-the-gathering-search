@@ -22,16 +22,11 @@ export default defineConfig({
       include: ['src/utils/**/*.{ts,tsx}', 'src/services/**/*.ts', 'src/store/**/*.ts', 'src/hooks/**/*.ts'],
       // 'json-summary' + 'json' feed the PR coverage-report action; 'text' for CI logs.
       reporter: ['text', 'text-summary', 'json', 'json-summary', 'html'],
-      // Ratchet, set just under the measured value at the time of writing. These read
-      // lower than the old numbers only because the denominator is now ~4x larger.
-      // Raise them as tests land; never widen the gap to make a red run pass.
-      // Raised 2026-08-07 (was 59/53/59/59) after covering deckImage's canvas render:
-      // 61.92/54.17/60.45/62.72 measured, each floor set just under it.
       thresholds: {
-        statements: 61,
-        branches: 54,
-        functions: 60,
-        lines: 62
+        statements: 79,
+        branches: 70,
+        functions: 76,
+        lines: 80
       }
     }
   }

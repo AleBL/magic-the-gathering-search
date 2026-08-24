@@ -1,38 +1,30 @@
 import { Card } from '../types/Card';
 import { Deck } from '../types/Deck';
-import { DeckFormatType, DeckZone } from '../types/enums';
-import { ScryfallCollectionResponse, ScryfallNotFoundIdentifier } from '../types/Scryfall';
+import { DeckZone } from '../types/enums';
+import { ScryfallNotFoundIdentifier } from '../types/Scryfall';
 import { translateCards } from '../utils/translationHelper';
+import { newId } from '../utils/id';
+import { readField, toCardList, toImportedDeck, toNotFoundIdentifiers } from '../utils/typeGuards';
+import { PacingOptions, RequestPacer, createPacer, fetchWithRateLimitRetry, pacedFetch } from './scryfallPacing';
+import { SCRYFALL_API, scryfallSearchUrl } from '../constants/urls';
 
-const MAX_RATE_LIMIT_RETRIES = 2;
-const DEFAULT_RETRY_DELAY_MS = 1000;
-const MAX_RETRY_DELAY_MS = 5000;
+// Re-exported so the pacing primitives have one home while callers keep importing the
+// import service they already talk to.
+export { retryDelayFor } from './scryfallPacing';
+
+/** Pacing knobs. Tests set them to zero; nothing in the app overrides them. */
+export type ImportPacingOptions = PacingOptions;
 
 /** POSTs to Scryfall's collection endpoint, retrying lightly on 429 (rate limit) before giving up. */
 const fetchCollectionWithRetry = async (
-  identifiers: Array<{ name?: string; set?: string; collector_number?: string }>
-): Promise<Response> => {
-  for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt++) {
-    const response = await fetch('https://api.scryfall.com/cards/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifiers })
-    });
-
-    if (response.status !== 429 || attempt === MAX_RATE_LIMIT_RETRIES) {
-      return response;
-    }
-
-    const retryAfterHeader = Number(response.headers.get('Retry-After'));
-    const delayMs = Number.isFinite(retryAfterHeader)
-      ? Math.min(retryAfterHeader * 1000, MAX_RETRY_DELAY_MS)
-      : DEFAULT_RETRY_DELAY_MS;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  // Unreachable: the loop always returns within MAX_RATE_LIMIT_RETRIES + 1 iterations.
-  throw new Error('ScryfallRateLimited');
-};
+  identifiers: Array<{ name?: string; set?: string; collector_number?: string }>,
+  pacer: RequestPacer
+): Promise<Response> =>
+  fetchWithRateLimitRetry(pacer, SCRYFALL_API.cardsCollection, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifiers })
+  });
 
 /**
  * Reads an exported `.json` deck file. Accepts both shapes the app writes: a single deck,
@@ -53,15 +45,11 @@ export const parseDeckJson = (content: string): Deck[] | null => {
   const candidates = Array.isArray(parsed) ? parsed : [parsed];
   if (candidates.length === 0) return null;
 
-  // Every deck in one file would otherwise share a millisecond, and `put` would leave only
-  // the last one standing. The offset keeps ids unique without changing their shape.
-  const baseId = Date.now();
-
-  return candidates.reduce<Deck[] | null>((decks, candidate, index) => {
+  return candidates.reduce<Deck[] | null>((decks, candidate) => {
     if (!decks) return null;
-    const deck = candidate as Deck | null;
-    if (!deck || typeof deck.name !== 'string' || !deck.name || !Array.isArray(deck.cards)) return null;
-    decks.push({ ...deck, id: String(baseId + index), format: deck.format || DeckFormatType.FREEFORM });
+    const deck = toImportedDeck(candidate);
+    if (!deck) return null;
+    decks.push({ ...deck, id: newId() });
     return decks;
   }, []);
 };
@@ -100,7 +88,6 @@ const SECTION_HEADERS = new Set([
   'about'
 ]);
 
-/** Lowercases and strips accents/trailing colon so headers match across languages. */
 const normalizeHeader = (value: string): string =>
   value
     .replace(/:$/, '')
@@ -129,13 +116,13 @@ export const parseDeckText = (text: string): ParseResult[] => {
       cardName = match[2].trim();
     }
 
-    // Sometimes .dec or formats include tags like *F* or *CM* or *E*. Remove those too.
+    // .dec exports tag copies with markers like *F* (foil) or *CM* (commander).
     cardName = cardName.replace(/\s*\*[a-zA-Z0-9]+\*\s*$/, '').trim();
 
     let setCode: string | undefined;
     let collectorNumber: string | undefined;
 
-    // Extract set and collector number e.g. "(M10) 1" or "[M10] 1" or "(PLST) WOC-166"
+    // "(M10) 1", "[M10] 1" and "(PLST) WOC-166" are all in the wild.
     const setMatch = cardName.match(/\s*[([]([A-Za-z0-9]{3,5})[)\]]\s*([A-Za-z0-9-]*)$/);
     if (setMatch) {
       setCode = setMatch[1].toLowerCase();
@@ -148,7 +135,6 @@ export const parseDeckText = (text: string): ParseResult[] => {
       }
     }
 
-    // Remove collector number / set code from the end of the card name
     cardName = cardName.replace(/\s*[([][A-Za-z0-9]{3,5}[)\]]\s*[A-Za-z0-9-]*$/, '').trim();
     cardName = cardName.replace(/\s+[A-Za-z0-9]{3,5}\s+\d+[a-zA-Z]?$/, '').trim();
 
@@ -169,20 +155,18 @@ export interface ImportProgressData {
 /** Cap on extra per-name lookups so a malformed list can't fan out unbounded. */
 const LOCALIZED_LOOKUP_LIMIT = 40;
 
-/**
- * Scryfall's /cards/collection `name` identifier only matches English names, so
- * a deck exported in another language (e.g. Arena in pt) never resolves there.
- * The search endpoint does match localized printed names, so retry stragglers.
- */
-const resolveLocalizedName = async (name: string, lang: string): Promise<Card | null> => {
+// Scryfall's /cards/collection `name` identifier matches English names only, so a deck
+// exported from Arena in pt never resolves there. The search endpoint does match localized
+// printed names, which is why the stragglers get a second pass through it.
+const resolveLocalizedName = async (name: string, lang: string, pacer: RequestPacer): Promise<Card | null> => {
   const queries = lang && lang !== 'en' ? [`!"${name}" lang:${lang}`, `"${name}" lang:${lang}`] : [`!"${name}"`];
 
   for (const query of queries) {
     try {
-      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`);
+      const res = await pacedFetch(pacer, scryfallSearchUrl(query, { unique: 'cards' }));
       if (!res.ok) continue;
-      const json = (await res.json()) as { data?: Card[] };
-      if (json.data && json.data.length > 0) return json.data[0];
+      const cards = toCardList(readField(await res.json(), 'data'));
+      if (cards.length > 0) return cards[0];
     } catch {
       // Fall through to the next, less strict query.
     }
@@ -194,8 +178,10 @@ export const fetchCardsFromParsedList = async (
   parsed: ParseResult[],
   currentLang: string = 'en',
   onProgress?: (progress: ImportProgressData) => void,
-  t?: (key: string, options?: Record<string, unknown>) => string
+  t?: (key: string, options?: Record<string, unknown>) => string,
+  pacing?: ImportPacingOptions
 ): Promise<{ cards: Card[]; missing: string[] }> => {
+  const pacer = createPacer(pacing);
   const uniqueParsed = Array.from(
     new Map(parsed.map((p) => [`${p.name}|${p.set || ''}|${p.collector_number || ''}`, p])).values()
   );
@@ -226,7 +212,7 @@ export const fetchCardsFromParsedList = async (
       return { name: item.name };
     });
 
-    const response = await fetchCollectionWithRetry(identifiers);
+    const response = await fetchCollectionWithRetry(identifiers, pacer);
 
     if (!response.ok) {
       if (response.status === 503 || response.status === 504) {
@@ -238,16 +224,13 @@ export const fetchCardsFromParsedList = async (
       throw new Error('Scryfall API error');
     }
 
-    const json = (await response.json()) as ScryfallCollectionResponse;
-    if (json.data && Array.isArray(json.data)) {
-      allResolvedCards.push(...json.data);
-    }
-    if (json.not_found && Array.isArray(json.not_found)) {
-      initialNotFound.push(...json.not_found);
-    }
+    const json: unknown = await response.json();
+    allResolvedCards.push(...toCardList(readField(json, 'data')));
+    initialNotFound.push(...toNotFoundIdentifiers(readField(json, 'not_found')));
   }
 
-  // Retry logic for not_found items, stripping set and collector_number, just use name
+  // Second pass on name alone: a printing this profile asked for by set and collector number
+  // may simply not exist, while the card does.
   if (initialNotFound.length > 0) {
     if (onProgress) {
       onProgress({
@@ -275,35 +258,29 @@ export const fetchCardsFromParsedList = async (
 
         if (!originalName) return null;
 
-        // For DFCs, sending just the front face is more reliable
+        // A double-faced card resolves by its front face far more often than by "Front // Back".
         let frontFace = originalName.split(/\s+\/?\/?\s+/)[0].trim();
 
-        // Aggressive fallback cleanup for names that STILL have set info attached
         frontFace = frontFace.replace(/\s*[([].*$/, '').trim();
 
         return { name: frontFace };
       })
       .filter(Boolean) as { name: string }[];
 
-    // Unique retries to avoid duplicate name lookups
     const uniqueRetries = Array.from(new Map(retryIdentifiers.map((r) => [r.name, r])).values());
 
     for (let chunkStartIndex = 0; chunkStartIndex < uniqueRetries.length; chunkStartIndex += CHUNK_SIZE) {
       const chunk = uniqueRetries.slice(chunkStartIndex, chunkStartIndex + CHUNK_SIZE);
 
-      const response = await fetchCollectionWithRetry(chunk);
+      const response = await fetchCollectionWithRetry(chunk, pacer);
 
       if (response.ok) {
-        const json = (await response.json()) as ScryfallCollectionResponse;
-        if (json.data && Array.isArray(json.data)) {
-          allResolvedCards.push(...json.data);
-        }
+        allResolvedCards.push(...toCardList(readField(await response.json(), 'data')));
       }
     }
   }
 
-  // Whatever /cards/collection still could not resolve is usually a localized
-  // name. Retry those through search before giving up on them.
+  // Whatever /cards/collection still could not resolve is usually a localized name.
   const resolvedNames = new Set<string>();
   for (const card of allResolvedCards) {
     if (card.name) resolvedNames.add(card.name.toLowerCase());
@@ -314,7 +291,7 @@ export const fetchCardsFromParsedList = async (
   if (unresolved.length > 0) {
     const lang = (currentLang || 'en').split('-')[0].toLowerCase();
     for (const item of unresolved.slice(0, LOCALIZED_LOOKUP_LIMIT)) {
-      const localized = await resolveLocalizedName(item.name, lang);
+      const localized = await resolveLocalizedName(item.name, lang, pacer);
       if (localized) allResolvedCards.push(localized);
     }
   }
@@ -351,7 +328,7 @@ export const fetchCardsFromParsedList = async (
       nameLookup.set(originalCard.name.toLowerCase(), translatedCard);
       const namePart = originalCard.name.split('//')[0].trim().toLowerCase();
       nameLookup.set(namePart, translatedCard);
-      // Also index single slash if it's a DFC
+      // Some exports write a double-faced card as "Front / Back" instead of "Front // Back".
       if (originalCard.name.includes('//')) {
         const singleSlashName = originalCard.name.replace('//', '/').toLowerCase();
         nameLookup.set(singleSlashName, translatedCard);
@@ -375,7 +352,6 @@ export const fetchCardsFromParsedList = async (
       foundCard = nameLookup.get(normalizedName);
     }
 
-    // Additional fallback for DFC names in input like "Front / Back"
     if (!foundCard && normalizedName.includes('/')) {
       const frontFace = normalizedName.split(/\s+\/?\/?\s+/)[0].trim();
       foundCard = nameLookup.get(frontFace);
@@ -383,9 +359,9 @@ export const fetchCardsFromParsedList = async (
 
     if (foundCard) {
       for (let copyIndex = 0; copyIndex < item.quantity; copyIndex++) {
-        // We append a timestamp so every imported copy has a unique id
-        const copy = { ...foundCard, id: `${foundCard.id}-${copyIndex}-${Date.now()}` } as unknown as Card;
-        // Preserve zone / commander status when the source (e.g. a share link) carries it.
+        // Each copy is its own deck entry and needs its own id; the printing's id stays as a
+        // prefix so the origin of the entry remains readable.
+        const copy: Card = { ...foundCard, id: `${foundCard.id}-${newId()}` };
         if (item.zone) copy.zone = item.zone;
         if (item.isCommander) copy.isCommander = true;
         finalCards.push(copy);

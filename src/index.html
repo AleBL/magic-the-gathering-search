@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Styles the boot overlay that electron/preload.ts appends before any module runs.
+       Linked here rather than imported from main.tsx so it is render-blocking. -->
+  <link rel="stylesheet" href="./style/loader.css">
 </head>
 
 <body>

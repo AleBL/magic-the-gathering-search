@@ -7,7 +7,6 @@ const STORAGE_KEY = STORAGE_KEYS.visualEffects;
 const CHANGE_EVENT = 'visual-effects-change';
 
 function readStored(): boolean {
-  if (typeof window === 'undefined') return true;
   const saved = readStoredPreference(STORAGE_KEY);
   return saved !== null ? saved === 'true' : true;
 }
@@ -19,13 +18,9 @@ function syncDomFlag(enabled: boolean) {
 }
 
 /**
- * Opt-in "visual effects" preference (3D flip, foil shine, ambient glow,
- * particles, view transitions). Persisted in localStorage like theme/language
- * and mirrored across every hook instance via a window event so a toggle in one
- * place updates the whole app without prop drilling.
- *
- * `motionEnabled` folds in the OS-level reduced-motion preference: it is the
- * gate components should check before running any decorative motion.
+ * Opt-in visual effects (3D flip, foil shine, ambient glow, particles, view transitions),
+ * mirrored across every hook instance by a window event so one toggle updates the whole app.
+ * `motionEnabled` is the gate to check before decorative motion: it folds in the OS setting.
  */
 export function useVisualEffects() {
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -38,7 +33,6 @@ export function useVisualEffects() {
   useEffect(() => {
     const handleChange = () => setEffectsEnabledState(readStored());
     window.addEventListener(CHANGE_EVENT, handleChange);
-    // Keep multiple windows/tabs in sync as well.
     window.addEventListener('storage', handleChange);
     return () => {
       window.removeEventListener(CHANGE_EVENT, handleChange);

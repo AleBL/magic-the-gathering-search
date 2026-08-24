@@ -9,11 +9,9 @@ export function dispatchPendingAction(action: PendingAction): void {
 }
 
 /**
- * Runs the handler for whichever command arrives on the store's `pendingAction` channel.
- *
- * A command with no handler here is left on the channel: it is shared, and each command
- * belongs to exactly one mounted component, so clearing an unowned one would swallow it
- * before its owner saw it.
+ * Runs the handler for whichever command arrives on the store's `pendingAction` channel. A
+ * command with no handler here is left on the shared channel: clearing one this component
+ * does not own would swallow it before its owner saw it.
  */
 export function usePendingAction(handlers: PendingActionHandlers): void {
   const pendingAction = useDeckStore((state) => state.pendingAction);
@@ -21,8 +19,8 @@ export function usePendingAction(handlers: PendingActionHandlers): void {
 
   const handlersRef = useRef(handlers);
 
-  // Kept in a ref, and declared before the dispatcher so it commits first: callers rebuild
-  // `handlers` every render, so depending on it would re-run the dispatcher constantly.
+  // In a ref, committed before the dispatcher: callers rebuild `handlers` every render, so
+  // depending on it directly would re-run the dispatcher constantly.
   useEffect(() => {
     handlersRef.current = handlers;
   });

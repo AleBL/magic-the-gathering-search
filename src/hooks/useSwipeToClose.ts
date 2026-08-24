@@ -4,8 +4,7 @@ const DISMISS_THRESHOLD_PX = 150;
 
 /**
  * Walks up from the touch target, not the element the handlers sit on: those are often
- * different (an `overflow-hidden` panel wrapping an `overflow-y-auto` body). Stops at the
- * dialog so it never reads the page behind the modal.
+ * different (an `overflow-hidden` panel wrapping an `overflow-y-auto` body).
  */
 function isAtScrollTop(target: EventTarget | null): boolean {
   let el = target instanceof HTMLElement ? target : null;
@@ -20,14 +19,11 @@ function isAtScrollTop(target: EventTarget | null): boolean {
 }
 
 /**
- * Drag-to-dismiss for a bottom sheet. Attach the handlers and `panelStyle` to the
- * `role="dialog"` panel so the whole sheet is draggable. The gesture only engages when the
- * touched content is already scrolled to the top, so scrolling and dismissing coexist.
- *
- * Two settings in `panelStyle` are load-bearing:
- * - `touch-action: pan-y` — `none` kills scrolling, `auto` lets the browser's own
+ * Drag-to-dismiss for a bottom sheet: attach the handlers and `panelStyle` to the
+ * `role="dialog"` panel. Two settings in `panelStyle` are load-bearing:
+ * - `touch-action: pan-y`, since `none` kills scrolling and `auto` lets the browser's
  *   pull-to-refresh race these handlers for the same touch.
- * - `translate`, not `transform` — the panel's enter animation animates `transform`, and a
+ * - `translate`, not `transform`: the panel's enter animation animates `transform`, and a
  *   CSS animation beats an inline style on the same property, so the drag would do nothing.
  */
 export function useSwipeToClose<T extends HTMLElement>(onClose: () => void) {

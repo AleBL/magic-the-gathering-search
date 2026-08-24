@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaSearch, FaLayerGroup, FaBoxOpen } from 'react-icons/fa';
 import { AppTab } from '../../types';
@@ -12,6 +12,7 @@ import AppShortcutsOverlay from '../ui/AppShortcutsOverlay';
 import useDarkMode from '../../hooks/useDarkMode';
 import { useDeckStore } from '../../store/useDeckStore';
 import useDialog from '../../hooks/useDialog';
+import { useShortcutHandler } from '../../hooks/useShortcutHandler';
 import { ToastAction, ToastVariant } from '../../types/Toast';
 
 interface RootLayoutProps {
@@ -40,23 +41,26 @@ export default function RootLayout({
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // The playtest is a fullscreen mode with its own shortcuts; don't fire app-level ones underneath it.
-      if (document.body.dataset.playtestOpen === 'true') return;
+  // App layer: the playtest and any open modal sit above this in the keyboard registry, so
+  // these no longer need to check whether a fullscreen mode is covering them.
+  useShortcutHandler(
+    (e) => {
       const target = e.target as HTMLElement;
       const inField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandOpen((prev) => !prev);
-      } else if (e.key === '?' && !inField) {
+        return true;
+      }
+      if (e.key === '?' && !inField) {
         e.preventDefault();
         setIsShortcutsOpen((prev) => !prev);
+        return true;
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+      return false;
+    },
+    { layer: 'app' }
+  );
 
   const currentDeckLength = useDeckStore((state) => state.currentDeck.length);
   const editingDeck = useDeckStore((state) => state.editingDeck);

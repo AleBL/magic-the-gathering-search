@@ -49,3 +49,6 @@ src/dev-dist/
 
 # Generated demo profile (scripts/seed-profile.mjs)
 seed-profile.json
+
+# Generated collection CSV (scripts/generate-collection-csv.mjs)
+collection-large.csv

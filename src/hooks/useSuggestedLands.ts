@@ -1,6 +1,7 @@
 import { Card } from '../types/Card';
 import { DeckFormat } from '../types/Deck';
 import { MANA_COLOR_TO_BASIC_LAND } from '../utils/deckStatistics';
+import { scryfallNamedImageUrl } from '../constants/urls';
 
 export function useSuggestedLands(
   currentDeck: Card[],
@@ -21,8 +22,7 @@ export function useSuggestedLands(
         Object.entries(MANA_COLOR_TO_BASIC_LAND).map(([color, landName]) => [landName, color === 'C' ? [] : [color]])
       );
 
-      const imageUrlFor = (landName: string) =>
-        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(landName)}&format=image`;
+      const imageUrlFor = (landName: string) => scryfallNamedImageUrl(landName);
 
       return {
         id: `${name.toLowerCase()}-basic-land`,

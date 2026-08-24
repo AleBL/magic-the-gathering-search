@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { isBrowserOffline } from '../utils/scryfallSearch';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
@@ -65,8 +66,7 @@ export function useDeckTextImport(
         // `fetchCardsFromParsedList` swallows per-card network failures and returns an
         // empty list, which is indistinguishable from every name being wrong. Offline, the
         // lookups never happened — blaming the user's spelling sends them to fix nothing.
-        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        setErrorMsg(isOffline ? t('search.scryfallOffline') : t('deck.importError'));
+        setErrorMsg(isBrowserOffline() ? t('search.scryfallOffline') : t('deck.importError'));
         setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false }));
       }
     } catch (err: unknown) {
@@ -76,8 +76,7 @@ export function useDeckTextImport(
       } else if (err instanceof Error && err.message === 'ScryfallRateLimited') {
         setErrorMsg(t('search.rateLimited'));
       } else {
-        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        setErrorMsg(isOffline ? t('search.scryfallOffline') : t('deck.importError'));
+        setErrorMsg(isBrowserOffline() ? t('search.scryfallOffline') : t('deck.importError'));
       }
       setImportProgress((prev: ImportProgressData) => ({ ...prev, isImporting: false }));
     }

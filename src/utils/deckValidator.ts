@@ -1,4 +1,5 @@
 import { Card } from '../types/Card';
+import { isTokenCard } from './tokenCards';
 import { DeckFormat } from '../types/Deck';
 import { DeckFormatType, DeckZone } from '../types/enums';
 import i18n from '../plugins/i18n';
@@ -14,11 +15,9 @@ export interface ValidationResult {
   errors: ValidationError[];
 }
 
-/**
- * Full resource paths. `getResource` returns `undefined` for a miss without warning, so a
- * wrong path here turns every check below into `false` — i.e. "no card is a legal
- * commander". A test asserts each one resolves.
- */
+// Full resource paths. `getResource` returns `undefined` for a miss without warning, so a
+// wrong path here silently turns every check below into "no card is a legal commander".
+// A test asserts each one resolves.
 export const CHECK_LIST_KEYS = {
   partner: 'validation.partnerCheckList',
   friends: 'validation.friendsCheckList',
@@ -35,11 +34,11 @@ export const CHECK_LIST_KEYS = {
 
 type CheckListKey = (typeof CHECK_LIST_KEYS)[keyof typeof CHECK_LIST_KEYS];
 
-/**
- * True when `text` contains any phrase from the given list, in any of the three shipped
- * languages. Cards can be displayed translated, so matching only the active language would
- * miss a card whose oracle text arrived in another one.
- */
+const MAX_COPIES_PER_CARD = 4;
+const MAX_COMMANDERS = 2;
+
+// All three shipped languages, not the active one: a card can arrive with its oracle text
+// already translated, and matching one language would miss it.
 const matchesPhraseList = (text: string, key: CheckListKey): boolean => {
   const lowerText = text.toLowerCase();
   const phrases = (['pt', 'en', 'es'] as const)
@@ -50,18 +49,21 @@ const matchesPhraseList = (text: string, key: CheckListKey): boolean => {
   return phrases.some((phrase) => lowerText.includes(phrase.trim()));
 };
 
-/**
- * How a single card stands in a format, for the badges the card surfaces draw.
- *
- * One place on purpose. `banned` and `restricted` were derived independently in three
- * components straight from `card.legalities`, while Pauper's "commons only" rule lived only in
- * `validateDeck` — so an uncommon in a Pauper deck made the deck invalid with no marking on the
- * card that caused it. Anything that can invalidate a deck has to be visible on the card.
- */
+// One place on purpose: three components used to read `card.legalities` themselves while
+// Pauper's commons-only rule lived in `validateDeck` alone, so an uncommon invalidated the
+// deck with no badge on the card that caused it. Anything that can invalidate a deck has to
+// be visible on the card.
 export type CardFormatStatus = 'legal' | 'banned' | 'restricted' | 'invalid';
 
 export function cardFormatStatus(card: Card, format?: DeckFormat): CardFormatStatus {
   if (!format || format === DeckFormatType.FREEFORM) return 'legal';
+
+  // Scryfall marks every format `not_legal` on a token, because a token is never a deck
+  // entry to begin with. Reading that as a verdict badged the deck's own tokens as
+  // invalid, and only sometimes: a token added from a local preset carries no
+  // `legalities` at all, so the same tab showed some tokens flagged and others clean.
+  // `validateDeck` already leaves tokens out; the badge has to agree with it.
+  if (isTokenCard(card)) return 'legal';
 
   const legality = card.legalities?.[format as keyof typeof card.legalities];
   if (legality === 'banned') return 'banned';
@@ -69,7 +71,6 @@ export function cardFormatStatus(card: Card, format?: DeckFormat): CardFormatSta
 
   // Pauper allows commons only, whatever the ban list says.
   if (format === DeckFormatType.PAUPER && card.rarity && card.rarity !== 'common') return 'invalid';
-  // The card simply does not exist in this format's card pool.
   if (legality === 'not_legal') return 'invalid';
 
   return 'legal';
@@ -81,10 +82,8 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
   // A card carries no zone until one is assigned, so an unset zone is the main deck.
   const zoneOf = (card: Card): DeckZone => card.zone ?? DeckZone.MAIN;
 
-  /**
-   * Deck *size* counts the main deck only; copy limits, rarity and ban lists cover the
-   * sideboard too. The maybeboard and tokens are not validated at all.
-   */
+  // Size counts the main deck only, while copy limits, rarity and ban lists cover the
+  // sideboard too. Maybeboard and tokens are not validated at all.
   const mainDeck = cards.filter((card) => zoneOf(card) === DeckZone.MAIN);
   const playableCards = cards.filter((card) => zoneOf(card) === DeckZone.MAIN || zoneOf(card) === DeckZone.SIDEBOARD);
 
@@ -99,26 +98,22 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     return { isValid: true, errors: [] };
   }
 
-  // Count copies of each card (excluding basic lands)
-  const cardCounts: { [name: string]: number } = {};
+  const nonBasicCopiesByName: { [name: string]: number } = {};
 
   playableCards.forEach((card) => {
     const { name } = card;
-    /**
-     * Two separate words, not the literal "basic land": Scryfall puts the snow supertype
-     * between them ("Basic Snow Land — Forest"). The phrase lists also cover pt/es type
-     * lines, which an English substring never matched.
-     */
+    // "Basic" and "Land" are matched as two separate words because Scryfall puts the snow
+    // supertype between them ("Basic Snow Land — Forest"), and through the phrase lists
+    // because a pt/es type line never contains the English substring.
     const typeLine = card.type_line || '';
     const isBasic =
       (matchesPhraseList(typeLine, CHECK_LIST_KEYS.basicLand) && matchesPhraseList(typeLine, CHECK_LIST_KEYS.land)) ||
       BASIC_LAND_NAMES.includes(name);
     if (!isBasic) {
-      cardCounts[name] = (cardCounts[name] || 0) + 1;
+      nonBasicCopiesByName[name] = (nonBasicCopiesByName[name] || 0) + 1;
     }
   });
 
-  // Rules: Max 4 copies of any non-basic land card for Standard, Modern, Vintage, Pauper
   const limitedCopyFormats: DeckFormat[] = [
     DeckFormatType.STANDARD,
     DeckFormatType.MODERN,
@@ -133,17 +128,16 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       });
     }
 
-    Object.entries(cardCounts).forEach(([name, count]) => {
-      if (count > 4) {
+    Object.entries(nonBasicCopiesByName).forEach(([name, count]) => {
+      if (count > MAX_COPIES_PER_CARD) {
         errors.push({
           key: 'validationMaxCopies',
-          params: { name, count, max: 4 }
+          params: { name, count, max: MAX_COPIES_PER_CARD }
         });
       }
     });
   }
 
-  // Commander Format Rules
   if (format === DeckFormatType.COMMANDER) {
     if (mainDeck.length !== COMMANDER_DECK_SIZE) {
       errors.push({
@@ -152,8 +146,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       });
     }
 
-    // Singleton rule: Max 1 copy of any non-basic land card
-    Object.entries(cardCounts).forEach(([name, count]) => {
+    Object.entries(nonBasicCopiesByName).forEach(([name, count]) => {
       if (count > 1) {
         errors.push({
           key: 'validationCommanderSingleton',
@@ -162,49 +155,36 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       }
     });
 
-    // 1. Check if there is at least one designated Commander in the deck
     const commanders = mainDeck.filter((card) => card.isCommander);
     if (commanders.length === 0) {
       errors.push({
         key: 'validationCommanderNoCommander'
       });
     } else {
-      if (commanders.length > 2) {
+      if (commanders.length > MAX_COMMANDERS) {
         errors.push({
           key: 'validationCommanderMaxTwo'
         });
-      } else if (commanders.length === 2) {
-        // Validate Partner / Choose a Background rule
-        const [c1, c2] = commanders;
-        const t1 = (c1.type_line || '').toLowerCase();
-        const t2 = (c2.type_line || '').toLowerCase();
-        const o1 = (c1.oracle_text || '').toLowerCase();
-        const o2 = (c2.oracle_text || '').toLowerCase();
+      } else if (commanders.length === MAX_COMMANDERS) {
+        const [first, second] = commanders.map((commander) => ({
+          typeLine: (commander.type_line || '').toLowerCase(),
+          oracleText: (commander.oracle_text || '').toLowerCase()
+        }));
 
-        // Check Partner, Friends Forever, Doctor's Companion, and Choose a Background rules using i18n
-        const isPartner1 = matchesPhraseList(o1, CHECK_LIST_KEYS.partner);
-        const isPartner2 = matchesPhraseList(o2, CHECK_LIST_KEYS.partner);
-
-        const isFriends1 = matchesPhraseList(o1, CHECK_LIST_KEYS.friends);
-        const isFriends2 = matchesPhraseList(o2, CHECK_LIST_KEYS.friends);
-
-        const isDoctor1 = matchesPhraseList(o1, CHECK_LIST_KEYS.doctor);
-        const isDoctor2 = matchesPhraseList(o2, CHECK_LIST_KEYS.doctor);
-
-        // Check Choose a Background + Background
-        const isBackgroundCreature1 =
-          matchesPhraseList(t1, CHECK_LIST_KEYS.creature) && matchesPhraseList(o1, CHECK_LIST_KEYS.backgroundCreature);
-        const isBackground1 = matchesPhraseList(t1, CHECK_LIST_KEYS.background);
-        const isBackgroundCreature2 =
-          matchesPhraseList(t2, CHECK_LIST_KEYS.creature) && matchesPhraseList(o2, CHECK_LIST_KEYS.backgroundCreature);
-        const isBackground2 = matchesPhraseList(t2, CHECK_LIST_KEYS.background);
+        const hasPartner = (c: typeof first) => matchesPhraseList(c.oracleText, CHECK_LIST_KEYS.partner);
+        const hasFriendsForever = (c: typeof first) => matchesPhraseList(c.oracleText, CHECK_LIST_KEYS.friends);
+        const hasDoctorsCompanion = (c: typeof first) => matchesPhraseList(c.oracleText, CHECK_LIST_KEYS.doctor);
+        const choosesBackground = (c: typeof first) =>
+          matchesPhraseList(c.typeLine, CHECK_LIST_KEYS.creature) &&
+          matchesPhraseList(c.oracleText, CHECK_LIST_KEYS.backgroundCreature);
+        const isBackground = (c: typeof first) => matchesPhraseList(c.typeLine, CHECK_LIST_KEYS.background);
 
         const isValidPartnership =
-          (isPartner1 && isPartner2) ||
-          (isFriends1 && isFriends2) ||
-          (isDoctor1 && isDoctor2) ||
-          (isBackgroundCreature1 && isBackground2) ||
-          (isBackgroundCreature2 && isBackground1);
+          (hasPartner(first) && hasPartner(second)) ||
+          (hasFriendsForever(first) && hasFriendsForever(second)) ||
+          (hasDoctorsCompanion(first) && hasDoctorsCompanion(second)) ||
+          (choosesBackground(first) && isBackground(second)) ||
+          (choosesBackground(second) && isBackground(first));
 
         if (!isValidPartnership) {
           errors.push({
@@ -212,7 +192,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
           });
         }
       }
-      // 2. Validate designated commander(s)
+
       commanders.forEach((commander) => {
         const typeLine = (commander.type_line || '').toLowerCase();
         const oracleText = (commander.oracle_text || '').toLowerCase();
@@ -222,9 +202,9 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
         const isPlaneswalker = matchesPhraseList(typeLine, CHECK_LIST_KEYS.planeswalker);
         const canBeCommander = matchesPhraseList(oracleText, CHECK_LIST_KEYS.canBeCommander);
 
-        const isValidCmd = (isLegendary && isCreature) || (isLegendary && isPlaneswalker && canBeCommander);
+        const isValidCommander = (isLegendary && isCreature) || (isLegendary && isPlaneswalker && canBeCommander);
 
-        if (!isValidCmd) {
+        if (!isValidCommander) {
           errors.push({
             key: 'validationCommanderInvalidCommander',
             params: { name: commander.name }
@@ -232,7 +212,6 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
         }
       });
 
-      // 3. Validate color identity of all other cards against the combined identity of commanders
       const commanderColors = new Set<string>();
       commanders.forEach((commander) => {
         if (commander.color_identity) {
@@ -259,7 +238,7 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
             .map((card) => `${card.name} (${card.colors.join('')})`)
             .join(', ') + (invalidCards.length > 3 ? '...' : '');
 
-        const cmdColorsString = Array.from(commanderColors).join('') || 'C'; // Colorless
+        const cmdColorsString = Array.from(commanderColors).join('') || 'C';
 
         errors.push({
           key: 'validationCommanderColorIdentity',
@@ -272,7 +251,6 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     }
   }
 
-  // Pauper Format Rules
   if (format === DeckFormatType.PAUPER) {
     const nonCommonCards = playableCards.filter((card) => card.rarity !== 'common');
     if (nonCommonCards.length > 0) {
@@ -285,14 +263,13 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
     }
   }
 
-  // Format Banned & Restricted lists validation from Scryfall API legalities
+  // Ban and restriction status comes from Scryfall's `legalities`, never from a list kept here.
   const bannedMatches: string[] = [];
   const restrictedMatches: string[] = [];
 
   playableCards.forEach((card) => {
     const cardName = card.name;
 
-    // Check if card is banned in the selected format
     if (card.legalities) {
       const status = card.legalities[format as keyof typeof card.legalities];
       if (status === 'banned') {
@@ -300,9 +277,9 @@ export function validateDeck(cards: Card[], format: DeckFormat): ValidationResul
       }
     }
 
-    // Check Vintage Restricted (limit 1)
+    // Restricted means one copy allowed, which only Vintage uses.
     if (format === DeckFormatType.VINTAGE && card.legalities?.vintage === 'restricted') {
-      const count = cardCounts[cardName] || 0;
+      const count = nonBasicCopiesByName[cardName] || 0;
       if (count > 1) {
         restrictedMatches.push(cardName);
       }

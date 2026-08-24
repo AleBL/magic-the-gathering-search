@@ -495,3 +495,56 @@ test.describe('collection header layout', () => {
     expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
   });
 });
+
+/** The summary and filters collapse to give the binder its height back. */
+test.describe('collection tools panel', () => {
+  const openTab = async (page: import('@playwright/test').Page) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await page.waitForTimeout(400);
+    await seedCollection(page, 20);
+    await page.reload();
+    await page.getByRole('button', { name: 'Collection' }).click();
+    await expect(page.locator(CARD_SELECTOR).first()).toBeVisible();
+  };
+
+  test('hides the summary and filters, and brings them back', async ({ appPage }) => {
+    await openTab(appPage);
+
+    const toggle = appPage.getByRole('button', { name: /Hide filters/i });
+    await expect(appPage.getByRole('button', { name: 'Advanced Filters' })).toBeVisible();
+
+    await toggle.click();
+    await expect(appPage.getByRole('button', { name: 'Advanced Filters' })).toBeHidden();
+    await expect(appPage.getByText(/Total cards/i)).toBeHidden();
+
+    await appPage.getByRole('button', { name: /Show filters/i }).click();
+    await expect(appPage.getByRole('button', { name: 'Advanced Filters' })).toBeVisible();
+  });
+
+  /** Collapsing must not strand anyone inside the binder with no way back to the grid. */
+  test('the view picker stays reachable while collapsed', async ({ appPage }) => {
+    await openTab(appPage);
+    await appPage.getByRole('button', { name: /Hide filters/i }).click();
+
+    await openViewMenu(appPage);
+    await appPage.getByRole('button', { name: 'Binder', exact: true }).click();
+    await expect(appPage.locator('[data-binder-page]').first()).toBeVisible();
+
+    await openViewMenu(appPage);
+    await appPage.getByRole('button', { name: 'Grid', exact: true }).click();
+    await expect(appPage.locator(CARD_SELECTOR).first()).toBeVisible();
+  });
+
+  test('the choice survives a reload', async ({ appPage }) => {
+    await openTab(appPage);
+    await appPage.getByRole('button', { name: /Hide filters/i }).click();
+
+    await appPage.reload();
+    await appPage.getByRole('button', { name: 'Collection' }).click();
+
+    await expect(appPage.getByRole('button', { name: /Show filters/i })).toBeVisible();
+    await expect(appPage.getByRole('button', { name: 'Advanced Filters' })).toBeHidden();
+  });
+});

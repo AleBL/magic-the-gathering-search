@@ -7,10 +7,9 @@ import { decrementOwned, incrementOwned, setOwnedQuantity, toggleWishlist } from
 import { dispatchToast } from '../utils/toastHelper';
 
 /**
- * Scoped collection state for a single card/printing. Uses a targeted live
- * query so each card only re-renders when its own entry changes, not on every
- * collection mutation. Every mutation confirms itself with a toast so the
- * (small, overlay-style) controls always give visible feedback.
+ * Scoped to one card, on a targeted live query, so a card re-renders when its own entry
+ * changes rather than on every collection mutation. Each mutation confirms itself with a
+ * toast, since the controls are small overlay buttons with no state of their own to show.
  */
 export function useCardCollection(card: Card) {
   const { t } = useTranslation();

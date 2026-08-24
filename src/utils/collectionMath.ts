@@ -1,7 +1,6 @@
 import { Card } from '../types/Card';
 import { CollectionEntry, Currency } from '../types/Collection';
 
-/** Parses the Scryfall price string for the given currency into a number, or null when unpriced. */
 export function getCardPrice(card: Card, currency: Currency): number | null {
   const raw = currency === 'eur' ? card.prices?.eur : card.prices?.usd;
   if (raw == null) return null;
@@ -9,10 +8,7 @@ export function getCardPrice(card: Card, currency: Currency): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-/**
- * Price for a collection entry: the printing's own price when available,
- * otherwise the stored English-printing fallback (marked as an estimate).
- */
+/** Falls back to the stored English-printing price, flagged so the UI can call it an estimate. */
 export function getEntryPrice(
   entry: CollectionEntry,
   currency: Currency
@@ -26,7 +22,6 @@ export function getEntryPrice(
   return Number.isFinite(value) ? { price: value, isFallback: true } : null;
 }
 
-/** Formats a numeric value with the currency's symbol and two decimals. */
 export function formatCurrency(value: number, currency: Currency): string {
   const symbol = currency === 'eur' ? '€' : '$';
   return `${symbol}${value.toFixed(2)}`;
@@ -40,24 +35,17 @@ export function isBasicLand(card: Card): boolean {
 const normalizeName = (name: string): string => name.trim().toLowerCase();
 
 export interface CollectionSummary {
-  /** Total owned copies across every printing (sum of quantities). */
   totalCopies: number;
-  /** Distinct printings with at least one owned copy. */
   uniquePrintings: number;
-  /** Entries flagged for the wishlist. */
   wishlistCount: number;
-  /**
-   * Estimated value of owned copies: unit price × quantity, so ten copies of a card
-   * count ten times.
-   */
+  /** Unit price × quantity, so ten copies of a card count ten times. */
   totalValue: number;
   /**
-   * Estimated value of the wishlist: one unit price per wishlisted printing. A wishlist
-   * entry records *that* you want a card, not how many, so multiplying by quantity would
-   * be meaningless — a wishlisted card you already own three of is still one wish.
+   * One unit price per wishlisted printing, never multiplied by quantity: a wishlist entry
+   * records *that* you want a card, and a card you already own three of is still one wish.
    */
   wishlistValue: number;
-  /** Owned entries whose value came from the English-printing fallback price. */
+  /** Owned entries priced from the English-printing fallback instead of their own printing. */
   fallbackPricedCount: number;
   currency: Currency;
 }
@@ -92,43 +80,33 @@ export function computeCollectionSummary(entries: CollectionEntry[], currency: C
 
 export interface DeckGapCardRow {
   name: string;
-  /** Copies the deck requires. */
   needed: number;
-  /** Owned copies applicable to this card (across all printings). */
+  /** Owned copies of this card summed across every printing. */
   owned: number;
-  /** Copies still to acquire (`max(0, needed - owned)`). */
   missing: number;
-  /** Representative unit price used to estimate the missing spend. */
+  /** First priced printing found in the deck, standing in for every printing of the card. */
   unitPrice: number | null;
-  /** `missing * unitPrice` (0 when the card has no price). */
   missingValue: number;
 }
 
 export interface DeckCollectionGap {
-  /** Non-basic copies the deck requires. */
+  /** Non-basic copies only, since basics never need buying. */
   totalNeeded: number;
-  /** Owned copies that count toward the deck (capped at `needed` per card). */
+  /** Capped at `needed` per card, so a spare playset does not inflate the total. */
   totalOwned: number;
   missingCopies: number;
-  /** Distinct cards with at least one missing copy. */
   missingUnique: number;
   missingValue: number;
-  /** One row per distinct non-basic card in the deck, sorted by missing spend. */
   rows: DeckGapCardRow[];
   currency: Currency;
 }
 
-/**
- * Compares a deck against the owned collection to report what still needs
- * buying and its estimated cost. Cards are matched by name (case-insensitive)
- * so any owned printing satisfies the requirement; basic lands are ignored.
- */
+/** Matched by name, case-insensitive, so any owned printing satisfies the requirement. */
 export function computeDeckCollectionGap(
   deckCards: Card[],
   entries: CollectionEntry[],
   currency: Currency
 ): DeckCollectionGap {
-  // Owned copies summed per card name across every printing.
   const ownedByName = new Map<string, number>();
   for (const entry of entries) {
     if (entry.quantity <= 0) continue;
@@ -136,7 +114,6 @@ export function computeDeckCollectionGap(
     ownedByName.set(key, (ownedByName.get(key) ?? 0) + entry.quantity);
   }
 
-  // Aggregate the deck: needed count and a representative price per card name.
   const needed = new Map<string, { name: string; count: number; unitPrice: number | null }>();
   for (const card of deckCards) {
     if (isBasicLand(card)) continue;

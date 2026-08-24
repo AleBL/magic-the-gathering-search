@@ -9,6 +9,7 @@ export interface StubCardOptions {
   name?: string;
   id?: string;
   typeLine?: string;
+  oracleText?: string;
   rarity?: string;
   cmc?: number;
   colors?: string[];
@@ -26,7 +27,7 @@ export function stubCard(options: StubCardOptions = {}) {
     lang: 'en',
     released_at: '2021-01-01',
     type_line: options.typeLine ?? 'Instant',
-    oracle_text: 'Deal 3 damage to any target.',
+    oracle_text: options.oracleText ?? 'Deal 3 damage to any target.',
     mana_cost: '{R}',
     cmc: options.cmc ?? 1,
     colors: options.colors ?? ['R'],

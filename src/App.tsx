@@ -14,6 +14,7 @@ import { useGlobalRipple } from './hooks/useGlobalRipple';
 import { useVisualEffects } from './hooks/useVisualEffects';
 import useOnlineStatus from './hooks/useOnlineStatus';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { APP_EVENTS, emitAppEvent, onAppEvent } from './constants/appEvents';
 
 // 'search' is the landing tab and stays in the entry chunk so first paint costs no
 // extra round trip. The other two are split out and then warmed on idle below, so
@@ -61,7 +62,7 @@ function App() {
   }, []);
 
   const handleEscape = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('mtg-escape'));
+    emitAppEvent(APP_EVENTS.escape);
   }, []);
 
   useShortcuts({
@@ -87,26 +88,18 @@ function App() {
   useEffect(() => {
     fetchSymbols();
 
-    const handleGlobalToast = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      showToast(customEvent.detail.message, customEvent.detail.variant);
-    };
-    window.addEventListener('global-toast', handleGlobalToast);
-    return () => window.removeEventListener('global-toast', handleGlobalToast);
+    return onAppEvent(APP_EVENTS.toast, ({ message, variant }) => showToast(message, variant));
   }, [showToast]);
 
   // Detached views (e.g. the collection's empty state) can request a tab
   // switch without receiving the setter through props.
   useEffect(() => {
-    const handleNavigateTab = (e: Event) => {
-      const tab = (e as CustomEvent).detail as AppTab;
+    return onAppEvent(APP_EVENTS.navigateTab, (tab) => {
       if (tab === 'search' || tab === 'deck' || tab === 'collection') {
         setActiveTab(tab);
         if (tab === 'search') dispatchPendingAction('focus-search');
       }
-    };
-    window.addEventListener('mtg-navigate-tab', handleNavigateTab);
-    return () => window.removeEventListener('mtg-navigate-tab', handleNavigateTab);
+    });
   }, []);
 
   useEffect(() => {
@@ -144,7 +137,7 @@ function App() {
     };
 
     const ipc = safeWindow.electronAPI;
-    if (typeof window !== 'undefined' && ipc) {
+    if (ipc) {
       const unsubscribe = ipc.on('menu-clear-deck', handleClearDeck);
       return () => {
         if (unsubscribe) unsubscribe();

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, mockScryfall, stubCard, test } from './fixtures';
 import type { Page } from '@playwright/test';
 import { seedCollection, CARD_SELECTOR } from './seed';
 
@@ -31,6 +31,27 @@ async function goOffline(page: Page) {
   await expect(page.getByText("You're offline")).toBeVisible();
 }
 
+/**
+ * The tokens tab only exists for a deck that holds something, and its controls only appear
+ * for the working deck (a saved deck is read-only there). Search, add a copy, open the deck
+ * pane, switch zone — the shortest path to the two token journeys below.
+ */
+async function openTokensTab(page: Page, cardName: string) {
+  await page.getByRole('textbox', { name: 'Search cards...' }).fill(cardName);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Add copy' }).first().click();
+  await page.getByRole('button', { name: 'My Decks' }).click();
+  await page.getByRole('button', { name: /^Tokens \(/ }).click();
+}
+
+/** A card whose text names a token, which is what deck analysis looks for. */
+const TOKEN_GENERATOR = stubCard({
+  name: 'Krenko, Mob Boss',
+  id: 'krenko-mob-boss',
+  typeLine: 'Legendary Creature — Goblin Warrior',
+  oracleText: 'Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.'
+});
+
 test.describe('offline', () => {
   test('the app says it is offline', async ({ appPage }) => {
     await appPage.goto('/');
@@ -48,7 +69,10 @@ test.describe('offline', () => {
     await appPage.getByRole('textbox', { name: 'Search cards...' }).fill('bolt');
     await appPage.getByRole('button', { name: 'Search', exact: true }).click();
 
-    await expect(appPage.getByText(/Scryfall is currently offline|No cards found/)).toBeVisible({ timeout: 20_000 });
+    // Deliberately not `offline|No cards found`: the empty state is the failure this test
+    // exists to catch, so tolerating it would make the assertion unfalsifiable.
+    await expect(appPage.getByText(/Scryfall is currently offline/)).toBeVisible({ timeout: 20_000 });
+    await expect(appPage.getByText('No cards found')).toHaveCount(0);
   });
 
   // The editions control only exists for a card in a deck being edited, so the journey has
@@ -104,6 +128,46 @@ test.describe('offline', () => {
     // Shown twice — inline in the dialog and in the error dialog it raises.
     await expect(appPage.getByText(/Scryfall is currently offline/).first()).toBeVisible({ timeout: 20_000 });
     await expect(appPage.getByText(/check the names/)).toHaveCount(0);
+  });
+
+  // "No tokens found with this name" is the same lie the empty search grid tells: offline,
+  // no name was ever looked up.
+  test('a token search with no connection blames the connection, not the name', async ({ appPage }) => {
+    await appPage.goto('/');
+    await openTokensTab(appPage, 'bolt');
+
+    const addToken = appPage.getByRole('button', { name: 'Add Token' });
+    await expect(addToken).toBeVisible();
+
+    await goOffline(appPage);
+    await addToken.click();
+
+    const dialog = appPage.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox').first().fill('goblin');
+    await dialog.getByRole('button', { name: 'Search', exact: true }).click();
+
+    await expect(dialog.getByText(/Scryfall is currently offline/)).toBeVisible({ timeout: 20_000 });
+    await expect(dialog.getByText('No tokens found with this name.')).toHaveCount(0);
+  });
+
+  // Deck analysis resolves each generator's tokens over the network. With none reachable it
+  // used to finish quietly, leaving "No tokens found for this card." on screen — a verdict
+  // about the deck, from a lookup that never happened.
+  test('deck analysis with no connection reports the failure instead of an empty verdict', async ({ appPage }) => {
+    await mockScryfall(appPage, [TOKEN_GENERATOR]);
+    await appPage.goto('/');
+    await openTokensTab(appPage, 'krenko');
+
+    const analyze = appPage.getByRole('button', { name: 'Analyze Deck' }).first();
+    await expect(analyze).toBeVisible();
+
+    await goOffline(appPage);
+    await analyze.click();
+
+    await expect(appPage.getByRole('alert').getByText(/Scryfall is currently offline/)).toBeVisible({
+      timeout: 20_000
+    });
   });
 
   /**

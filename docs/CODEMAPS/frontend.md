@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-15 | Files scanned: 40+ components | Token estimate: ~1000 -->
+<!-- Generated: 2026-08-18 | Files scanned: 40+ components | Token estimate: ~1000 -->
 
 # Frontend Component Map
 
@@ -10,6 +10,12 @@ App.tsx (root)
 │   ├── Header
 │   │   ├── SearchBar (part of CardSearch)
 │   │   ├── ProfileMenu
+│   │   │   ├── ProfileMenuBackHeader
+│   │   │   ├── ProfileMenuMainSection
+│   │   │   ├── ProfileMenuLanguageSection
+│   │   │   ├── ProfileMenuBackupSection
+│   │   │   ├── ProfileMenuAboutSection
+│   │   │   └── ProfileMenuHelpSection
 │   │   ├── CommandPalette
 │   │   └── AppShortcutsOverlay
 │   │
@@ -17,22 +23,33 @@ App.tsx (root)
 │   │   └── CardSearch
 │   │       ├── SearchFilters
 │   │       ├── CardGrid
-│   │       └── CardDetailsModal
-│   │           ├── PrintingSelector
-│   │           ├── DoubleFacedCardFlipper
-│   │           └── CardLegalityBadge
+│   │       └── CardDetailModal
+│   │           ├── CardDetailImagePanel
+│   │           ├── CardDetailData
+│   │           ├── CardDetailActions
+│   │           ├── CardDetailEditControls
+│   │           ├── CardDetailRelatedTokens
+│   │           ├── CardDetailPrintsSidebar   (printing/language picker)
+│   │           └── FlipCard                  (double-faced card flip)
 │   │
 │   └── Tab: Deck
 │       ├── EditingDeckBanner (conditional)
 │       ├── DeckManager
+│       │   ├── DeckManagerToolbar
+│       │   ├── DeckManagerDeckListLayout
+│       │   ├── DeckManagerModals
 │       │   ├── DeckList
 │       │   ├── DeckPreview
+│       │   │   ├── DeckPreviewNoteTabs
+│       │   │   └── DeckPreviewZoneCards
 │       │   ├── DeckStats
 │       │   │   └── ManaCurveChart (Recharts)
 │       │   ├── DeckValidationBadge
 │       │   ├── DeckSaveDialog
 │       │   ├── DeckProxyPrint
 │       │   └── PlaytestSimulator
+│       │       ├── PlaytestModals
+│       │       │   └── PlaytestBattlefieldContextMenu
 │       │       ├── PlaytestTokenModal
 │       │       ├── PlaytestParticles
 │       │       └── ScrySurveilModal
@@ -75,26 +92,39 @@ DeckStoreState {
 
 ## Hook Dependency Map
 
+Components depend on orchestrating hooks only. A hook folder (`hooks/deck/`,
+`hooks/playtest/`, …) is that hook's insides and is not imported from a component.
+
 ```
 CardSearch Component
 ├── useCardSearch() → Scryfall API (debounced)
-├── useCardPrints() → Fetch alternative printings
+│   └── hooks/search/: useCardSearchPaging, useScryfallEmitters
+├── useCardPrints() → Fetch alternative printings (utils/cardPrints)
 ├── useCardRelatedTokens() → Find related tokens
 ├── useTranslation() → i18next
 └── useToast() → Toast notifications
 
 DeckManager Component
 ├── useDeckManager() → Load/save/export operations
+│   └── hooks/deck/: useDeckExport, useDeckFileImport, useDeckRecords,
+│                    useDeckSaving, useDeckValidation, useImportProgressModal
 ├── useDeckActions() → Add/remove card handlers
 ├── useDeckTokens() → Populate related tokens
-├── useDeckValidator() → Format legality checks
-└── useDeckTextImport() → Parse MTG Arena format
+│   └── hooks/tokens/: useDeckTokenAnalysis, useDeckTokenList,
+│                      useTokenPresets, useTokenSearch
+├── useDeckTextImport() → Parse MTG Arena format
+├── useDeckInfoEditor() → Name/format/notes editing
+├── useSuggestedLands() → Mana base suggestions
+└── usePendingAction() → Command channel
 
 PlaytestSimulator Component
 ├── usePlaytestSimulator() → Full playtest state machine
+│   └── hooks/playtest/: Zones, Library, Battlefield, CardMoves, Mulligan,
+│                        Turn, Life, Log, History, FaceChoice
+│       └── utils/playtestBoard → pure zone transitions
 ├── useProxyPrint() → Proxy sheet generation
-├── useTokenHandlers() → Token summon logic
-└── usePlaytestSimulator.test() → Unit tests
+│   └── hooks/print/useProxyPrintRoutine → utils/proxyPrintLayout
+└── useTokenHandlers() → Token summon logic
 
 DeckStats Component
 └── recharts for mana curve visualization
@@ -104,7 +134,7 @@ DeckStats Component
 
 | Component | Trigger | Purpose |
 |-----------|---------|---------|
-| CardDetailsModal | Click card in search grid | Show card image, printing options, legality |
+| CardDetailModal | Click card in search grid | Show card image, printing options, legality |
 | DeckSaveDialog | "Save Deck" action | Format selection, name input, save to DB |
 | PlaytestTokenModal | Click token button in playtest | List deck-related tokens, select quantity |
 | ScrySurveilModal | Playtest "scry" action | Reorder top-deck cards |

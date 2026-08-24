@@ -26,11 +26,8 @@ interface UseDeckInfoEditorParams {
 }
 
 /**
- * Rename / re-format a saved deck through the reused DeckSaveDialog.
- *
- * Kept out of DeckManager because it is a closed loop: open with a deck, edit the
- * two draft fields, persist, and close. It only touches the rest of the screen to
- * keep an already-open deck's header in sync via `setSelectedDeck`.
+ * Rename or re-format a saved deck through the reused DeckSaveDialog. A closed loop, hence
+ * kept out of DeckManager: it only reaches outside to keep an open deck's header in sync.
  */
 export function useDeckInfoEditor({ saveEditedDeck, setSelectedDeck, showToast, showAlert }: UseDeckInfoEditorParams) {
   const { t } = useTranslation();

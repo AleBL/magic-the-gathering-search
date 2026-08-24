@@ -12,7 +12,46 @@ app.commandLine.appendSwitch('disable-gpu-compositing');
 // Hide some warnings from terminal
 app.commandLine.appendSwitch('log-level', '3');
 
+// Content Security Policy, per environment.
+//
+// Development (Vite dev server over http://localhost): the HMR client is injected inline,
+// React Refresh compiles module updates at runtime, and the client talks back over a
+// websocket — so 'unsafe-inline', 'unsafe-eval' and ws: are unavoidable here.
+//
+// Production (static bundle loaded from file://): `yarn build` emits only external
+// <script type="module"> and <link rel="stylesheet"> tags, so scripts need nothing beyond
+// 'self' and eval stays blocked. Network access is narrowed to Scryfall, the only host the
+// renderer ever calls. Trade-off: style-src still keeps 'unsafe-inline', now for a single
+// reason — useProxyPrint appends a <style id="proxy-print-override"> whose @page rule is
+// built from the chosen paper size, and Chromium refuses to apply it without the keyword.
+// The boot spinner no longer needs it (its CSS is bundled in src/style/loader.css), and
+// Google Fonts never did: a remote stylesheet link costs an origin here, not 'unsafe-inline'.
+const CSP_DEV = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "connect-src 'self' https: ws:"
+].join('; ');
+
+const CSP_PROD = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "connect-src 'self' https://api.scryfall.com",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-src 'none'",
+  "frame-ancestors 'none'"
+].join('; ');
+
 function createWindow() {
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+
   // Create the browser window.
   const window = new BrowserWindow({
     title: 'MTG Deck Forge',
@@ -41,14 +80,13 @@ function createWindow() {
     window.show();
   });
 
-  // Content Security Policy
+  // Content Security Policy. The handler also fires for file:// responses, so the
+  // production policy applies to the packaged app and not just to the dev server.
   window.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: ws:;"
-        ]
+        'Content-Security-Policy': [devServerUrl ? CSP_DEV : CSP_PROD]
       }
     });
   });
@@ -75,12 +113,11 @@ function createWindow() {
     return { action: 'deny' }; // Always deny new electron windows
   });
 
-  const url = process.env.VITE_DEV_SERVER_URL;
   const indexHtml = join(__dirname, '../dist-vite/index.html');
 
   // and load the index.html of the app.
-  if (url) {
-    window?.loadURL(url);
+  if (devServerUrl) {
+    window?.loadURL(devServerUrl);
     window.webContents.openDevTools();
   } else {
     window?.loadFile(indexHtml);

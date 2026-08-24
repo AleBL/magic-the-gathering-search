@@ -4,23 +4,16 @@ import { Card } from '../../types/Card';
 import { Deck, DeckFormat, DeckRelatedToken } from '../../types/Deck';
 import { DeckFormatType } from '../../types/enums';
 import { ShowToastFn } from '../../types/Toast';
-import SavedDecksPanel from './SavedDecksPanel';
-import DeckVersionHistoryModal from './DeckVersionHistoryModal';
-import DeckSuggestionsModal from './DeckSuggestionsModal';
 import DeckPreview from './DeckPreview';
 import DeckEditWorkspace from './DeckEditWorkspace';
-import DeckCoverModal from './DeckCoverModal';
 import CardSearch from '../card/CardSearch';
-import DeckSaveDialog from './DeckSaveDialog';
-import CustomDialog from '../ui/CustomDialog';
 import { useDeckStore } from '../../store/useDeckStore';
 import { useDeckActions } from '../../hooks/useDeckActions';
 import useDeckManager from '../../hooks/useDeckManager';
 import useDialog from '../../hooks/useDialog';
-import DeckTextImportModal from '../deck/DeckTextImportModal';
-import DeckImportProgressModal from '../deck/DeckImportProgressModal';
 import { DeckManagerToolbar } from '../deck/DeckManagerToolbar';
-import { DeckExportDialog } from '../deck/DeckExportDialog';
+import { DeckManagerModals } from '../deck/DeckManagerModals';
+import { DeckManagerDeckListLayout } from '../deck/DeckManagerDeckListLayout';
 import { useDeckTextImport } from '../../hooks/useDeckTextImport';
 import { useSuggestedLands } from '../../hooks/useSuggestedLands';
 import { useCardSizePreference } from '../../hooks/useCardSizePreference';
@@ -534,156 +527,92 @@ function DeckManager({ showToast }: DeckManagerProps) {
             deck={deckPreviewElement}
           />
         ) : (
-          /* At lg+ the two lanes scroll independently: one page-level scrollbar meant that
-             reading a long decklist dragged the saved-decks list along with it.
-
-             `h-full`, not a `100vh` calculation: `.workspace-body` is already `flex-1` and
-             knows its own height, so guessing it from the viewport overshot by a dozen pixels
-             and left the wrapper with a third, barely-moving scrollbar. Below lg the layout is
-             a single column in normal page flow, so none of this applies. */
-          <div
-            className={`grid grid-cols-1 ${showDeckList ? 'lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]' : 'lg:grid-cols-1'} gap-4 p-4 lg:h-full lg:overflow-hidden`}
-          >
-            {showDeckList ? (
-              <SavedDecksPanel
-                decks={displayDecks}
-                savedDeckCount={savedDecks.length}
-                selectedDeckId={selectedDeck?.id ?? null}
-                editingDeckId={editingDeckId}
-                isMobileOpen={isMobileDeckListOpen}
-                onToggleMobileOpen={() => setIsMobileDeckListOpen((open) => !open)}
-                onSelectDeck={setSelectedDeck}
-                onEditDeck={handleEditDeck}
-                onExportDeck={(deck) => setDeckToExport(deck)}
-                onDuplicateDeck={handleDuplicateDeck}
-                onNewFromDeck={handleNewDeckFromThis}
-                onDeleteDeck={confirmDeleteDeck}
-                onChangeCover={setDeckForCover}
-              />
-            ) : null}
-            <div className="col-span-1 min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
-              {deckPreviewElement}
-            </div>
-          </div>
+          <DeckManagerDeckListLayout
+            showDeckList={showDeckList}
+            displayDecks={displayDecks}
+            savedDeckCount={savedDecks.length}
+            selectedDeckId={selectedDeck?.id ?? null}
+            editingDeckId={editingDeckId}
+            isMobileDeckListOpen={isMobileDeckListOpen}
+            onToggleMobileDeckList={() => setIsMobileDeckListOpen((open) => !open)}
+            onSelectDeck={setSelectedDeck}
+            onEditDeck={handleEditDeck}
+            onExportDeck={(deck) => setDeckToExport(deck)}
+            onDuplicateDeck={handleDuplicateDeck}
+            onNewFromDeck={handleNewDeckFromThis}
+            onDeleteDeck={confirmDeleteDeck}
+            onChangeCover={setDeckForCover}
+            deckPreview={deckPreviewElement}
+          />
         )}
       </div>
 
-      {showSaveDialog ? (
-        <DeckSaveDialog
-          deckName={deckName}
-          deckFormat={deckFormat}
-          onDeckNameChange={setDeckName}
-          onDeckFormatChange={setDeckFormat}
-          onSave={handleSaveDeck}
-          onCancel={() => {
-            setShowSaveDialog(false);
-            setDeckName('');
-          }}
-        />
-      ) : null}
-
-      {deckInfoEdit ? (
-        <DeckSaveDialog
-          deckName={infoName}
-          deckFormat={infoFormat}
-          onDeckNameChange={setInfoName}
-          onDeckFormatChange={setInfoFormat}
-          onSave={handleSaveDeckInfo}
-          onCancel={closeDeckInfoEditor}
-          title={t('deck.editDeckInfo')}
-        />
-      ) : null}
-
-      {dialogState.isOpen ? (
-        <CustomDialog
-          isOpen={dialogState.isOpen}
-          type={dialogState.type}
-          title={dialogState.title}
-          message={dialogState.message}
-          onConfirm={dialogState.onConfirm}
-          onCancel={closeDialog}
-          variant={dialogState.variant}
-        />
-      ) : null}
-
-      {isHistoryOpen && selectedDeck ? (
-        <DeckVersionHistoryModal
-          deck={selectedDeck}
-          onRestore={(version) => {
-            handleEditDeck(
-              version.deckId,
-              version.name,
-              version.format,
-              version.cards,
-              undefined,
-              version.relatedTokens
-            );
-            setIsHistoryOpen(false);
-          }}
-          onClose={() => setIsHistoryOpen(false)}
-        />
-      ) : null}
-
-      {isSuggestionsOpen ? (
-        <DeckSuggestionsModal
-          cards={selectedDeck ? selectedDeck.cards : currentDeck}
-          format={selectedDeck ? selectedDeck.format : activeFormat}
-          onAddToDeck={handleAddToDeck}
-          onClose={() => setIsSuggestionsOpen(false)}
-        />
-      ) : null}
-
-      {deckForCover ? (
-        <DeckCoverModal
-          deck={deckForCover}
-          onSelect={async (cardId) => {
-            await setDeckCover(deckForCover.id, cardId);
-            setDeckForCover(null);
-            showToast(t('deck.coverUpdated'));
-          }}
-          onClose={() => setDeckForCover(null)}
-        />
-      ) : null}
-
-      {deckToExport ? (
-        <DeckExportDialog
-          deck={deckToExport}
-          onExportJson={(deck) => {
-            exportDeck(deck);
-            setDeckToExport(null);
-          }}
-          onExportDec={(deck) => {
-            exportDeckAsDec(deck);
-            setDeckToExport(null);
-          }}
-          onCancel={() => setDeckToExport(null)}
-          showToast={showToast}
-        />
-      ) : null}
-
-      <DeckTextImportModal
-        isOpen={isTextImportOpen}
-        onClose={() => setIsTextImportOpen(false)}
-        onImport={importTextDeck}
-        isImporting={isTextImporting}
-        errorMsg={textImportErrorMsg}
-      />
-
-      <DeckImportProgressModal
-        isOpen={isProgressModalOpen}
-        progress={textImportProgress}
-        missingCards={textMissingCards}
-        errorMsg={textImportErrorMsg}
-        onClose={() => setIsProgressModalOpen(false)}
-        onFinish={finishTextImport}
-      />
-
-      <DeckImportProgressModal
-        isOpen={isFileImportModalOpen}
-        progress={fileImportProgress}
-        missingCards={fileMissingCards}
-        errorMsg={fileImportError}
-        onClose={closeFileImportModal}
+      <DeckManagerModals
+        showToast={showToast}
+        editDeckInfoTitle={t('deck.editDeckInfo')}
+        showSaveDialog={showSaveDialog}
+        deckName={deckName}
+        deckFormat={deckFormat}
+        onDeckNameChange={setDeckName}
+        onDeckFormatChange={setDeckFormat}
+        onSaveDeck={handleSaveDeck}
+        onCancelSaveDialog={() => {
+          setShowSaveDialog(false);
+          setDeckName('');
+        }}
+        deckInfoEdit={deckInfoEdit}
+        infoName={infoName}
+        infoFormat={infoFormat}
+        onInfoNameChange={setInfoName}
+        onInfoFormatChange={setInfoFormat}
+        onSaveDeckInfo={handleSaveDeckInfo}
+        onCloseDeckInfoEditor={closeDeckInfoEditor}
+        dialogState={dialogState}
+        onCloseDialog={closeDialog}
+        isHistoryOpen={isHistoryOpen}
+        selectedDeck={selectedDeck}
+        onRestoreVersion={(version) =>
+          handleEditDeck(version.deckId, version.name, version.format, version.cards, undefined, version.relatedTokens)
+        }
+        onCloseHistory={() => setIsHistoryOpen(false)}
+        isSuggestionsOpen={isSuggestionsOpen}
+        currentDeck={currentDeck}
+        activeFormat={activeFormat}
+        onAddToDeck={handleAddToDeck}
+        onCloseSuggestions={() => setIsSuggestionsOpen(false)}
+        deckForCover={deckForCover}
+        onSelectCover={async (cardId) => {
+          if (!deckForCover) return;
+          await setDeckCover(deckForCover.id, cardId);
+          setDeckForCover(null);
+          showToast(t('deck.coverUpdated'));
+        }}
+        onCloseCoverModal={() => setDeckForCover(null)}
+        deckToExport={deckToExport}
+        onExportJson={(deck) => {
+          exportDeck(deck);
+          setDeckToExport(null);
+        }}
+        onExportDec={(deck) => {
+          exportDeckAsDec(deck);
+          setDeckToExport(null);
+        }}
+        onCancelExport={() => setDeckToExport(null)}
+        isTextImportOpen={isTextImportOpen}
+        onCloseTextImport={() => setIsTextImportOpen(false)}
+        onImportText={importTextDeck}
+        isTextImporting={isTextImporting}
+        textImportErrorMsg={textImportErrorMsg}
+        isProgressModalOpen={isProgressModalOpen}
+        textImportProgress={textImportProgress}
+        textMissingCards={textMissingCards}
+        onCloseProgressModal={() => setIsProgressModalOpen(false)}
+        onFinishTextImport={finishTextImport}
+        isFileImportModalOpen={isFileImportModalOpen}
+        fileImportProgress={fileImportProgress}
+        fileMissingCards={fileMissingCards}
+        fileImportError={fileImportError}
+        onCloseFileImportModal={closeFileImportModal}
       />
     </div>
   );

@@ -14,13 +14,15 @@ afterEach(() => {
 // TODO(test-coverage): the coverage gate in vitest.config.ts spans the whole logic
 // layer (utils/services/store/hooks), so the gaps below show up as real numbers
 // rather than being excluded from the denominator.
-//
-// Covered 2026-08-06: useSearchFilters, useShortcuts, useDeckTextImport,
-// useCardPrints, useAnimatedList, useEscapeKey — hooks went 31% → 42% statements.
+
 // Still open, highest value first:
-//   - hooks: useDeckManager, useDeckActions, useCardSearch, useDeckTokens,
-//     useProxyPrint, and playtest undo/redo + mulligan flows
-//   - services: deckImportService, fileDownload
-//   - utils: cardTypePredicates, formatLabel, contextMenuPosition, rippleEffect,
-//     deckImage (24%, the largest single gap left)
-//   - deckValidator's commander partnership / color-identity branches
+//   - hooks: deck/useDeckExport, three delegations to fileDownload. Worth testing now that
+//     fileDownload has real tests: the assertion can be the exported file itself, not the
+//     mock, which is why it was skipped before
+//   - hooks: tokens/useTokenSearch and tokens/useDeckTokenAnalysis, the other open front
+//   - utils: cardTypePredicates, formatLabel
+//
+// Deliberately not on this list: contextMenuPosition and rippleEffect. Both are
+// geometry and visual effect whose failure mode is "looks wrong", which a unit test
+// asserting numbers does not catch and the E2E suite does. Adding tests there would
+// move the coverage number without making a regression more likely to be caught.

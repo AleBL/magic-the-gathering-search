@@ -1,7 +1,7 @@
-import { ReactNode, useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { FaTimes, FaSync, FaRedo } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { Card } from '../../types/Card';
 import { useCardPrints } from '../../hooks/useCardPrints';
 import { useCardRelatedTokensForCard } from '../../hooks/useCardRelatedTokens';
@@ -13,7 +13,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useVisualEffects } from '../../hooks/useVisualEffects';
 import { getCardFaceImages } from '../../utils/cardFaces';
-import FlipCard from './FlipCard';
+import { CardDetailImagePanel } from './CardDetailImagePanel';
 
 interface CardDetailModalProps {
   card: Card;
@@ -39,9 +39,7 @@ interface CardDetailModalProps {
 import { CardDetailActions } from './CardDetailActions';
 import { CardDetailData } from './CardDetailData';
 import { CardDetailEditControls } from './CardDetailEditControls';
-import { CardDetailPrintsSidebar } from './CardDetailPrintsSidebar';
 import { CardDetailRelatedTokens } from './CardDetailRelatedTokens';
-import { CardCollectionControls } from './CardCollectionControls';
 
 /** Scryfall layouts whose faces are printed on one physical side (never flip). */
 const SAME_SIDE_LAYOUTS = new Set(['split', 'aftermath', 'flip', 'adventure']);
@@ -292,92 +290,33 @@ function CardDetailModal({
               scroll the card art and the edition list along with it. Each side gets its own
               scroller so the image stays put while the text moves. */}
           <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 overflow-y-auto md:overflow-hidden custom-scrollbar pr-2 pb-2">
-            {/* ── Left: edition sidebar + card image ── */}
-            <div className="flex flex-col md:flex-row gap-4 items-center md:items-start shrink-0 animate-fadeIn md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
-              {showPrintsSidebar && !hidePrintsSidebar && (
-                <CardDetailPrintsSidebar
-                  isLoading={isPrintsLoading}
-                  prints={prints}
-                  currentCard={card}
-                  onHoverImageUrl={setHoveredImageUrl}
-                  onSelectPrint={handleSelectPrint}
-                  getCardFaceImageUrl={getCardImageUrl}
-                />
-              )}
-
-              {/* Card image */}
-              <div className="card-detail-image-wrapper flex flex-col items-center gap-3 shrink-0 relative group/image">
-                <div
-                  ref={foilRef}
-                  className="relative rounded-[4.5%]"
-                  onMouseMove={foilEnabled ? handleFoilMove : undefined}
-                  onMouseLeave={foilEnabled ? handleFoilLeave : undefined}
-                >
-                  {faceImages && !hoveredImageUrl ? (
-                    <FlipCard
-                      frontSrc={faceImages.front}
-                      backSrc={faceImages.back}
-                      isFlipped={showBackFace}
-                      alt={currentFace ? currentFace.name : card.name}
-                      animated={motionEnabled}
-                      imgClassName="card-detail-image"
-                      loading="eager"
-                    />
-                  ) : (
-                    <img
-                      src={visibleImageUrl}
-                      alt={currentFace ? currentFace.name : card.name}
-                      style={isRotated ? { transform: 'rotate(90deg)' } : undefined}
-                      className={`card-detail-image transition-all duration-300 ${
-                        isPreloading ? 'opacity-70 scale-[0.98] brightness-90' : 'opacity-100 scale-100'
-                      }`}
-                    />
-                  )}
-                  {foilEnabled && <div className="holo-foil" aria-hidden="true" />}
-                </div>
-                {faceImages && hasMultipleFaces && (
-                  <button
-                    type="button"
-                    onClick={() => setShowBackFace((prev) => !prev)}
-                    className="absolute top-4 left-4 z-20 p-3 rounded-full
-                      bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
-                      text-white shadow-xl
-                      transition-all duration-300 transform hover:scale-110 active:scale-95
-                      flex items-center justify-center opacity-80 hover:opacity-100"
-                    title={t('cardDetails.flipAction')}
-                  >
-                    <FaSync
-                      className={`text-xl transition-transform duration-500 ${showBackFace ? '-rotate-180' : 'rotate-0'}`}
-                    />
-                  </button>
-                )}
-                {canRotate && (
-                  <button
-                    type="button"
-                    onClick={() => setIsRotated((prev) => !prev)}
-                    className="absolute top-4 left-4 z-20 p-3 rounded-full
-                      bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20
-                      text-white shadow-xl
-                      transition-all duration-300 transform hover:scale-110 active:scale-95
-                      flex items-center justify-center opacity-80 hover:opacity-100"
-                    title={t('cardDetails.rotateAction')}
-                    aria-pressed={isRotated}
-                  >
-                    <FaRedo className="text-xl" />
-                  </button>
-                )}
-
-                {/* Ownership actions sit under the art rather than in the text column: on wide
-                    screens that space was empty, and the controls belong next to the card they
-                    act on. On phones the columns stack, so they land between art and text —
-                    still directly below the card. */}
-                {showCollectionControls && !isToken ? (
-                  <div className="w-full max-w-[300px]">
-                    <CardCollectionControls card={card} variant="panel" />
-                  </div>
-                ) : null}
-              </div>
-            </div>
+            <CardDetailImagePanel
+              showPrintsSidebar={showPrintsSidebar}
+              hidePrintsSidebar={hidePrintsSidebar}
+              isPrintsLoading={isPrintsLoading}
+              prints={prints}
+              card={card}
+              onHoverImageUrl={setHoveredImageUrl}
+              onSelectPrint={handleSelectPrint}
+              foilRef={foilRef}
+              foilEnabled={foilEnabled}
+              onFoilMove={handleFoilMove}
+              onFoilLeave={handleFoilLeave}
+              faceImages={faceImages}
+              hoveredImageUrl={hoveredImageUrl}
+              currentFace={currentFace}
+              motionEnabled={motionEnabled}
+              visibleImageUrl={visibleImageUrl}
+              isPreloading={isPreloading}
+              isRotated={isRotated}
+              hasMultipleFaces={hasMultipleFaces}
+              showBackFace={showBackFace}
+              onToggleBackFace={() => setShowBackFace((prev) => !prev)}
+              canRotate={canRotate}
+              onToggleRotated={() => setIsRotated((prev) => !prev)}
+              showCollectionControls={showCollectionControls}
+              isToken={isToken}
+            />
 
             {/* ── Right: card info ── */}
             <div className="card-detail-info md:min-h-0 md:overflow-y-auto md:overscroll-contain custom-scrollbar md:pr-1">
@@ -455,7 +394,7 @@ function CardDetailModal({
       )}
     </>,
     document.body
-  ) as unknown as ReactNode;
+  );
 }
 
 export default CardDetailModal;

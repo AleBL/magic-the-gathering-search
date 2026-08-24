@@ -5,17 +5,13 @@ export interface BudgetCard {
 }
 
 export interface BudgetPlan {
-  /** How much the deck total exceeds the target (0 when within budget). */
+  /** 0 when the deck is within budget. */
   overBy: number;
-  /** Fewest priciest cards to remove to get back under the target. */
+  /** The priciest cards first, cut until the deck is back under the target. */
   cuts: BudgetCard[];
 }
 
-/**
- * Greedy budget planner: given a deck's priced cards, its total and a target
- * budget, returns how far over budget it is and the fewest most-expensive cards
- * to drop to get back under the target. A non-positive target means "no target".
- */
+/** A target of zero or less means no budget was set, and nothing is ever suggested for cutting. */
 export function planBudgetCuts(cards: BudgetCard[], total: number, target: number): BudgetPlan {
   const overBy = total - target;
   if (!(target > 0) || overBy <= 0) return { overBy: 0, cuts: [] };

@@ -18,10 +18,6 @@ interface UseDeckPreviewStateParams {
   deckRelatedTokens: DeckRelatedToken[] | undefined;
 }
 
-/**
- * Encapsulates all local UI state and derived data for DeckPreview,
- * leaving the component responsible only for rendering.
- */
 export function useDeckPreviewState({
   selectedDeck,
   currentDeck,
@@ -113,7 +109,6 @@ export function useDeckPreviewState({
   const handleHoverLeave = useCallback(() => setHoveredCard(null), []);
 
   return {
-    // State
     viewMode,
     setViewMode,
     hoveredCard,
@@ -134,7 +129,6 @@ export function useDeckPreviewState({
     setSortBy,
     isDisplaySettingsOpen,
     setIsDisplaySettingsOpen,
-    // Derived
     activeCards,
     isCommanderFormat,
     commanders,
@@ -143,7 +137,6 @@ export function useDeckPreviewState({
     deckCards,
     groupedCards,
     zoneCounts,
-    // Handlers
     handleHoverEnter,
     handleHoverMove,
     handleHoverLeave

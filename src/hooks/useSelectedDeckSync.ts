@@ -11,9 +11,8 @@ interface UseSelectedDeckSyncParams {
 }
 
 /**
- * Owns the selected saved deck: restores the selection when an edit session ends, and
- * mirrors it into the store for the navbar's mobile page menu, which renders outside this
- * subtree and cannot receive it through props.
+ * Owns the selected saved deck: restores it when an edit session ends, and mirrors it into
+ * the store for the navbar's page menu, which renders outside this subtree.
  */
 export function useSelectedDeckSync({
   selectedDeck,

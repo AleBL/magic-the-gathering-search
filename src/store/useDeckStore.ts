@@ -44,11 +44,7 @@ interface DeckStoreState {
   pendingAction: PendingAction | null;
   setPendingAction: (action: PendingAction | null) => void;
 
-  /**
-   * Read-only snapshot of the saved deck currently open for viewing in the
-   * deck manager (null when browsing/editing). Published by DeckManager so
-   * detached UI (the navbar's mobile page menu) can offer the right actions.
-   */
+  /** Read-only snapshot published by DeckManager, so detached UI can offer the right actions. */
   selectedDeckSummary: SelectedDeckSummary | null;
   setSelectedDeckSummary: (summary: SelectedDeckSummary | null) => void;
 
@@ -57,9 +53,8 @@ interface DeckStoreState {
   setSavedDeckCount: (count: number) => void;
 
   /**
-   * Encoded deck lifted from a `?deck=` share link on startup. App detects it,
-   * switches to the deck tab and parks it here; DeckManager consumes it once
-   * mounted (importing the deck) and clears it.
+   * Encoded deck lifted from a `?deck=` share link on startup: App parks it here, and
+   * DeckManager consumes it once mounted and clears it.
    */
   pendingSharedDeck: string | null;
   setPendingSharedDeck: (encoded: string | null) => void;
@@ -72,10 +67,9 @@ export interface SelectedDeckSummary {
 }
 
 /**
- * Cross-component command channel: emitters (shortcuts, command palette,
- * mobile page menu) set one of these and the owning component's effect
- * executes it. A union — not string — so a typo'd dispatch or handler
- * comparison fails to compile instead of silently no-opping.
+ * Cross-component command channel: shortcuts, the command palette and the page menu set one
+ * of these and the owning component's effect runs it. A union, not a string, so a typo fails
+ * to compile instead of silently no-opping.
  */
 export type PendingAction =
   | 'focus-search'
@@ -174,29 +168,24 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
       const index = state.currentDeck.findIndex((card) => card.id === cardId);
       if (index === -1) return state;
 
-      const isCurrentlyCommander = !!state.currentDeck[index].isCommander;
-
-      if (isCurrentlyCommander) {
+      if (state.currentDeck[index].isCommander) {
         return {
           currentDeck: state.currentDeck.map((card, idx) => (idx === index ? { ...card, isCommander: false } : card))
         };
-      } else {
-        const currentCommanders = state.currentDeck.filter((card) => card.isCommander);
-        if (currentCommanders.length >= 2) {
-          const commanderToKeep = currentCommanders[currentCommanders.length - 1];
-          return {
-            currentDeck: state.currentDeck.map((card, idx) => {
-              if (idx === index) return { ...card, isCommander: true };
-              if (card.id === commanderToKeep.id) return { ...card, isCommander: true };
-              return { ...card, isCommander: false };
-            })
-          };
-        } else {
-          return {
-            currentDeck: state.currentDeck.map((card, idx) => (idx === index ? { ...card, isCommander: true } : card))
-          };
-        }
       }
+
+      // Two commanders are legal (partners), so promoting a third demotes every earlier one
+      // except the most recently marked, rather than refusing the click with no explanation.
+      const commanders = state.currentDeck.filter((card) => card.isCommander);
+      const keptCommanderId = commanders.length >= 2 ? commanders[commanders.length - 1].id : null;
+
+      return {
+        currentDeck: state.currentDeck.map((card, idx) => {
+          if (idx === index) return { ...card, isCommander: true };
+          if (keptCommanderId === null) return card;
+          return { ...card, isCommander: card.id === keptCommanderId };
+        })
+      };
     }),
 
   clearDeck: () => set({ currentDeck: [], currentDeckRelatedTokens: [] }),

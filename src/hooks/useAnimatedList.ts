@@ -8,13 +8,9 @@ export interface AnimatedEntry<T> {
 }
 
 /**
- * Keeps items that just dropped out of `items` rendered a little longer
- * (isLeaving: true) instead of vanishing the instant they're gone, so a row
- * can fade/slide out instead of the list flickering. Reduced-motion users
- * skip the hold entirely. One instance per rendered list — see
- * DeckCardList.tsx's AnimatedDeckCardGroup for why this can't just be
- * called inline inside a `.map()` (Rules of Hooks: a variable number of
- * groups would mean a variable number of hook calls).
+ * Holds items that just left `items` for `exitMs` (isLeaving: true) so a row can animate out
+ * instead of the list flickering; reduced-motion users skip the hold. One instance per
+ * rendered list: calling it inside a `.map()` would make the number of hook calls vary.
  */
 export function useAnimatedList<T>(items: T[], getKey: (item: T) => string, exitMs = 200): AnimatedEntry<T>[] {
   const [entries, setEntries] = useState<AnimatedEntry<T>[]>(() =>
@@ -23,10 +19,8 @@ export function useAnimatedList<T>(items: T[], getKey: (item: T) => string, exit
   const prefersReducedMotion = usePrefersReducedMotion();
   const timeoutsRef = useRef<Map<string, number>>(new Map());
 
-  // Read getKey/exitMs through refs so callers can pass inline callbacks
-  // without retriggering the sync effect every render — an inline getKey
-  // used to re-run the effect after its own setEntries, looping forever
-  // ("Maximum update depth exceeded").
+  // Through refs so an inline getKey does not retrigger the sync effect every render: it
+  // used to re-run after its own setEntries, looping to "Maximum update depth exceeded".
   const getKeyRef = useRef(getKey);
   getKeyRef.current = getKey;
   const exitMsRef = useRef(exitMs);
@@ -70,8 +64,7 @@ export function useAnimatedList<T>(items: T[], getKey: (item: T) => string, exit
         changed = true;
       }
 
-      // Bail out with the same reference when nothing changed so React
-      // skips the re-render — items is often a fresh array each render.
+      // Same reference when nothing changed, since `items` is often rebuilt every render.
       return changed ? next : current;
     });
   }, [items, prefersReducedMotion]);

@@ -2,24 +2,18 @@ import { logger } from './logger';
 import { Card } from '../types/Card';
 import i18n from '../plugins/i18n';
 import { dispatchToast } from './toastHelper';
+import { gathererImageUrl, scryfallSearchUrl } from '../constants/urls';
 
-/**
- * Translates a list of cards to a target language (e.g., 'en', 'es', 'pt') in batch
- * using the Scryfall search API.
- * Keeps cards in their original order, falling back to the original card object
- * if the translation query fails or if a translation is not available for a specific card.
- */
-/** True when a printing carries at least one usable price value. */
 const hasPriceData = (prices?: Card['prices']): boolean =>
   !!prices && [prices.usd, prices.usd_foil, prices.eur, prices.eur_foil].some((v) => v != null && v !== '');
 
+/** Order is preserved, and any card the API cannot translate comes back untouched. */
 export async function translateCards(cards: Card[], targetLang: string): Promise<Card[]> {
   if (cards.length === 0) return [];
 
-  // Normalize language (e.g. "en-US" -> "en") for Scryfall compatibility
+  // Scryfall's `lang:` takes the bare code, so a browser locale like "en-US" has to be cut.
   const lang = (targetLang || 'en').split('-')[0].toLowerCase();
 
-  // Group unique oracle_ids to reduce search overhead
   const oracleIdMap = new Map<string, Card>();
   cards.forEach((card) => {
     if (card.oracle_id) {
@@ -30,21 +24,18 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
   const uniqueOracleIds = Array.from(oracleIdMap.keys());
   const translatedMap = new Map<string, Card>();
 
-  // Process in batches of 20 to keep URL query size reasonable
+  // Batched because the whole query travels in the URL, and one oracle_id term is ~50 chars.
   const BATCH_SIZE = 20;
   for (let batchStartIndex = 0; batchStartIndex < uniqueOracleIds.length; batchStartIndex += BATCH_SIZE) {
     const batch = uniqueOracleIds.slice(batchStartIndex, batchStartIndex + BATCH_SIZE);
 
-    // Query looks like: (oracle_id:id1 OR oracle_id:id2 ...) lang:xx. The
-    // parentheses are load-bearing: Scryfall binds adjacency tighter than OR,
-    // so without them `lang:` would only constrain the LAST oracle_id term and
-    // every other card would come back in its default (English) printing.
+    // The parentheses are load-bearing: Scryfall binds adjacency tighter than OR, so without
+    // them `lang:` constrains only the last oracle_id term and every other card comes back in
+    // English. `include:extras` is what makes tokens and emblems, hidden from default search,
+    // resolve to their localized printing instead of their English name.
     const oracleQuery = batch.map((id) => `oracle_id:${id}`).join(' OR ');
-    // `include:extras` is required so tokens/emblems (Scryfall "extras", hidden
-    // from default search) resolve to their localized printing — otherwise a
-    // Food/Comida token always falls back to its English name.
     const query = `(${oracleQuery}) lang:${lang} include:extras`;
-    const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}`;
+    const url = scryfallSearchUrl(query);
 
     try {
       const response = await fetch(url);
@@ -54,9 +45,7 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
           json.data.forEach((card: Card & { multiverse_ids?: number[] }) => {
             if (card.oracle_id) {
               const multiverseId = card.multiverse_ids?.[0];
-              const gathererUrl = multiverseId
-                ? `https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${multiverseId}&type=card`
-                : '';
+              const gathererUrl = multiverseId ? gathererImageUrl(multiverseId) : '';
 
               const image_uris = card.image_uris || {
                 small: '',
@@ -77,11 +66,10 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
       }
     } catch (error) {
       logger.error('Failed to translate card batch:', error);
-      dispatchToast(i18n.t('common.errorTranslatingBatch') as string, 'danger');
+      dispatchToast(i18n.t('common.errorTranslatingBatch') as string, 'error');
     }
   }
 
-  // Map the original cards to their translated counterpart or fallback to the original
   return cards.map((card) => {
     if (!card.oracle_id || !translatedMap.has(card.oracle_id)) return card;
 
@@ -107,8 +95,8 @@ export async function translateCards(cards: Card[], targetLang: string): Promise
       };
     }
 
-    // Localized printings very often ship without price data. Keep the original
-    // (English) printing's prices so imported decks still show USD/EUR values.
+    // Localized printings very often ship with no price at all, and dropping the English
+    // printing's prices would blank out the value of every imported deck.
     if (!hasPriceData(result.prices) && hasPriceData(card.prices)) {
       result = { ...result, prices: card.prices };
     }

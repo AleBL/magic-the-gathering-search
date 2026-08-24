@@ -15,6 +15,7 @@ import { dispatchPendingAction, usePendingAction } from '../../hooks/usePendingA
 import { useCollectionOwnership, OwnershipFilter } from '../../hooks/useCollectionOwnership';
 import ErrorState from '../ui/ErrorState';
 import EmptyState from '../ui/EmptyState';
+import { APP_EVENTS, onAppEvent } from '../../constants/appEvents';
 
 interface CardSearchProps {
   onAddToDeck?: (card: Card) => void;
@@ -69,11 +70,7 @@ function CardSearch({
   });
 
   useEffect(() => {
-    const handleEscape = () => {
-      searchInputRef.current?.blur();
-    };
-    window.addEventListener('mtg-escape', handleEscape);
-    return () => window.removeEventListener('mtg-escape', handleEscape);
+    return onAppEvent(APP_EVENTS.escape, () => searchInputRef.current?.blur());
   }, []);
 
   useEffect(() => {

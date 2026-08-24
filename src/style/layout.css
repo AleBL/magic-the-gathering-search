@@ -313,7 +313,6 @@ html.dark .deck-preview-section {
 .floating-card-preview {
   @apply fixed pointer-events-none z-[var(--z-preview)] rounded-2xl overflow-hidden border border-white/20 dark:border-white/10 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md transition-all duration-150 ease-out;
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
-  width: 260px;
   height: auto;
   aspect-ratio: 5/7;
 }
