@@ -223,6 +223,11 @@ describe('retryDelayFor', () => {
 describe('request pacing', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  // `setTimeout(n)` is allowed to fire a tick early, and Date.now() only has millisecond
+  // resolution, so a 40 ms gap is routinely measured as 39. The assertion is that the
+  // loop waits, not that the platform's timer is exact.
+  const TIMER_SLACK_MS = 2;
+
   /** Answers a collection POST with one card per identifier, so nothing falls through. */
   const resolveEverything = (timestamps: number[]) =>
     vi.stubGlobal(
@@ -253,7 +258,7 @@ describe('request pacing', () => {
 
     expect(timestamps).toHaveLength(3);
     const gaps = timestamps.slice(1).map((at, index) => at - timestamps[index]);
-    gaps.forEach((gap) => expect(gap).toBeGreaterThanOrEqual(40));
+    gaps.forEach((gap) => expect(gap).toBeGreaterThanOrEqual(40 - TIMER_SLACK_MS));
   });
 
   // The per-name fallback is the loop that could fan out to 40 requests, and it shares the
@@ -299,7 +304,7 @@ describe('request pacing', () => {
     // One collection POST, then the two search queries the localized fallback tries.
     expect(timestamps.length).toBeGreaterThanOrEqual(3);
     const gaps = timestamps.slice(1).map((at, index) => at - timestamps[index]);
-    gaps.forEach((gap) => expect(gap).toBeGreaterThanOrEqual(40));
+    gaps.forEach((gap) => expect(gap).toBeGreaterThanOrEqual(40 - TIMER_SLACK_MS));
   });
 
   it('does not pause before the first request', async () => {
