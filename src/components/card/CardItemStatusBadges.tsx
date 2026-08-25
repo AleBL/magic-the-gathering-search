@@ -61,5 +61,3 @@ export function CardItemStatusBadges({
     </>
   );
 }
-
-export default CardItemStatusBadges;

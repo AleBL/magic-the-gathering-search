@@ -25,5 +25,3 @@ export function ProfileMenuBackHeader({ title, onBack, onClose }: ProfileMenuBac
     </div>
   );
 }
-
-export default ProfileMenuBackHeader;

@@ -34,5 +34,3 @@ export function ProfileMenuHelpSection({ shortcuts, onBack, onClose }: ProfileMe
     </>
   );
 }
-
-export default ProfileMenuHelpSection;

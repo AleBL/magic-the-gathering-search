@@ -195,9 +195,7 @@ export function ProxyPrintSettingsBar({
             >
               {t(
                 `print.spacing${spacingOptionValue.charAt(0).toUpperCase() + spacingOptionValue.slice(1)}` as
-                  | 'print.spacingNone'
-                  | 'print.spacingSmall'
-                  | 'print.spacingLarge'
+                  'print.spacingNone' | 'print.spacingSmall' | 'print.spacingLarge'
               )}
             </button>
           ))}

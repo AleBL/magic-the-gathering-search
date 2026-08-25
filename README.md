@@ -117,7 +117,7 @@ any script of that name and would silently produce a source tarball instead of t
 ```bash
 yarn test              # unit + component tests (Vitest)
 yarn test:watch        # the same suite in watch mode
-yarn test:coverage     # same, enforcing the coverage thresholds in vitest.config.ts
+yarn test:coverage     # same, enforcing the coverage thresholds in vitest.config.mts
 yarn test:e2e          # end-to-end journeys (Playwright)
 yarn test:e2e:ui       # the same journeys in Playwright's interactive runner
 yarn test:e2e:bench    # collection scale benchmark (add BENCH_PROD=1 for the production bundle)

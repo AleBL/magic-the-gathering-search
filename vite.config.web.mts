@@ -2,11 +2,14 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { join, resolve } from 'path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const srcRoot = join(__dirname, 'src');
+// This config is ESM (`.mts`), where `__dirname` does not exist.
+const root = dirname(fileURLToPath(import.meta.url));
+const srcRoot = join(root, 'src');
 
-// Standalone web/PWA build. Deliberately separate from vite.config.ts (which wires
+// Standalone web/PWA build. Deliberately separate from vite.config.mts (which wires
 // vite-plugin-electron for the desktop app): the service worker + manifest here must
 // never end up in the Electron-packaged renderer, since Chromium won't register a SW
 // under file:// and a stale-cache update flow makes no sense for a locally installed app.
@@ -90,7 +93,7 @@ export default defineConfig({
   ],
   root: srcRoot,
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    outDir: resolve(root, 'dist'),
     emptyOutDir: true
   },
   base: '/',

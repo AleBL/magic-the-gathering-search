@@ -2,13 +2,7 @@ import { Card } from '../types/Card';
 import { DeckVersion } from '../types/Deck';
 
 export type DeckVersionChangeType =
-  | 'added'
-  | 'removed'
-  | 'increased'
-  | 'decreased'
-  | 'printing'
-  | 'commander'
-  | 'renamed';
+  'added' | 'removed' | 'increased' | 'decreased' | 'printing' | 'commander' | 'renamed';
 
 export interface DeckVersionChange {
   type: DeckVersionChangeType;
