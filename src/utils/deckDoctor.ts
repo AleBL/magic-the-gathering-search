@@ -227,13 +227,7 @@ export function computeConsistencyScore(stats: DeckStatistics, colorSources: Col
 }
 
 export type RecommendationKind =
-  | 'add-lands'
-  | 'cut-lands'
-  | 'add-source'
-  | 'curve-heavy'
-  | 'screw-risk'
-  | 'flood-risk'
-  | 'balanced';
+  'add-lands' | 'cut-lands' | 'add-source' | 'curve-heavy' | 'screw-risk' | 'flood-risk' | 'balanced';
 
 export type RecommendationSeverity = 'critical' | 'warning' | 'info' | 'good';
 
