@@ -80,7 +80,7 @@ export default defineConfig({
         // Benchmarks against the dev server measure React's development build, which carries
         // checks production strips. BENCH_PROD serves the real bundle instead.
         command: process.env.BENCH_PROD
-          ? `yarn build:web && npx vite preview --config vite.config.web.ts --port ${PORT} --strictPort`
+          ? `yarn build:web && npx vite preview --config vite.config.web.mts --port ${PORT} --strictPort`
           : `yarn dev:web --port ${PORT} --strictPort`,
         url: BASE_URL,
         reuseExistingServer: false,

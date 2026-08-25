@@ -54,7 +54,7 @@ jobs:
       - name: Lint
         run: yarn lint:check
 
-      # Runs the suite and enforces the coverage thresholds set in vitest.config.ts;
+      # Runs the suite and enforces the coverage thresholds set in vitest.config.mts;
       # the job fails here if coverage drops below the configured floor.
       - name: Test with coverage
         run: yarn test:coverage
@@ -66,7 +66,7 @@ jobs:
       - name: Build (web / PWA)
         run: yarn build:web
 
-      # vite build via vite.config.ts (Electron renderer) + tsc for the main process.
+      # vite build via vite.config.mts (Electron renderer) + tsc for the main process.
       - name: Build (Electron)
         run: yarn build
 

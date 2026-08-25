@@ -11,7 +11,7 @@ afterEach(() => {
   cleanup();
 });
 
-// TODO(test-coverage): the coverage gate in vitest.config.ts spans the whole logic
+// TODO(test-coverage): the coverage gate in vitest.config.mts spans the whole logic
 // layer (utils/services/store/hooks), so the gaps below show up as real numbers
 // rather than being excluded from the denominator.
 

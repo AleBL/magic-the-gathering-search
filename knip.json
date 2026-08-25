@@ -1,8 +1,8 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["e2e/**/*.spec.ts", "electron/index.ts", "electron/preload.ts", "scripts/*.mjs"],
   "project": ["src/**/*.{ts,tsx}", "electron/**/*.ts", "e2e/**/*.ts"],
   "ignoreDependencies": ["tailwindcss"],
   "ignoreExportsUsedInFile": true,
-  "vite": { "config": ["vite.config.ts", "vite.config.web.ts"] }
+  "vite": { "config": ["vite.config.mts", "vite.config.web.mts"] }
 }
