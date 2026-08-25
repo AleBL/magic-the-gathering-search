@@ -42,5 +42,3 @@ export function ProfileMenuAboutSection({ onBack, onClose }: ProfileMenuAboutSec
     </>
   );
 }
-
-export default ProfileMenuAboutSection;

@@ -125,5 +125,3 @@ export function DeckPreviewZoneCards({
     </>
   );
 }
-
-export default DeckPreviewZoneCards;

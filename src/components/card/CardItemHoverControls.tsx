@@ -103,5 +103,3 @@ export function CardItemHoverControls({
     </div>
   );
 }
-
-export default CardItemHoverControls;

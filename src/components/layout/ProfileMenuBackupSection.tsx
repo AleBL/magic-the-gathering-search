@@ -18,5 +18,3 @@ export function ProfileMenuBackupSection({ onBack, onClose }: ProfileMenuBackupS
     </>
   );
 }
-
-export default ProfileMenuBackupSection;

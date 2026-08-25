@@ -40,5 +40,3 @@ export function ProfileMenuLanguageSection({
     </>
   );
 }
-
-export default ProfileMenuLanguageSection;

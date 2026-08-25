@@ -86,5 +86,3 @@ export function PlaytestBattlefieldContextMenu({ playtestId }: { readonly playte
     </>
   );
 }
-
-export default PlaytestBattlefieldContextMenu;

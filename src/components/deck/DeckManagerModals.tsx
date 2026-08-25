@@ -236,5 +236,3 @@ export function DeckManagerModals({
     </>
   );
 }
-
-export default DeckManagerModals;

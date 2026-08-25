@@ -47,5 +47,3 @@ export function DeckPreviewNoteTabs({
     </div>
   );
 }
-
-export default DeckPreviewNoteTabs;

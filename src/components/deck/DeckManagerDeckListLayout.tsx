@@ -80,5 +80,3 @@ export function DeckManagerDeckListLayout({
     </div>
   );
 }
-
-export default DeckManagerDeckListLayout;

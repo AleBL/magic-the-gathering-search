@@ -149,5 +149,3 @@ export function CardDetailImagePanel({
     </div>
   );
 }
-
-export default CardDetailImagePanel;

@@ -231,5 +231,3 @@ export function DeckStackPlaymatCard({
     </div>
   );
 }
-
-export default DeckStackPlaymatCard;
